@@ -1,0 +1,82 @@
+# PasarKita Marketplace
+
+Website marketplace fullstack sederhana dengan:
+
+- halaman produk + pencarian/filter/sorting
+- halaman detail produk
+- login/register
+- keranjang belanja tersimpan di localStorage
+- backend API Express + database SQLite
+
+## Menjalankan project
+
+### Cara termudah (Windows, klik langsung)
+
+1. Install dependency sekali: `npm install`
+2. **Double-click** file `buka-aplikasi.bat` di folder project
+3. Browser akan terbuka otomatis — tidak perlu copy alamat
+
+### Cara manual
+
+1. Install dependency:
+
+   npm install
+
+2. Jalankan server:
+
+   npm start
+
+3. Buka di browser (port sesuai file `.env`, default project ini `5057`):
+
+   http://localhost:5057
+
+## Konfigurasi Port via .env
+
+Project ini sudah mendukung file `.env`.
+
+1. Salin dari contoh:
+
+   copy .env.example .env
+
+2. Ubah port sesuai kebutuhan:
+
+   PORT=5000
+
+3. Jalankan ulang server:
+
+   npm start
+
+4. Buka:
+
+   http://localhost:5000
+
+## Endpoint API
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/me` (butuh Bearer token)
+- `GET /api/users` (role: admin/manager)
+- `POST /api/users` (role: admin/manager; manager hanya boleh buat role user)
+- `GET /api/products`
+- `GET /api/products/:id`
+- `POST /api/checkout` (butuh Bearer token)
+
+## Catatan
+
+Database tersimpan di `data/marketplace.db` dan akan otomatis membuat data produk awal saat pertama kali dijalankan.
+
+## Role (Admin / Manager / User)
+
+- **User**: bisa belanja & checkout
+- **Manager**: bisa lihat list user dan buat user (hanya role `user`)
+- **Admin**: bisa lihat list user dan buat user (role `admin/manager/user`)
+
+### Membuat akun admin pertama (seed)
+
+Isi `.env` dengan:
+
+- `SEED_ADMIN_EMAIL`
+- `SEED_ADMIN_PASSWORD`
+- `SEED_ADMIN_NAME` (opsional)
+
+Lalu jalankan `npm start`. Kalau email tersebut belum ada di DB, sistem akan otomatis membuat akun admin.

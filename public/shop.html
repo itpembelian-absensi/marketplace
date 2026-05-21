@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Produk - PT SAHABAT JAYA SUKSES</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">
+        <img id="brandLogo" class="brand-logo hidden" alt="Logo" />
+        <span class="brand-text">
+          <h1>PT SAHABAT JAYA SUKSES</h1>
+          <p>Produk yang dijual</p>
+        </span>
+      </a>
+      <div class="top-actions">
+        <img id="topLogo" class="top-logo hidden" alt="Logo" />
+        <a href="/" class="btn-secondary">Profil</a>
+        <div id="userArea"></div>
+        <button id="cartButton" class="btn-secondary">Keranjang (0)</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="shop-layout">
+        <aside class="sidebar">
+          <div class="sidebar-header">
+            <h3 class="sidebar-title">Kategori</h3>
+            <button id="clearCategory" class="btn-secondary">Reset</button>
+          </div>
+          <div id="categorySidebar" class="sidebar-body"></div>
+        </aside>
+
+        <section class="shop-content">
+          <section class="filters filters-2col">
+            <div class="input-group">
+              <label for="searchInput">Cari produk</label>
+              <input id="searchInput" type="text" placeholder="Cari nama produk..." />
+            </div>
+            <div class="input-group">
+              <label for="sortSelect">Urutkan</label>
+              <select id="sortSelect">
+                <option value="default">Default</option>
+                <option value="priceAsc">Harga Terendah</option>
+                <option value="priceDesc">Harga Tertinggi</option>
+                <option value="ratingDesc">Rating Tertinggi</option>
+              </select>
+            </div>
+          </section>
+
+          <section>
+            <h2 class="section-title">Daftar Produk</h2>
+            <p id="activeFilterText" class="empty-state"></p>
+            <div id="productGrid" class="product-grid">
+              <p class="empty-state">Memuat produk...</p>
+            </div>
+          </section>
+        </section>
+      </div>
+    </main>
+
+    <aside id="cartPanel" class="cart-panel hidden">
+      <div class="cart-header">
+        <h3>Keranjang Belanja</h3>
+        <button id="closeCartButton" class="btn-secondary">Tutup</button>
+      </div>
+      <div id="cartItems" class="cart-items"></div>
+      <div class="cart-footer">
+        <div class="auth-form">
+          <input id="checkoutName" type="text" placeholder="Nama penerima" />
+          <input id="checkoutPhone" type="text" placeholder="No WA / Telepon" />
+          <textarea id="checkoutAddress" rows="2" placeholder="Alamat pengiriman"></textarea>
+          <select id="checkoutPaymentMethod">
+            <option value="transfer">Transfer Bank</option>
+            <option value="cod">COD</option>
+            <option value="ewallet">E-Wallet</option>
+          </select>
+        </div>
+        <p>Total: <strong id="cartTotal">Rp 0</strong></p>
+        <button id="checkoutButton" class="btn-primary">Proses Bayar</button>
+      </div>
+    </aside>
+
+    <script src="/common.js"></script>
+    <script src="/main.js"></script>
+  </body>
+</html>

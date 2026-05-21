@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - PT SAHABAT JAYA SUKSES</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">
+        <img id="brandLogo" class="brand-logo hidden" alt="Logo" />
+        <span class="brand-text">
+          <h1>PT SAHABAT JAYA SUKSES</h1>
+          <p>Masuk akun</p>
+        </span>
+      </a>
+      <div class="top-actions">
+        <img id="topLogo" class="top-logo hidden" alt="Logo" />
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="auth-card">
+        <h2>Login</h2>
+        <form id="loginForm" class="auth-form">
+          <input type="email" id="email" placeholder="Email" required />
+          <input type="password" id="password" placeholder="Password" required />
+          <button type="submit" class="btn-primary">Masuk</button>
+        </form>
+        <p id="message" class="message"></p>
+        <a class="auth-link" href="/register.html">Belum punya akun? Register</a>
+      </section>
+    </main>
+
+    <script src="/common.js"></script>
+    <script src="/login.js"></script>
+  </body>
+</html>

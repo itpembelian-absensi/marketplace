@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Manajemen User - PT SAHABAT JAYA SUKSES</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">
+        <img id="brandLogo" class="brand-logo hidden" alt="Logo" />
+        <span class="brand-text">
+          <h1>PT SAHABAT JAYA SUKSES</h1>
+          <p>Admin Dashboard</p>
+        </span>
+      </a>
+      <div class="top-actions">
+        <img id="topLogo" class="top-logo hidden" alt="Logo" />
+        <div id="userArea"></div>
+        <a href="/" class="btn-secondary">Kembali</a>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="tabs">
+        <button class="tab active" data-tab="usersTab">User</button>
+        <button class="tab" data-tab="productsTab">Produk</button>
+        <button class="tab" data-tab="menuTab">Menu</button>
+        <button class="tab" data-tab="brandingTab">Logo</button>
+        <button class="tab" data-tab="settingsTab">Lainnya</button>
+      </div>
+
+      <section id="usersTab" class="auth-card" style="max-width: 900px">
+        <h2>Setting User & Role</h2>
+        <p id="usersMessage" class="message"></p>
+        <div id="usersTable"></div>
+
+        <h3 style="margin-top: 18px">Create User</h3>
+        <form id="createUserForm" class="auth-form">
+          <input type="text" id="name" placeholder="Nama" required />
+          <input type="email" id="email" placeholder="Email" required />
+          <input
+            type="password"
+            id="password"
+            placeholder="Password minimal 6 karakter"
+            minlength="6"
+            required
+          />
+          <select id="roleSelect">
+            <option value="user">user</option>
+            <option value="manager">manager</option>
+            <option value="admin">admin</option>
+          </select>
+          <button type="submit" class="btn-primary">Buat User</button>
+        </form>
+        <p id="createMessage" class="message"></p>
+        <p class="empty-state" style="margin-top: 8px">
+          Catatan: role <strong>manager</strong> hanya bisa membuat user dengan role
+          <strong>user</strong>.
+        </p>
+      </section>
+
+      <section id="productsTab" class="auth-card hidden" style="max-width: 900px">
+        <h2>Manajemen Produk</h2>
+        <form id="productForm" class="auth-form">
+          <input id="productName" type="text" placeholder="Nama produk" required />
+          <select id="productCategory" required>
+            <option value="">Pilih kategori</option>
+          </select>
+          <select id="productSubcategory" required>
+            <option value="">Pilih sub-kategori</option>
+          </select>
+          <input id="productPrice" type="number" min="1" placeholder="Harga produk" required />
+          <input id="productDiscount" type="number" min="0" max="95" placeholder="Diskon % (opsional)" />
+          <input id="productRating" type="number" min="1" max="5" step="0.1" placeholder="Rating (default 4.5)" />
+          <input id="productImageFile" type="file" accept="image/png,image/jpeg,image/webp" />
+          <input id="productWaPhone" type="text" placeholder="Nomor WA untuk tanya produk (opsional)" />
+          <textarea id="productDescription" rows="3" placeholder="Deskripsi produk" required></textarea>
+          <button id="productSubmitButton" type="submit" class="btn-primary">Tambah Produk</button>
+          <button id="productCancelEdit" type="button" class="btn-secondary hidden">Batal Edit</button>
+        </form>
+        <p id="productsMessage" class="message"></p>
+        <div id="productsList" style="margin-top: 12px"></div>
+      </section>
+
+      <section id="brandingTab" class="auth-card hidden" style="max-width: 900px">
+        <h2>Upload Logo</h2>
+        <form id="logoForm" class="auth-form">
+          <input type="file" id="logoFile" accept="image/*" required />
+          <button type="submit" class="btn-primary">Upload</button>
+        </form>
+        <p id="logoMessage" class="message"></p>
+        <div id="logoPreview" style="margin-top: 12px"></div>
+        <p class="empty-state" style="margin-top: 8px">
+          Hanya <strong>admin</strong> yang bisa upload logo. File otomatis dikompres ke max 2MB
+          saat upload.
+        </p>
+      </section>
+
+      <section id="menuTab" class="auth-card hidden" style="max-width: 900px">
+        <h2>Menu & Sub Menu (Kategori Produk)</h2>
+        <p id="menuMessage" class="message"></p>
+
+        <div class="info-grid" style="margin-top: 10px">
+          <div class="info-card">
+            <h3>Tambah Kategori</h3>
+            <form id="createCategoryForm" class="auth-form">
+              <input id="categoryName" type="text" placeholder="Nama kategori" required />
+              <button class="btn-primary" type="submit">Tambah</button>
+            </form>
+          </div>
+          <div class="info-card">
+            <h3>Tambah Sub-kategori</h3>
+            <form id="createSubcategoryForm" class="auth-form">
+              <select id="categorySelectForSub"></select>
+              <input id="subcategoryName" type="text" placeholder="Nama sub-kategori" required />
+              <button class="btn-primary" type="submit">Tambah</button>
+            </form>
+          </div>
+        </div>
+
+        <h3 class="section-heading">Daftar Menu</h3>
+        <div id="menuList"></div>
+        <p class="empty-state" style="margin-top: 10px">
+          Catatan: Jika kategori/sub-kategori dihapus, produk terkait akan otomatis dipindah ke
+          <strong>Lainnya → Umum</strong>.
+        </p>
+      </section>
+
+      <section id="settingsTab" class="auth-card hidden" style="max-width: 900px">
+        <h2>Profil Perusahaan</h2>
+        <form id="companyProfileForm" class="auth-form">
+          <label for="aboutInput">Tentang Perusahaan</label>
+          <textarea
+            id="aboutInput"
+            rows="4"
+            placeholder="Deskripsi tentang perusahaan"
+          ></textarea>
+
+          <label for="visionInput">Visi</label>
+          <textarea id="visionInput" rows="3" placeholder="Visi perusahaan"></textarea>
+
+          <label for="missionInput">Misi</label>
+          <textarea id="missionInput" rows="3" placeholder="Misi perusahaan"></textarea>
+
+          <label for="contactEmailInput">Email</label>
+          <input id="contactEmailInput" type="email" placeholder="contoh@email.com" />
+
+          <label for="contactPhoneInput">Telepon</label>
+          <input id="contactPhoneInput" type="text" placeholder="08xx-xxxx-xxxx" />
+
+          <label for="contactAddressInput">Alamat</label>
+          <textarea
+            id="contactAddressInput"
+            rows="2"
+            placeholder="Alamat perusahaan"
+          ></textarea>
+
+          <button type="submit" class="btn-primary">Simpan Profil Perusahaan</button>
+        </form>
+        <p id="companyProfileMessage" class="message"></p>
+        <p class="empty-state">
+          Perubahan akan tampil di halaman utama setelah disimpan.
+        </p>
+      </section>
+    </main>
+
+    <script src="/common.js?v=20260424"></script>
+    <script src="/admin.js?v=20260424"></script>
+  </body>
+</html>

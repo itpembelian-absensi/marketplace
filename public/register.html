@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Register - PT SAHABAT JAYA SUKSES</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">
+        <img id="brandLogo" class="brand-logo hidden" alt="Logo" />
+        <span class="brand-text">
+          <h1>PT SAHABAT JAYA SUKSES</h1>
+          <p>Daftar akun baru</p>
+        </span>
+      </a>
+      <div class="top-actions">
+        <img id="topLogo" class="top-logo hidden" alt="Logo" />
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="auth-card">
+        <h2>Register</h2>
+        <form id="registerForm" class="auth-form">
+          <input type="text" id="name" placeholder="Nama lengkap" required />
+          <input type="email" id="email" placeholder="Email" required />
+          <input
+            type="password"
+            id="password"
+            placeholder="Password minimal 6 karakter"
+            minlength="6"
+            required
+          />
+          <button type="submit" class="btn-primary">Daftar</button>
+        </form>
+        <p id="message" class="message"></p>
+        <a class="auth-link" href="/login.html">Sudah punya akun? Login</a>
+      </section>
+    </main>
+
+    <script src="/common.js"></script>
+    <script src="/register.js"></script>
+  </body>
+</html>
