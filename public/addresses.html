@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Master Alamat - PT SAHABAT JAYA SUKSES</title>
+    <link rel="stylesheet" href="/style.css?v=14" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">
+        <img id="brandLogo" class="brand-logo hidden" alt="Logo" />
+        <span class="brand-text">
+          <h1>PT SAHABAT JAYA SUKSES</h1>
+          <p>Master Alamat Pengiriman</p>
+        </span>
+      </a>
+      <div class="top-actions">
+        <img id="topLogo" class="top-logo hidden" alt="Logo" />
+        <div id="userArea"></div>
+        <a href="/profile.html" class="btn-secondary">Profil</a>
+        <a href="/" class="btn-secondary">Toko</a>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="detail-card address-master-page">
+        <div class="address-master-header">
+          <div>
+            <h2 class="section-title" style="margin: 0">Master Alamat</h2>
+            <p class="empty-state" style="margin: 8px 0 0">
+              Data alamat kirim milik akun Anda. Satu alamat bisa dijadikan <strong>default</strong> untuk checkout.
+            </p>
+          </div>
+          <button type="button" id="addressShowFormBtn" class="btn-primary">+ Tambah Alamat</button>
+        </div>
+
+        <div class="address-master-toolbar">
+          <input type="search" id="addressSearch" placeholder="Cari label, nama, telepon, alamat..." />
+          <span id="addressCountLabel" class="empty-state"></span>
+        </div>
+
+        <p id="addressMessage" class="message hidden"></p>
+
+        <div class="address-table-wrap">
+          <table class="address-master-table">
+            <thead>
+              <tr>
+                <th>Label</th>
+                <th>Penerima</th>
+                <th>Telepon</th>
+                <th>Alamat</th>
+                <th>GPS</th>
+                <th>Default</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="addressTableBody">
+              <tr>
+                <td colspan="7" class="empty-state" style="padding: 16px; text-align: center">Memuat...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="addressFormPanel" class="address-form-panel hidden">
+          <hr style="border: 0; border-top: 1px solid var(--border); margin: 24px 0 16px" />
+          <h3 id="addressFormTitle" style="margin: 0">Tambah Alamat Baru</h3>
+          <form id="addressForm" class="auth-form" style="max-width: 560px; margin-top: 12px">
+            <div class="input-group">
+              <label for="addressLabel">Label alamat</label>
+              <input type="text" id="addressLabel" placeholder="Rumah, Kantor, Gudang, dll." />
+            </div>
+            <div class="input-group">
+              <label for="addressRecipient">Nama penerima *</label>
+              <input type="text" id="addressRecipient" required />
+            </div>
+            <div class="input-group">
+              <label for="addressPhone">No WA / Telepon *</label>
+              <input type="text" id="addressPhone" required />
+            </div>
+            <div class="input-group">
+              <label for="addressText">Alamat lengkap *</label>
+              <textarea id="addressText" rows="3" required></textarea>
+            </div>
+            <div class="warehouse-coords-grid">
+              <div class="input-group">
+                <label for="addressLat">Latitude (opsional)</label>
+                <input type="number" step="any" id="addressLat" placeholder="untuk ongkir akurat" />
+              </div>
+              <div class="input-group">
+                <label for="addressLng">Longitude (opsional)</label>
+                <input type="number" step="any" id="addressLng" />
+              </div>
+            </div>
+            <button type="button" id="addressGpsBtn" class="btn-secondary">GPS lokasi ini</button>
+            <label class="address-default-check">
+              <input type="checkbox" id="addressDefault" /> Jadikan alamat default
+            </label>
+            <div class="address-form-actions">
+              <button type="submit" id="addressSubmitBtn" class="btn-primary">Simpan Alamat</button>
+              <button type="button" id="addressCancelBtn" class="btn-secondary">Batal</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+
+    <script src="/common.js?v=10"></script>
+    <script src="/address-master.js?v=1"></script>
+  </body>
+</html>

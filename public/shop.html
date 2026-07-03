@@ -4,26 +4,85 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Produk - PT SAHABAT JAYA SUKSES</title>
-    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/style.css?v=14" />
+    <link rel="stylesheet" href="/home.css?v=62" />
+    <script src="https://accounts.google.com/gsi/client" async></script>
   </head>
-  <body>
-    <header class="topbar">
-      <a class="brand" href="/">
-        <img id="brandLogo" class="brand-logo hidden" alt="Logo" />
-        <span class="brand-text">
-          <h1>PT SAHABAT JAYA SUKSES</h1>
-          <p>Produk yang dijual</p>
-        </span>
-      </a>
-      <div class="top-actions">
-        <img id="topLogo" class="top-logo hidden" alt="Logo" />
-        <a href="/" class="btn-secondary">Profil</a>
-        <div id="userArea"></div>
-        <button id="cartButton" class="btn-secondary">Keranjang (0)</button>
+  <body class="shop-page">
+    <div class="sjs-header-sticky">
+    <header class="sjs-header">
+      <div class="sjs-header-inner">
+        <a class="sjs-brand" href="/">
+          <img id="brandLogo" class="sjs-brand-logo" src="/logo-sjs.png" alt="Logo SJS" />
+          <span class="sjs-brand-fallback hidden" id="brandFallback">SJS</span>
+          <span class="sjs-brand-text">
+            <strong id="companyNameText">PT Sahabat Jaya Sukses</strong>
+            <small id="companyTaglineText">Your Board Solusions</small>
+          </span>
+        </a>
+        <div class="sjs-header-spacer" aria-hidden="true"></div>
+        <div class="sjs-header-right">
+        <form class="sjs-search" id="headerSearchForm" action="/shop.html" method="get">
+          <input type="search" name="q" id="headerSearchInput" placeholder="Cari apa?" autocomplete="off" />
+          <button type="submit" aria-label="Cari">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3-3"/></svg>
+          </button>
+        </form>
+        <div class="sjs-header-actions">
+          <button type="button" id="cartButton" class="sjs-cart-btn" aria-label="Keranjang">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h2l2.5 12h11l2.5-9H6"/></svg>
+            <span id="cartCountBadge" class="sjs-cart-badge">0</span>
+          </button>
+          <div id="userArea" class="sjs-user-area"></div>
+          <button type="button" id="topLoginLink" class="sjs-auth-btn">Masuk / Daftar</button>
+          <div class="sjs-profile-wrap hidden" id="profileWrap">
+            <button type="button" id="topProfileLink" class="sjs-profile-icon" aria-label="Menu profil">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v1.2h19.2v-1.2c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+            </button>
+            <div id="profileDropdown" class="sjs-profile-dropdown hidden">
+              <p class="sjs-profile-name" id="profileDropdownName"></p>
+              <a href="/profile.html">Profil Saya</a>
+              <a href="/addresses.html">Alamat Kirim</a>
+              <a href="/admin.html" id="profileAdminLink" class="hidden">Panel Admin</a>
+              <button type="button" id="headerLogoutBtn">Keluar</button>
+            </div>
+          </div>
+        </div>
+        </div>
       </div>
     </header>
 
-    <main class="container">
+    <nav class="sjs-navbar">
+      <div class="sjs-navbar-inner">
+        <div class="sjs-nav-links">
+          <a href="/" class="sjs-nav-item sjs-nav-home" aria-label="Beranda">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-5v-6H11v6H6v-9H3z"/></svg>
+          </a>
+          <a href="/shop.html?promo=1" class="sjs-nav-item sjs-nav-promo">Promo Spesial %</a>
+          <a href="/shop.html" class="sjs-nav-item sjs-nav-all">Semua Kategori</a>
+          <a href="#" class="sjs-nav-item">Layanan</a>
+          <a href="#" class="sjs-nav-item">Daftar Merek</a>
+          <a href="#" class="sjs-nav-item">Blog</a>
+          <a href="#" class="sjs-nav-item">Berita</a>
+        </div>
+        <a href="#" class="sjs-nav-track">
+          <svg class="sjs-nav-track-icon" viewBox="0 0 48 32" aria-hidden="true">
+            <g fill="currentColor">
+              <rect x="0" y="5" width="11" height="3" rx="1.5"/>
+              <rect x="0" y="11" width="8" height="3" rx="1.5"/>
+              <rect x="0" y="17" width="5" height="3" rx="1.5"/>
+              <path d="M12 7h21v13H12V7zm20 4h6l4 4v5H32V11z"/>
+              <circle cx="17" cy="23" r="3.2"/>
+              <circle cx="37" cy="23" r="3.2"/>
+            </g>
+          </svg>
+          Lacak pengirimanmu
+        </a>
+      </div>
+    </nav>
+    </div>
+
+    <main class="container shop-main">
       <div class="shop-layout">
         <aside class="sidebar">
           <div class="sidebar-header">
@@ -51,7 +110,7 @@
           </section>
 
           <section>
-            <h2 class="section-title">Daftar Produk</h2>
+            <h2 class="section-title" id="shopSectionTitle">Daftar Produk</h2>
             <p id="activeFilterText" class="empty-state"></p>
             <div id="productGrid" class="product-grid">
               <p class="empty-state">Memuat produk...</p>
@@ -61,29 +120,30 @@
       </div>
     </main>
 
-    <aside id="cartPanel" class="cart-panel hidden">
-      <div class="cart-header">
-        <h3>Keranjang Belanja</h3>
-        <button id="closeCartButton" class="btn-secondary">Tutup</button>
+    <div id="authModal" class="sjs-auth-modal hidden" aria-hidden="true">
+      <div class="sjs-auth-modal-backdrop" id="authModalBackdrop"></div>
+      <div class="sjs-auth-modal-card" role="dialog" aria-labelledby="authModalTitle">
+        <button type="button" class="sjs-auth-modal-close" id="authModalClose" aria-label="Tutup">&times;</button>
+        <h2 id="authModalTitle">Masuk / Daftar</h2>
+        <p class="sjs-auth-modal-sub">Masuk ke akun SJS untuk belanja dan lacak pesanan.</p>
+        <form id="headerLoginForm" class="auth-form" autocomplete="off">
+          <div>
+            <label for="headerLoginEmail">Email</label>
+            <input type="email" id="headerLoginEmail" placeholder="contoh@email.com" required autocomplete="email" />
+          </div>
+          <div>
+            <label for="headerLoginPassword">Password</label>
+            <input type="password" id="headerLoginPassword" placeholder="Password" required autocomplete="current-password" />
+          </div>
+          <button type="submit" class="sjs-auth-submit">Masuk</button>
+        </form>
+        <div id="headerGoogleSignIn" class="sjs-google-signin"></div>
+        <p id="headerLoginMessage" class="message"></p>
+        <a href="/register.html" class="sjs-auth-register-link">Belum punya akun? Daftar sekarang</a>
       </div>
-      <div id="cartItems" class="cart-items"></div>
-      <div class="cart-footer">
-        <div class="auth-form">
-          <input id="checkoutName" type="text" placeholder="Nama penerima" />
-          <input id="checkoutPhone" type="text" placeholder="No WA / Telepon" />
-          <textarea id="checkoutAddress" rows="2" placeholder="Alamat pengiriman"></textarea>
-          <select id="checkoutPaymentMethod">
-            <option value="transfer">Transfer Bank</option>
-            <option value="cod">COD</option>
-            <option value="ewallet">E-Wallet</option>
-          </select>
-        </div>
-        <p>Total: <strong id="cartTotal">Rp 0</strong></p>
-        <button id="checkoutButton" class="btn-primary">Proses Bayar</button>
-      </div>
-    </aside>
+    </div>
 
-    <script src="/common.js"></script>
-    <script src="/main.js"></script>
+    <script src="/common.js?v=14"></script>
+    <script src="/main.js?v=15"></script>
   </body>
 </html>

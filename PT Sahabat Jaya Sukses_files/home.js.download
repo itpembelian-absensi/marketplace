@@ -1,0 +1,373 @@
+const heroTrack = document.getElementById("heroTrack");
+const heroDots = document.getElementById("heroDots");
+const heroPrev = document.getElementById("heroPrev");
+const heroNext = document.getElementById("heroNext");
+const featuresGrid = document.getElementById("featuresGrid");
+const featuresSectionTitle = document.getElementById("featuresSectionTitle");
+const aboutStats = document.getElementById("aboutStats");
+const aboutTitle = document.getElementById("aboutTitle");
+const aboutSubtitle = document.getElementById("aboutSubtitle");
+const aboutGallery = document.getElementById("aboutGallery");
+const aboutGalleryInner = document.getElementById("aboutGalleryInner");
+const footerNewsletterTitle = document.getElementById("footerNewsletterTitle");
+const footerNewsletterEmail = document.getElementById("footerNewsletterEmail");
+const footerNewsletterBtn = document.getElementById("footerNewsletterBtn");
+const footerNewsletterForm = document.getElementById("footerNewsletterForm");
+const footerNewsletterMessage = document.getElementById("footerNewsletterMessage");
+const footerSocial = document.getElementById("footerSocial");
+const footerColumns = document.getElementById("footerColumns");
+const footerCopyright = document.getElementById("footerCopyright");
+
+let currentSlide = 0;
+let slideCount = 0;
+let autoplayTimer = null;
+
+const DEFAULT_SLIDES = [
+  {
+    imageUrl: "",
+    title: "Registrasi Gratis Biaya Admin!",
+    subtitle:
+      "Pengguna akan mendapatkan gratis biaya admin pada 10 pembelian pertama selama periode promo member berlangsung.*",
+    ctaText: "Registrasi Member",
+    ctaLink: "/register.html",
+    footnote: "*Periode promo: ... - ... 2026",
+  },
+];
+
+const PLACEHOLDER_SVG = `<svg class="home-feature-placeholder" viewBox="0 0 100 80" xmlns="http://www.w3.org/2000/svg"><rect fill="#87CEEB" width="100" height="50"/><ellipse fill="#fff" cx="70" cy="15" rx="12" ry="8"/><path fill="#4CAF50" d="M0 50 Q25 35 50 50 T100 50 V80 H0Z"/></svg>`;
+
+function escapeHtml(str) {
+  return String(str || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function isVideoUrl(url) {
+  return /\.(mp4|webm|ogg)$/i.test(String(url || ""));
+}
+
+function renderSlides(slides) {
+  if (!heroTrack) return;
+  const list = slides.length ? slides : DEFAULT_SLIDES;
+  slideCount = list.length;
+  currentSlide = 0;
+
+  heroTrack.innerHTML = list
+    .map((slide) => {
+      const bgStyle = slide.imageUrl && !isVideoUrl(slide.imageUrl)
+        ? `background-image:url('${slide.imageUrl}')`
+        : "";
+      const videoHtml =
+        slide.imageUrl && isVideoUrl(slide.imageUrl)
+          ? `<video src="${escapeHtml(slide.imageUrl)}" autoplay loop muted playsinline></video>`
+          : "";
+      const ctaHtml = slide.ctaText
+        ? `<a href="${escapeHtml(slide.ctaLink || "/register.html")}" class="home-hero-cta">${escapeHtml(slide.ctaText)}</a>`
+        : "";
+      const footnoteHtml = slide.footnote
+        ? `<p class="home-hero-footnote">${escapeHtml(slide.footnote)}</p>`
+        : "";
+
+      return `
+        <div class="home-hero-slide" style="${bgStyle}">
+          ${videoHtml}
+          <div class="home-hero-overlay">
+            ${slide.title ? `<h1 class="home-hero-title">${escapeHtml(slide.title)}</h1>` : ""}
+            ${slide.subtitle ? `<p class="home-hero-subtitle">${escapeHtml(slide.subtitle)}</p>` : ""}
+            ${ctaHtml}
+          </div>
+          ${footnoteHtml}
+        </div>`;
+    })
+    .join("");
+
+  if (heroDots) {
+    heroDots.innerHTML = list
+      .map((_, i) => `<button type="button" class="home-hero-dot${i === 0 ? " active" : ""}" data-index="${i}" aria-label="Slide ${i + 1}"></button>`)
+      .join("");
+    heroDots.querySelectorAll(".home-hero-dot").forEach((dot) => {
+      dot.addEventListener("click", () => goToSlide(Number(dot.dataset.index)));
+    });
+  }
+
+  updateSlidePosition();
+  resetAutoplay();
+}
+
+function updateSlidePosition() {
+  if (!heroTrack) return;
+  heroTrack.style.transform = `translateX(-${currentSlide * 100}%)`;
+  if (heroDots) {
+    heroDots.querySelectorAll(".home-hero-dot").forEach((dot, i) => {
+      dot.classList.toggle("active", i === currentSlide);
+    });
+  }
+}
+
+function goToSlide(index) {
+  if (!slideCount) return;
+  currentSlide = ((index % slideCount) + slideCount) % slideCount;
+  updateSlidePosition();
+  resetAutoplay();
+}
+
+function resetAutoplay() {
+  if (autoplayTimer) clearInterval(autoplayTimer);
+  if (slideCount <= 1) return;
+  autoplayTimer = setInterval(() => goToSlide(currentSlide + 1), 6000);
+}
+
+function renderFeatures(features, sectionTitle) {
+  if (featuresSectionTitle && sectionTitle) {
+    featuresSectionTitle.textContent = sectionTitle;
+  }
+
+  if (!featuresGrid) return;
+
+  const items = features.length ? features : Array(7).fill({ imageUrl: "", title: "", description: "" });
+
+  featuresGrid.innerHTML = items
+    .map((item) => {
+      const imgContent = item.imageUrl
+        ? `<img src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.title || "Fitur")}" />`
+        : PLACEHOLDER_SVG;
+      const titleHtml = item.title ? `<p class="home-feature-title">${escapeHtml(item.title)}</p>` : "";
+      const descHtml = item.description ? `<p class="home-feature-desc">${escapeHtml(item.description)}</p>` : "";
+      const inner = `
+        <div class="home-feature-img">${imgContent}</div>
+        ${titleHtml}
+        ${descHtml}`;
+
+      if (item.link) {
+        return `<a href="${escapeHtml(item.link)}" class="home-feature-card">${inner}</a>`;
+      }
+      return `<div class="home-feature-card">${inner}</div>`;
+    })
+    .join("");
+}
+
+const STAT_ICONS = {
+  box: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8.5 12 3 3 8.5v7L12 21l9-5.5v-7Z"/><path d="M3 8.5 12 14l9-5.5M12 14v7"/></svg>`,
+  tools: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76Z"/></svg>`,
+  people: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+};
+
+function renderAboutSection(about) {
+  const data = about || {};
+  const stats = Array.isArray(data.stats) && data.stats.length ? data.stats : [];
+  const gallery = Array.isArray(data.gallery) && data.gallery.length ? data.gallery : [];
+
+  if (aboutTitle) {
+    aboutTitle.textContent = data.title || "Pengiriman Multi-Wilayah";
+  }
+  if (aboutSubtitle) {
+    aboutSubtitle.textContent = data.subtitle || "Menjangkau pengiriman ke berbagai daerah di Indonesia";
+  }
+
+  if (aboutStats) {
+    aboutStats.innerHTML = stats
+      .slice(0, 3)
+      .map((stat) => {
+        const styleClass = stat.style === "dark" ? "is-dark" : "is-light";
+        const iconKey = STAT_ICONS[stat.icon] ? stat.icon : "box";
+        return `
+          <div class="home-about-stat ${styleClass}">
+            <span class="home-about-stat-icon">${STAT_ICONS[iconKey]}</span>
+            <strong class="home-about-stat-value">${escapeHtml(stat.value || "")}</strong>
+            <span class="home-about-stat-label">${escapeHtml(stat.label || "")}</span>
+          </div>`;
+      })
+      .join("");
+  }
+
+  if (aboutGalleryInner || aboutGallery) {
+    const target = aboutGalleryInner || aboutGallery;
+    const photos = gallery.slice(0, 4);
+    while (photos.length < 4) photos.push({ imageUrl: "" });
+
+    target.innerHTML = photos
+      .map((item, index) => {
+        const url = String(item?.imageUrl || "").trim();
+        const style = url ? `background-image:url('${escapeHtml(url)}')` : "";
+        const emptyClass = url ? "" : " is-empty";
+        return `<div class="home-about-photo${emptyClass}" style="${style}" role="img" aria-label="Galeri ${index + 1}"></div>`;
+      })
+      .join("");
+  }
+}
+
+const SOCIAL_ICONS = {
+  instagram: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7zm11 1.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>`,
+  facebook: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 10V7.5c0-.8.7-1.5 1.5-1.5H16V3h-2.2C11.7 3 10 4.7 10 7v3H8v3.5h2V21h3v-7.5h2.5L16 10h-3z"/></svg>`,
+  tiktok: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.5 3h-3.1v12.4a2.6 2.6 0 1 1-2.6-2.6c.2 0 .5 0 .7.1v-3.2a5.8 5.8 0 1 0 5.8 5.8V8.8c1.1.8 2.4 1.2 3.7 1.2V7c-2 0-3.7-.8-5-2.1V3z"/></svg>`,
+};
+
+const DEFAULT_FOOTER_SECTION = {
+  newsletterTitle: "Jangan sampai ketinggalan informasi\n& promo dari kami!",
+  emailPlaceholder: "Masukkan e-mail...",
+  buttonText: "Kirim",
+  socialLinks: [
+    { platform: "instagram", url: "#" },
+    { platform: "facebook", url: "#" },
+    { platform: "tiktok", url: "#" },
+  ],
+  columns: [
+    {
+      title: "Bantuan Pengguna",
+      links: [
+        { label: "Cara Berbelanja", url: "#" },
+        { label: "Pertanyaan Umum", url: "#" },
+      ],
+    },
+    {
+      title: "Kerja Sama & Kolaborasi",
+      links: [
+        { label: "Pembelian Retail", url: "#" },
+        { label: "Kerja Sama Bisnis", url: "#" },
+      ],
+    },
+    {
+      title: "Kebijakan Kami",
+      links: [
+        { label: "Ketentuan Pengguna", url: "#" },
+        { label: "Pengembalian Produk", url: "#" },
+        { label: "Kebijakan Privasi", url: "#" },
+        { label: "Ketentuan Pengiriman", url: "#" },
+      ],
+    },
+  ],
+  copyright: "Copyright © 2026 - PT Sahabat Jaya Sukses",
+};
+
+function renderFooterSection(footer) {
+  const data = {
+    ...DEFAULT_FOOTER_SECTION,
+    ...(footer || {}),
+    socialLinks:
+      Array.isArray(footer?.socialLinks) && footer.socialLinks.length
+        ? footer.socialLinks
+        : DEFAULT_FOOTER_SECTION.socialLinks,
+    columns:
+      Array.isArray(footer?.columns) && footer.columns.length
+        ? footer.columns
+        : DEFAULT_FOOTER_SECTION.columns,
+  };
+  const titleText = data.newsletterTitle || DEFAULT_FOOTER_SECTION.newsletterTitle;
+
+  if (footerNewsletterTitle) {
+    footerNewsletterTitle.innerHTML = escapeHtml(titleText)
+      .split("\n")
+      .join("<br />");
+  }
+  if (footerNewsletterEmail) {
+    footerNewsletterEmail.placeholder = data.emailPlaceholder || "Masukkan e-mail...";
+  }
+  if (footerNewsletterBtn) {
+    footerNewsletterBtn.textContent = data.buttonText || "Kirim";
+  }
+  if (footerCopyright) {
+    footerCopyright.textContent = data.copyright || "Copyright © 2026 - PT Sahabat Jaya Sukses";
+  }
+
+  if (footerSocial) {
+    const socials = data.socialLinks.slice(0, 3);
+    footerSocial.innerHTML = socials
+      .slice(0, 3)
+      .map((item) => {
+        const key = SOCIAL_ICONS[item.platform] ? item.platform : "instagram";
+        const label = key.charAt(0).toUpperCase() + key.slice(1);
+        return `<a href="${escapeHtml(item.url || "#")}" class="home-footer-social-link" target="_blank" rel="noopener noreferrer" aria-label="${label}">${SOCIAL_ICONS[key]}</a>`;
+      })
+      .join("");
+  }
+
+  if (footerColumns) {
+    footerColumns.innerHTML = data.columns
+      .slice(0, 3)
+      .map((col) => {
+        const links = (col.links || [])
+          .map(
+            (link) =>
+              `<li><a href="${escapeHtml(link.url || "#")}">${escapeHtml(link.label || "")}</a></li>`
+          )
+          .join("");
+        return `
+          <div class="home-footer-col">
+            <h3>${escapeHtml(col.title || "")}</h3>
+            <ul>${links}</ul>
+          </div>`;
+      })
+      .join("");
+  }
+}
+
+function bindNewsletterForm() {
+  if (!footerNewsletterForm) return;
+
+  footerNewsletterForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = footerNewsletterEmail?.value.trim() || "";
+    if (!email) return;
+
+    if (footerNewsletterMessage) {
+      footerNewsletterMessage.classList.remove("hidden", "is-error", "is-success");
+      footerNewsletterMessage.textContent = "Mengirim...";
+    }
+    if (footerNewsletterBtn) footerNewsletterBtn.disabled = true;
+
+    try {
+      const response = await fetch("/api/newsletter/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || "Gagal mendaftarkan e-mail.");
+
+      if (footerNewsletterMessage) {
+        footerNewsletterMessage.classList.add("is-success");
+        footerNewsletterMessage.textContent = data.message || "Terima kasih! E-mail berhasil didaftarkan.";
+      }
+      footerNewsletterForm.reset();
+    } catch (error) {
+      if (footerNewsletterMessage) {
+        footerNewsletterMessage.classList.add("is-error");
+        footerNewsletterMessage.textContent = error.message;
+      }
+    } finally {
+      if (footerNewsletterBtn) footerNewsletterBtn.disabled = false;
+      if (footerNewsletterMessage) footerNewsletterMessage.classList.remove("hidden");
+    }
+  });
+}
+
+async function loadHomePage() {
+  try {
+    const settings = await loadSettings();
+    const home = settings?.homePage || {};
+    const profile = settings?.companyProfile || {};
+
+    const nameEl = document.getElementById("companyNameText");
+    const taglineEl = document.getElementById("companyTaglineText");
+    if (nameEl && profile.name) nameEl.textContent = profile.name;
+    if (taglineEl) taglineEl.textContent = home.tagline || profile.tagline || taglineEl.textContent;
+
+    renderSlides(home.slides || DEFAULT_SLIDES);
+    renderFeatures(home.features || [], home.sectionTitle || "Satu tempat yang bikin #SemuaJadiSimple");
+    renderAboutSection(home.aboutSection);
+    renderFooterSection(home.footerSection);
+  } catch (error) {
+    renderSlides(DEFAULT_SLIDES);
+    renderFeatures([], "Satu tempat yang bikin #SemuaJadiSimple");
+    renderAboutSection(null);
+    renderFooterSection(null);
+  }
+}
+
+if (heroPrev) heroPrev.addEventListener("click", () => goToSlide(currentSlide - 1));
+if (heroNext) heroNext.addEventListener("click", () => goToSlide(currentSlide + 1));
+
+bindNewsletterForm();
+loadHomePage();

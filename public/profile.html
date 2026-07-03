@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Profil Pengguna - PT SAHABAT JAYA SUKSES</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">
+        <img id="brandLogo" class="brand-logo hidden" alt="Logo" />
+        <span class="brand-text">
+          <h1>PT SAHABAT JAYA SUKSES</h1>
+          <p>Profil Saya</p>
+        </span>
+      </a>
+      <div class="top-actions">
+        <img id="topLogo" class="top-logo hidden" alt="Logo" />
+        <div id="userArea"></div>
+        <a href="/" class="btn-secondary">Kembali</a>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="detail-card">
+        <h2 class="section-title" style="margin-top:0;">Profil Pengguna</h2>
+        
+        <div class="profile-header">
+          <div id="profileAvatarContainer">
+            <!-- Avatar will be rendered here -->
+          </div>
+          <div>
+            <h3 id="profileNameDisplay" style="margin:0 0 5px;">Memuat...</h3>
+            <p id="profileEmailDisplay" class="product-meta" style="margin:0;">-</p>
+            <p id="profileRoleDisplay" class="product-meta" style="margin:0;">-</p>
+            <label class="btn-secondary profile-upload-btn" style="display: inline-block; cursor: pointer;">
+              Upload Foto
+              <input type="file" id="profileImageInput" accept="image/png, image/jpeg, image/webp" style="display: none;" />
+            </label>
+          </div>
+        </div>
+
+        <hr style="border:0; border-top: 1px solid var(--border); margin: 20px 0;" />
+
+        <form id="profileForm" class="auth-form" style="max-width: 400px;">
+          <h3>Edit Data</h3>
+          <div id="profileMessage" class="message hidden"></div>
+          
+          <div class="input-group">
+            <label for="profileName">Nama Lengkap</label>
+            <input type="text" id="profileName" required />
+          </div>
+
+          <div class="input-group">
+            <label for="profilePassword">Password Baru (Opsional)</label>
+            <input type="password" id="profilePassword" placeholder="Kosongkan jika tidak ingin mengubah" />
+          </div>
+
+          <button type="submit" class="btn-primary" style="margin-top: 10px;">Simpan Perubahan</button>
+        </form>
+      </div>
+
+      <div class="detail-card" id="alamat-kirim" style="margin-top: 20px;">
+        <h2 class="section-title" style="margin-top:0;">Master Alamat Pengiriman</h2>
+        <p class="empty-state" style="margin-bottom: 14px;">
+          Kelola semua alamat kirim Anda di halaman master. Set satu alamat sebagai <strong>default</strong> untuk checkout.
+        </p>
+        <div id="profileAddressSummary" class="profile-address-summary empty-state">Memuat alamat...</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
+          <a href="/addresses.html" class="btn-primary">Buka Master Alamat</a>
+          <a href="/addresses.html?action=new" class="btn-secondary">+ Tambah Alamat</a>
+        </div>
+      </div>
+
+      <div class="detail-card" style="margin-top: 20px;">
+        <h2 class="section-title" style="margin-top:0;">Poin & Hadiah Loyalitas</h2>
+        
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+          <div style="flex: 1; min-width: 250px; background: linear-gradient(135deg, var(--primary) 0%, #3b82f6 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+            <p style="margin: 0; font-size: 1.1rem; opacity: 0.9;">Total Poin Saat Ini</p>
+            <h1 id="userTotalPoints" style="margin: 10px 0 0; font-size: 3rem; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">0</h1>
+            <p style="margin: 5px 0 0; font-size: 0.9rem; opacity: 0.8;">Kumpulkan poin dari setiap pembelian!</p>
+          </div>
+          
+          <div style="flex: 2; min-width: 300px;">
+            <h3 style="margin-top: 0;">Klaim Hadiah</h3>
+            <p style="font-size: 0.9rem; color: #6b7280; margin-bottom: 12px;">Tukarkan poin Anda dengan hadiah menarik di bawah ini.</p>
+            <div id="rewardsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;">
+              <p style="color: #6b7280; font-style: italic;">Memuat hadiah...</p>
+            </div>
+            <p id="redeemMessage" class="message" style="margin-top: 10px;"></p>
+          </div>
+        </div>
+
+        <hr style="border:0; border-top: 1px solid var(--border); margin: 20px 0;" />
+
+        <h3>Riwayat Poin</h3>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border); background: #f9fafb;">
+                <th style="padding: 10px;">Tanggal</th>
+                <th style="padding: 10px;">Tipe</th>
+                <th style="padding: 10px; text-align: right;">Poin</th>
+                <th style="padding: 10px;">Keterangan</th>
+              </tr>
+            </thead>
+            <tbody id="userPointsHistoryTbody">
+              <tr><td colspan="4" style="padding: 10px; text-align: center;">Memuat riwayat...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+
+    <script src="/common.js?v=10"></script>
+    <script src="/profile.js?v=3"></script>
+  </body>
+</html>

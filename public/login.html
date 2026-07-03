@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Login - PT SAHABAT JAYA SUKSES</title>
     <link rel="stylesheet" href="/style.css" />
+    <script src="https://accounts.google.com/gsi/client" async></script>
   </head>
   <body>
     <header class="topbar">
@@ -23,11 +24,18 @@
     <main class="container">
       <section class="auth-card">
         <h2>Login</h2>
-        <form id="loginForm" class="auth-form">
-          <input type="email" id="email" placeholder="Email" required />
-          <input type="password" id="password" placeholder="Password" required />
-          <button type="submit" class="btn-primary">Masuk</button>
+        <form id="loginForm" class="auth-form" autocomplete="off">
+          <div>
+            <label for="email" style="font-size:0.9rem; font-weight:500;">Email</label>
+            <input type="email" id="email" placeholder="contoh@email.com" required autocomplete="email" style="margin-top:4px; width:100%; box-sizing:border-box;" />
+          </div>
+          <div>
+            <label for="password" style="font-size:0.9rem; font-weight:500;">Password</label>
+            <input type="password" id="password" placeholder="Password" required autocomplete="current-password" style="margin-top:4px; width:100%; box-sizing:border-box;" />
+          </div>
+          <button type="submit" class="btn-primary" style="margin-top:8px;">Masuk</button>
         </form>
+        <div id="googleSignInBtn" style="margin-top: 16px; display: flex; justify-content: center;"></div>
         <p id="message" class="message"></p>
         <a class="auth-link" href="/register.html">Belum punya akun? Register</a>
       </section>

@@ -6,16 +6,7 @@ const sortSelect = document.getElementById("sortSelect");
 const categorySidebar = document.getElementById("categorySidebar");
 const clearCategoryButton = document.getElementById("clearCategory");
 const activeFilterText = document.getElementById("activeFilterText");
-const cartButton = document.getElementById("cartButton");
-const cartPanel = document.getElementById("cartPanel");
-const closeCartButton = document.getElementById("closeCartButton");
-const cartItems = document.getElementById("cartItems");
-const cartTotal = document.getElementById("cartTotal");
-const checkoutButton = document.getElementById("checkoutButton");
-const checkoutNameInput = document.getElementById("checkoutName");
-const checkoutPhoneInput = document.getElementById("checkoutPhone");
-const checkoutAddressInput = document.getElementById("checkoutAddress");
-const checkoutPaymentMethodSelect = document.getElementById("checkoutPaymentMethod");
+const shopSectionTitle = document.getElementById("shopSectionTitle");
 
 const isShopPage = Boolean(productGrid && searchInput && sortSelect && categorySidebar);
 
@@ -24,6 +15,45 @@ const selected = {
   subcategory: "all",
 };
 
+let promoOnly = false;
+
+function isPromoProduct(product) {
+  return normalizeDiscount(product.discount) > 0;
+}
+
+function syncPromoFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  promoOnly = params.get("promo") === "1";
+  updateShopNavState();
+  updateShopSectionTitle();
+}
+
+function clearPromoMode(updateUrl = true) {
+  if (!promoOnly) return;
+  promoOnly = false;
+  if (updateUrl) {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("promo");
+    const next = url.search ? `${url.pathname}${url.search}` : url.pathname;
+    window.history.replaceState({}, "", next);
+  }
+  updateShopNavState();
+  updateShopSectionTitle();
+}
+
+function updateShopNavState() {
+  if (!isShopPage) return;
+  const promoLink = document.querySelector(".sjs-nav-promo");
+  const allLink = document.querySelector(".sjs-nav-all");
+  if (promoLink) promoLink.classList.toggle("sjs-nav-active", promoOnly);
+  if (allLink) allLink.classList.toggle("sjs-nav-active", !promoOnly);
+}
+
+function updateShopSectionTitle() {
+  if (!shopSectionTitle) return;
+  shopSectionTitle.textContent = promoOnly ? "Promo Spesial" : "Daftar Produk";
+}
+
 function normalizeDiscount(discount) {
   const num = Number(discount);
   if (Number.isNaN(num)) return 0;
@@ -31,9 +61,11 @@ function normalizeDiscount(discount) {
 }
 
 function getFinalPrice(product) {
-  const basePrice = Number(product.price) || 0;
-  const discount = normalizeDiscount(product.discount);
-  return Math.round((basePrice * (100 - discount)) / 100);
+  if (product.selectedSizePrice) {
+    const discount = normalizeDiscount(product.discount);
+    return Math.round((Number(product.selectedSizePrice) * (100 - discount)) / 100);
+  }
+  return getProductFinalPrice(product);
 }
 
 function getWhatsAppUrl(phone, productName) {
@@ -150,6 +182,18 @@ function renderSidebar() {
 
 function renderActiveFilterText() {
   if (!activeFilterText) return;
+  if (promoOnly) {
+    if (selected.category === "all") {
+      activeFilterText.textContent = "Menampilkan produk yang sedang promo saja.";
+      return;
+    }
+    if (selected.subcategory === "all") {
+      activeFilterText.textContent = `Promo Spesial • Kategori: ${selected.category}`;
+      return;
+    }
+    activeFilterText.textContent = `Promo Spesial • Kategori: ${selected.category} → ${selected.subcategory}`;
+    return;
+  }
   if (selected.category === "all") {
     activeFilterText.textContent = "Menampilkan semua produk.";
     return;
@@ -175,7 +219,8 @@ function getFilteredProducts() {
     const matchesSub =
       selected.subcategory === "all" ||
       (product.subcategory || "Umum") === selected.subcategory;
-    return matchesSearch && matchesCategory && matchesSub;
+    const matchesPromo = !promoOnly || isPromoProduct(product);
+    return matchesSearch && matchesCategory && matchesSub && matchesPromo;
   });
 
   if (selectedSort === "priceAsc") {
@@ -195,7 +240,7 @@ function renderProducts() {
   const filtered = getFilteredProducts();
 
   if (!filtered.length) {
-    productGrid.innerHTML = '<p class="empty-state">Produk tidak ditemukan.</p>';
+    productGrid.innerHTML = `<p class="empty-state">${promoOnly ? "Tidak ada produk promo saat ini." : "Produk tidak ditemukan."}</p>`;
     return;
   }
 
@@ -207,22 +252,30 @@ function renderProducts() {
         <div class="product-content">
           <h3 class="product-title">${product.name}</h3>
           <p class="product-meta">${product.category} • ${product.subcategory || "Umum"} | Rating ${product.rating}</p>
+          <p class="product-meta" style="color: ${(product.stock || 0) > 0 ? 'var(--primary)' : 'var(--danger)'}; font-weight: 500;">
+            ${(product.stock || 0) > 0 ? `Stok: ${product.stock}` : 'Stok Habis'}
+          </p>
           ${
             normalizeDiscount(product.discount) > 0
               ? `<p class="product-meta" style="color:#047857">Diskon ${normalizeDiscount(product.discount)}%</p>`
               : ""
           }
-          <div class="price-row">
-            <strong>${formatRupiah(getFinalPrice(product))}</strong>
+          ${
+            (product.points_per_purchase || 0) > 0
+              ? `<span style="display: inline-block; background: #fef3c7; color: #d97706; font-size: 0.75rem; font-weight: 600; padding: 2px 6px; border-radius: 4px; margin-bottom: 8px;">🏆 +${product.points_per_purchase} Poin</span>`
+              : ""
+          }
+          <p class="product-price">${formatRupiah(getFinalPrice(product))}</p>
+          <div class="product-card-footer">
+            ${
+              getWhatsAppUrl(product.wa_phone, product.name)
+                ? `<a class="btn-wa action-btn-wa-full" href="${getWhatsAppUrl(product.wa_phone, product.name)}" target="_blank" rel="noopener noreferrer"><span class="wa-icon">WA</span><span>Chat WhatsApp</span></a>`
+                : ""
+            }
             <div class="product-actions">
               <a href="/product.html?id=${product.id}" class="btn-secondary action-btn">Detail</a>
-              ${
-                getWhatsAppUrl(product.wa_phone, product.name)
-                  ? `<a class="btn-wa action-btn" href="${getWhatsAppUrl(product.wa_phone, product.name)}" target="_blank" rel="noopener noreferrer"><span class="wa-icon">WA</span><span>Chat</span></a>`
-                  : ""
-              }
-              <button class="btn-primary action-btn action-btn-cart add-to-cart" data-id="${product.id}">Keranjang</button>
-              <button class="btn-buy action-btn action-btn-buy buy-now" data-id="${product.id}">Beli</button>
+              <button class="btn-primary action-btn add-to-cart" data-id="${product.id}" ${(product.stock || 0) <= 0 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>Keranjang</button>
+              <button class="btn-buy action-btn buy-now" data-id="${product.id}" ${(product.stock || 0) <= 0 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>Beli</button>
             </div>
           </div>
         </div>
@@ -232,89 +285,57 @@ function renderProducts() {
     .join("");
 }
 
-function updateCartUI() {
-  if (!cartButton || !cartItems || !cartTotal) return;
+function refreshCartLineStocks() {
   const cart = getCart();
-  cartButton.textContent = `Keranjang (${cart.length})`;
-  const total = cart.reduce((sum, item) => sum + getFinalPrice(item), 0);
-  cartTotal.textContent = formatRupiah(total);
-
-  if (!cart.length) {
-    cartItems.innerHTML = '<p class="empty-state">Keranjang masih kosong.</p>';
-    return;
-  }
-
-  cartItems.innerHTML = cart
-    .map(
-      (item, index) => `
-      <div class="cart-item">
-        <p><strong>${item.name}</strong></p>
-        <p>${formatRupiah(getFinalPrice(item))}</p>
-        <button class="btn-secondary remove-item" data-index="${index}">Hapus</button>
-      </div>
-    `
-    )
-    .join("");
+  let changed = false;
+  cart.forEach((line) => {
+    const product = products.find((item) => item.id === Number(line.id));
+    if (!product) return;
+    const sizeName = String(line.selectedSize || "").trim();
+    if (sizeName) {
+      const matched = findSizeOption(parseSizes(product), sizeName);
+      if (matched) {
+        const stockSjs = Math.max(0, Number(matched.stock_sjs) || 0);
+        const stockSjl = Math.max(0, Number(matched.stock_sjl) || 0);
+        if (line.stock_sjs !== stockSjs || line.stock_sjl !== stockSjl) {
+          line.stock_sjs = stockSjs;
+          line.stock_sjl = stockSjl;
+          changed = true;
+        }
+      }
+    } else {
+      const stockSjs = Math.max(0, Number(product.stock_sjs) || 0);
+      const stockSjl = Math.max(0, Number(product.stock_sjl) || 0);
+      if (line.stock_sjs !== stockSjs || line.stock_sjl !== stockSjl) {
+        line.stock_sjs = stockSjs;
+        line.stock_sjl = stockSjl;
+        changed = true;
+      }
+    }
+  });
+  if (changed) setCart(cart);
 }
 
-function handleAddToCart(productId) {
-  if (!isShopPage) return;
+function handleAddToCart(productId, chosenSize, qty = 1) {
+  if (!isShopPage) return false;
   const product = products.find((item) => item.id === Number(productId));
   if (!product) {
     return false;
   }
-  addToCart(product);
-  updateCartUI();
-  return true;
-}
-
-async function handleCheckout() {
-  if (!cartPanel) return;
+  
   const cart = getCart();
-  if (!cart.length) {
-    alert("Keranjang masih kosong.");
-    return;
+  const sizeName = chosenSize?.size || null;
+  const availableStock = getProductAvailableStock(product, chosenSize);
+  const qtyInCart = countCartQtyForProduct(cart, product.id, sizeName);
+  if (availableStock < qtyInCart + qty) {
+    alert(`Maaf, stok tidak mencukupi untuk menambah ${qty} item. (Tersisa: ${availableStock}, Di keranjang: ${qtyInCart})`);
+    return false;
   }
 
-  if (!getToken()) {
-    alert("Silakan login dulu untuk checkout.");
-    window.location.href = "/login.html";
-    return;
-  }
-
-  try {
-    const customerName = checkoutNameInput?.value.trim() || "";
-    const customerPhone = checkoutPhoneInput?.value.trim() || "";
-    const customerAddress = checkoutAddressInput?.value.trim() || "";
-    const paymentMethod = checkoutPaymentMethodSelect?.value || "";
-    if (!customerName || !customerPhone || !customerAddress || !paymentMethod) {
-      alert("Lengkapi nama, telepon, alamat, dan metode pembayaran.");
-      return;
-    }
-    const result = await apiFetch("/checkout", {
-      method: "POST",
-      body: JSON.stringify({
-        items: cart.map((item) => item.id),
-        customerName,
-        customerPhone,
-        customerAddress,
-        paymentMethod,
-      }),
-    });
-    alert(
-      `${result.message}\nOrder ID: ${result.orderId}\nMetode: ${result.paymentMethod}\nTotal: ${formatRupiah(
-        result.total
-      )}`
-    );
-    clearCart();
-    updateCartUI();
-    if (checkoutNameInput) checkoutNameInput.value = "";
-    if (checkoutPhoneInput) checkoutPhoneInput.value = "";
-    if (checkoutAddressInput) checkoutAddressInput.value = "";
-    cartPanel.classList.add("hidden");
-  } catch (error) {
-    alert(error.message);
-  }
+  const cartItem = buildCartLineFromProduct(product, chosenSize, qty);
+  addToCart(cartItem);
+  refreshHeaderCartBadge();
+  return true;
 }
 
 async function loadProducts() {
@@ -336,7 +357,9 @@ async function loadProducts() {
       categorySidebar.innerHTML = `<p class="empty-state">Gagal memuat kategori.</p>`;
     }
 
+    refreshCartLineStocks();
     renderProducts();
+    refreshHeaderCartBadge();
   } catch (error) {
     products = [];
     productGrid.innerHTML = `<p class="empty-state">${error.message}</p>`;
@@ -345,6 +368,18 @@ async function loadProducts() {
 }
 
 if (isShopPage) {
+  window.addEventListener("pageshow", () => {
+    syncPromoFromUrl();
+    loadProducts();
+  });
+
+  window.addEventListener("focus", () => {
+    if (products.length) {
+      refreshCartLineStocks();
+      refreshHeaderCartBadge();
+    }
+  });
+
   categorySidebar.addEventListener("click", (event) => {
     const btn = event.target.closest("button[data-cat]");
     if (!btn) return;
@@ -358,6 +393,7 @@ if (isShopPage) {
     clearCategoryButton.addEventListener("click", () => {
       selected.category = "all";
       selected.subcategory = "all";
+      clearPromoMode();
       renderSidebar();
       renderProducts();
     });
@@ -368,41 +404,37 @@ if (isShopPage) {
     const buyNowBtn = event.target.closest(".buy-now");
 
     if (addToCartBtn) {
-      const added = handleAddToCart(addToCartBtn.dataset.id);
-      if (added) {
-        alert("Produk ditambahkan ke keranjang.");
-      }
-    }
+      const pId = addToCartBtn.dataset.id;
+      const product = products.find((p) => p.id === Number(pId));
+      showAddToCartModal(product, (chosenSize, qty) => {
+        const added = handleAddToCart(pId, chosenSize, qty);
+        if (added) alert(`${qty} produk ditambahkan ke keranjang.`);
+      });
+    } else if (buyNowBtn) {
+      const pId = buyNowBtn.dataset.id;
+      const product = products.find((p) => p.id === Number(pId));
 
-    if (buyNowBtn) {
-      handleAddToCart(buyNowBtn.dataset.id);
-      cartPanel.classList.remove("hidden");
-    }
-  });
-
-  cartItems.addEventListener("click", (event) => {
-    const target = event.target;
-    if (target.classList.contains("remove-item")) {
-      removeFromCart(Number(target.dataset.index));
-      updateCartUI();
+      showAddToCartModal(product, (chosenSize, qty) => {
+        const added = handleAddToCart(pId, chosenSize, qty);
+        if (added) {
+          window.location.href = "/cart.html";
+        }
+      });
     }
   });
 
   searchInput.addEventListener("input", renderProducts);
   sortSelect.addEventListener("change", renderProducts);
 
-  cartButton.addEventListener("click", () => {
-    cartPanel.classList.toggle("hidden");
-  });
+  const urlQuery = new URLSearchParams(window.location.search).get("q");
+  if (urlQuery && searchInput) {
+    searchInput.value = urlQuery;
+  }
 
-  closeCartButton.addEventListener("click", () => {
-    cartPanel.classList.add("hidden");
-  });
-
-  checkoutButton.addEventListener("click", handleCheckout);
+  syncPromoFromUrl();
 
   renderUserArea();
-  updateCartUI();
+  refreshHeaderCartBadge();
   loadProducts();
 } else {
   renderUserArea();

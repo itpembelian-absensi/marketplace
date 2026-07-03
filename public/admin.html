@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Manajemen User - PT SAHABAT JAYA SUKSES</title>
-    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/style.css?v=13" />
   </head>
-  <body>
+  <body class="admin-page">
     <header class="topbar">
       <a class="brand" href="/">
         <img id="brandLogo" class="brand-logo hidden" alt="Logo" />
@@ -22,37 +22,61 @@
       </div>
     </header>
 
-    <main class="container">
-      <div class="tabs">
-        <button class="tab active" data-tab="usersTab">User</button>
-        <button class="tab" data-tab="productsTab">Produk</button>
-        <button class="tab" data-tab="menuTab">Menu</button>
-        <button class="tab" data-tab="brandingTab">Logo</button>
-        <button class="tab" data-tab="settingsTab">Lainnya</button>
-      </div>
+    <div class="admin-layout">
+      <aside class="admin-sidebar" aria-label="Menu admin">
+        <p class="admin-sidebar-title">Menu Admin</p>
+        <nav class="admin-nav">
+          <button type="button" class="tab active" data-tab="usersTab">User</button>
+          <button type="button" class="tab" data-tab="productsTab">Produk</button>
+          <button type="button" class="tab" data-tab="menuTab">Menu</button>
+          <button type="button" class="tab" data-tab="brandingTab">Profil Perusahaan</button>
+          <button type="button" class="tab" data-tab="bannerTab">Slideshow &amp; Beranda</button>
+          <button type="button" class="tab" data-tab="ordersTab">Pesanan</button>
+          <button type="button" class="tab" data-tab="salesTab">Laporan Penjualan</button>
+          <button type="button" class="tab" data-tab="inventoryTab">Laporan Stok</button>
+          <button type="button" class="tab" data-tab="pointsTab">Poin Loyalitas</button>
+          <button type="button" class="tab" data-tab="settingsTab">Lainnya</button>
+          <button type="button" class="tab" data-tab="whatsappTab">WhatsApp Bot</button>
+        </nav>
+      </aside>
 
-      <section id="usersTab" class="auth-card" style="max-width: 900px">
+      <main class="admin-main">
+      <section id="usersTab" class="auth-card admin-panel">
         <h2>Setting User & Role</h2>
         <p id="usersMessage" class="message"></p>
         <div id="usersTable"></div>
 
         <h3 style="margin-top: 18px">Create User</h3>
-        <form id="createUserForm" class="auth-form">
-          <input type="text" id="name" placeholder="Nama" required />
-          <input type="email" id="email" placeholder="Email" required />
-          <input
-            type="password"
-            id="password"
-            placeholder="Password minimal 6 karakter"
-            minlength="6"
-            required
-          />
-          <select id="roleSelect">
-            <option value="user">user</option>
-            <option value="manager">manager</option>
-            <option value="admin">admin</option>
-          </select>
-          <button type="submit" class="btn-primary">Buat User</button>
+        <form id="createUserForm" class="auth-form" autocomplete="off">
+          <div>
+            <label for="name" style="font-size:0.9rem; font-weight:500;">Nama Lengkap <span style="color:var(--danger)">*</span></label>
+            <input type="text" id="name" placeholder="Masukkan nama lengkap user" required autocomplete="new-password" style="margin-top:4px; width:100%; box-sizing:border-box;" />
+          </div>
+          <div>
+            <label for="email" style="font-size:0.9rem; font-weight:500;">Email <span style="color:var(--danger)">*</span></label>
+            <input type="email" id="email" placeholder="contoh@email.com" required autocomplete="new-password" style="margin-top:4px; width:100%; box-sizing:border-box;" />
+          </div>
+          <div>
+            <label for="password" style="font-size:0.9rem; font-weight:500;">Password <span style="color:var(--danger)">*</span></label>
+            <input
+              type="password"
+              id="password"
+              placeholder="Minimal 6 karakter"
+              minlength="6"
+              required
+              autocomplete="new-password"
+              style="margin-top:4px; width:100%; box-sizing:border-box;"
+            />
+          </div>
+          <div>
+            <label for="roleSelect" style="font-size:0.9rem; font-weight:500;">Role <span style="color:var(--danger)">*</span></label>
+            <select id="roleSelect" style="margin-top:4px; width:100%; box-sizing:border-box;">
+              <option value="user">user</option>
+              <option value="manager">manager</option>
+              <option value="admin">admin</option>
+            </select>
+          </div>
+          <button type="submit" class="btn-primary" style="margin-top:8px;">Buat User</button>
         </form>
         <p id="createMessage" class="message"></p>
         <p class="empty-state" style="margin-top: 8px">
@@ -61,22 +85,340 @@
         </p>
       </section>
 
-      <section id="productsTab" class="auth-card hidden" style="max-width: 900px">
+      <section id="ordersTab" class="auth-card admin-panel hidden">
+        <h2>Daftar Pesanan</h2>
+        <p id="ordersMessage" class="message"></p>
+        <div id="ordersTable" style="margin-top: 12px; overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border);">
+                <th style="padding: 10px;">ID</th>
+                <th style="padding: 10px;">Customer</th>
+                <th style="padding: 10px;">Tanggal</th>
+                <th style="padding: 10px;">Total</th>
+                <th style="padding: 10px;">Status</th>
+                <th style="padding: 10px;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="ordersTbody">
+              <tr><td colspan="6" style="padding: 10px; text-align: center;">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="salesTab" class="auth-card admin-panel hidden">
+        <h2>Laporan Penjualan</h2>
+        <div style="display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;">
+          <select id="salesMonth" style="padding: 8px;">
+            <option value="1">Januari</option>
+            <option value="2">Februari</option>
+            <option value="3">Maret</option>
+            <option value="4">April</option>
+            <option value="5">Mei</option>
+            <option value="6">Juni</option>
+            <option value="7">Juli</option>
+            <option value="8">Agustus</option>
+            <option value="9">September</option>
+            <option value="10">Oktober</option>
+            <option value="11">November</option>
+            <option value="12">Desember</option>
+          </select>
+          <input type="number" id="salesYear" placeholder="Tahun" style="padding: 8px; width: 100px;" />
+          <select id="salesStatus" style="padding: 8px;">
+            <option value="all">Semua Status</option>
+            <option value="paid">Paid</option>
+          </select>
+          <button type="button" id="salesFilterBtn" class="btn-primary">Tampilkan</button>
+          <button type="button" id="salesExportBtn" class="btn-secondary" disabled>Export CSV</button>
+        </div>
+        <p id="salesMessage" class="message"></p>
+        <div id="salesSummary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px;"></div>
+
+        <h3 style="margin: 0 0 10px; font-size: 1.05rem;">Penjualan per Produk</h3>
+        <div style="margin-bottom: 24px; overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border);">
+                <th style="padding: 10px;">Produk</th>
+                <th style="padding: 10px;">Ukuran</th>
+                <th style="padding: 10px; text-align: right;">Qty Terjual</th>
+                <th style="padding: 10px; text-align: right;">Omzet</th>
+              </tr>
+            </thead>
+            <tbody id="salesProductsTbody">
+              <tr><td colspan="4" style="padding: 10px; text-align: center;">Pilih periode lalu klik Tampilkan.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 style="margin: 0 0 10px; font-size: 1.05rem;">Metode Pembayaran</h3>
+        <div style="margin-bottom: 24px; overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border);">
+                <th style="padding: 10px;">Metode</th>
+                <th style="padding: 10px; text-align: right;">Jumlah Order</th>
+                <th style="padding: 10px; text-align: right;">Omzet</th>
+              </tr>
+            </thead>
+            <tbody id="salesPaymentTbody">
+              <tr><td colspan="3" style="padding: 10px; text-align: center;">-</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 style="margin: 0 0 10px; font-size: 1.05rem;">Daftar Order</h3>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border);">
+                <th style="padding: 10px;">ID</th>
+                <th style="padding: 10px;">Customer</th>
+                <th style="padding: 10px;">Tanggal</th>
+                <th style="padding: 10px;">Pembayaran</th>
+                <th style="padding: 10px;">Status</th>
+                <th style="padding: 10px; text-align: right;">Total</th>
+                <th style="padding: 10px;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="salesOrdersTbody">
+              <tr><td colspan="7" style="padding: 10px; text-align: center;">-</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="inventoryTab" class="auth-card admin-panel hidden">
+        <h2>Laporan Stok (Keluar/Masuk Barang)</h2>
+        <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+          <select id="inventoryMonth" style="padding: 8px;">
+            <option value="1">Januari</option>
+            <option value="2">Februari</option>
+            <option value="3">Maret</option>
+            <option value="4">April</option>
+            <option value="5">Mei</option>
+            <option value="6">Juni</option>
+            <option value="7">Juli</option>
+            <option value="8">Agustus</option>
+            <option value="9">September</option>
+            <option value="10">Oktober</option>
+            <option value="11">November</option>
+            <option value="12">Desember</option>
+          </select>
+          <input type="number" id="inventoryYear" placeholder="Tahun" style="padding: 8px; width: 100px;" />
+          <button id="inventoryFilterBtn" class="btn-primary">Tampilkan</button>
+        </div>
+        <p id="inventoryMessage" class="message"></p>
+        <div id="inventoryTable" style="margin-top: 12px; overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border);">
+                <th style="padding: 10px;">Produk</th>
+                <th style="padding: 10px; text-align: right;">Opening Balance</th>
+                <th style="padding: 10px; text-align: right; color: var(--primary);">IN (Masuk)</th>
+                <th style="padding: 10px; text-align: right; color: var(--danger);">OUT (Keluar)</th>
+                <th style="padding: 10px; text-align: right;">Ending Balance</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryTbody">
+              <tr><td colspan="5" style="padding: 10px; text-align: center;">Pilih bulan dan tahun lalu klik Tampilkan.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="pointsTab" class="auth-card admin-panel hidden">
+        <h2>Sistem Poin Loyalitas</h2>
+        
+        <div class="tabs" style="margin-bottom: 20px;">
+          <button class="tab active" data-tab="pointsRewardSubTab" id="btnPointsRewardSubTab" type="button" style="padding: 8px 16px; font-size: 0.9rem;">Hadiah Poin</button>
+          <button class="tab" data-tab="pointsUserSubTab" id="btnPointsUserSubTab" type="button" style="padding: 8px 16px; font-size: 0.9rem;">Saldo Poin User</button>
+          <button class="tab" data-tab="pointsHistorySubTab" id="btnPointsHistorySubTab" type="button" style="padding: 8px 16px; font-size: 0.9rem;">Riwayat Transaksi Poin</button>
+        </div>
+
+        <div id="pointsRewardSubTab">
+          <div class="info-card" style="margin-bottom: 20px;">
+            <h3>Tambah/Edit Hadiah Poin</h3>
+            <form id="rewardForm" class="auth-form">
+              <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 200px;">
+                  <label style="font-size: 0.85rem; font-weight: 500; margin-bottom: 4px; display: block;">Nama Hadiah (Mis: Diskon 10% / Voucher 50rb)</label>
+                  <input type="text" id="rewardName" placeholder="Nama Hadiah" required />
+                </div>
+                <div style="flex: 1; min-width: 200px;">
+                  <label style="font-size: 0.85rem; font-weight: 500; margin-bottom: 4px; display: block;">Poin yang Dibutuhkan</label>
+                  <input type="number" id="rewardPoints" placeholder="Poin" required min="1" />
+                </div>
+              </div>
+              <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px;">
+                <div style="flex: 1; min-width: 150px;">
+                  <label style="font-size: 0.85rem; font-weight: 500; margin-bottom: 4px; display: block;">Tipe Hadiah</label>
+                  <select id="rewardType" required>
+                    <option value="discount_percent">Diskon (%)</option>
+                    <option value="discount_fixed">Potongan Harga (Rp)</option>
+                    <option value="other">Lainnya (Gratis Produk, dll)</option>
+                  </select>
+                </div>
+                <div style="flex: 1; min-width: 150px;">
+                  <label style="font-size: 0.85rem; font-weight: 500; margin-bottom: 4px; display: block;">Nilai Hadiah (opsional, misal 10 atau 50000)</label>
+                  <input type="number" id="rewardValue" placeholder="Nilai diskon/potongan" min="0" />
+                </div>
+                <div style="flex: 1; min-width: 150px; display: flex; align-items: flex-end;">
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; margin-bottom: 12px; cursor: pointer;">
+                    <input type="checkbox" id="rewardActive" checked /> Hadiah Aktif
+                  </label>
+                </div>
+              </div>
+              <div style="margin-top: 10px;">
+                <label style="font-size: 0.85rem; font-weight: 500; margin-bottom: 4px; display: block;">Deskripsi Tambahan</label>
+                <input type="text" id="rewardDesc" placeholder="Deskripsi (Opsional)" />
+              </div>
+              <div style="margin-top: 12px;">
+                <button type="submit" id="rewardSubmitBtn" class="btn-primary">Simpan Hadiah</button>
+                <button type="button" id="rewardCancelBtn" class="btn-secondary hidden">Batal Edit</button>
+              </div>
+              <p id="rewardMessage" class="message"></p>
+            </form>
+          </div>
+
+          <h3>Daftar Hadiah</h3>
+          <div id="rewardsTable" style="margin-top: 12px; overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+              <thead>
+                <tr style="border-bottom: 1px solid var(--border); background: #f9fafb;">
+                  <th style="padding: 10px;">Nama Hadiah</th>
+                  <th style="padding: 10px;">Poin</th>
+                  <th style="padding: 10px;">Tipe</th>
+                  <th style="padding: 10px;">Status</th>
+                  <th style="padding: 10px;">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="rewardsTbody">
+                <tr><td colspan="5" style="padding: 10px; text-align: center;">Memuat data...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="pointsUserSubTab" class="hidden">
+          <div class="info-card" style="margin-bottom: 20px;">
+            <h3>Penyesuaian Saldo Poin Manual</h3>
+            <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 10px;">Gunakan ini untuk menambah/mengurangi poin user secara manual. Gunakan angka negatif (misal: -50) untuk mengurangi.</p>
+            <form id="adjustPointsForm" class="auth-form" style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 200px;">
+                <label style="font-size: 0.85rem; font-weight: 500; margin-bottom: 4px; display: block;">Pilih User</label>
+                <select id="adjustPointsUserId" required></select>
+              </div>
+              <div style="width: 120px;">
+                <label style="font-size: 0.85rem; font-weight: 500; margin-bottom: 4px; display: block;">Jumlah Poin</label>
+                <input type="number" id="adjustPointsAmount" placeholder="100 / -50" required />
+              </div>
+              <div style="flex: 1; min-width: 200px;">
+                <label style="font-size: 0.85rem; font-weight: 500; margin-bottom: 4px; display: block;">Keterangan</label>
+                <input type="text" id="adjustPointsDesc" placeholder="Alasan penyesuaian" />
+              </div>
+              <button type="submit" class="btn-primary" style="margin-bottom: 2px;">Simpan</button>
+            </form>
+            <p id="adjustPointsMessage" class="message"></p>
+          </div>
+
+          <h3>Saldo Poin User</h3>
+          <div id="userPointsTable" style="margin-top: 12px; overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+              <thead>
+                <tr style="border-bottom: 1px solid var(--border); background: #f9fafb;">
+                  <th style="padding: 10px;">ID</th>
+                  <th style="padding: 10px;">Nama User</th>
+                  <th style="padding: 10px;">Email</th>
+                  <th style="padding: 10px; text-align: right;">Total Poin</th>
+                </tr>
+              </thead>
+              <tbody id="userPointsTbody">
+                <tr><td colspan="4" style="padding: 10px; text-align: center;">Memuat data...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="pointsHistorySubTab" class="hidden">
+          <h3>Riwayat Transaksi Poin Keseluruhan</h3>
+          <div id="pointsHistoryTable" style="margin-top: 12px; overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+              <thead>
+                <tr style="border-bottom: 1px solid var(--border); background: #f9fafb;">
+                  <th style="padding: 10px;">Tanggal</th>
+                  <th style="padding: 10px;">User</th>
+                  <th style="padding: 10px;">Tipe</th>
+                  <th style="padding: 10px; text-align: right;">Poin</th>
+                  <th style="padding: 10px;">Keterangan</th>
+                </tr>
+              </thead>
+              <tbody id="pointsHistoryTbody">
+                <tr><td colspan="5" style="padding: 10px; text-align: center;">Memuat data...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="productsTab" class="auth-card admin-panel hidden">
         <h2>Manajemen Produk</h2>
         <form id="productForm" class="auth-form">
+          <label style="font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Nama Produk:</label>
           <input id="productName" type="text" placeholder="Nama produk" required />
+          
+          <label style="font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Kategori:</label>
           <select id="productCategory" required>
             <option value="">Pilih kategori</option>
           </select>
+          
+          <label style="font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Sub-kategori:</label>
           <select id="productSubcategory" required>
             <option value="">Pilih sub-kategori</option>
           </select>
+          
+          <label style="font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Harga (Rp):</label>
           <input id="productPrice" type="number" min="1" placeholder="Harga produk" required />
-          <input id="productDiscount" type="number" min="0" max="95" placeholder="Diskon % (opsional)" />
-          <input id="productRating" type="number" min="1" max="5" step="0.1" placeholder="Rating (default 4.5)" />
-          <input id="productImageFile" type="file" accept="image/png,image/jpeg,image/webp" />
-          <input id="productWaPhone" type="text" placeholder="Nomor WA untuk tanya produk (opsional)" />
+          
+          <div style="display: none;">
+            <label style="font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Stok Barang (PT SJS):</label>
+            <input id="productStockSJS" type="number" min="0" placeholder="Stok PT Sahabat Jaya Sukses" value="0" />
+            
+            <label style="font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Stok Barang (PT SJL):</label>
+            <input id="productStockSJL" type="number" min="0" placeholder="Stok PT Sukses Jaya Lestari" value="0" />
+          </div>
+
+          <label style="font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Poin Loyalitas Per Pembelian:</label>
+          <input id="productPoints" type="number" min="0" placeholder="Poin per 1 barang terjual (0 = tidak ada poin)" value="0" required />
+
+          <label style="font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Deskripsi Produk:</label>
           <textarea id="productDescription" rows="3" placeholder="Deskripsi produk" required></textarea>
+          
+          <label style="font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Pilihan Ukuran & Harga (Opsional):</label>
+          <div style="display: flex; gap: 8px; font-size: 0.8rem; font-weight: 600; color: #6b7280; margin-bottom: 4px; padding: 0 8px;">
+            <div style="flex: 1; min-width: 150px;">Nama Ukuran</div>
+            <div style="flex: 1; min-width: 120px;">Harga (Rp)</div>
+            <div style="width: 100px;">Stok SJS</div>
+            <div style="width: 100px;">Stok SJL</div>
+            <div style="width: 60px;"></div>
+          </div>
+          <div id="productSizesContainer" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px;">
+            <!-- Baris ukuran dinamis akan ditambahkan di sini -->
+          </div>
+          <button id="addSizeRowBtn" type="button" class="btn-secondary" style="font-size: 0.8rem; padding: 6px 12px; margin-bottom: 12px; align-self: flex-start;">+ Tambah Ukuran</button>
+          
+          <label style="font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Diskon (%):</label>
+          <input id="productDiscount" type="number" min="0" max="95" placeholder="Diskon % (opsional)" />
+          
+          <label style="font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Rating (1-5):</label>
+          <input id="productRating" type="number" min="1" max="5" step="0.1" placeholder="Rating (default 4.5)" />
+          
+          <label style="font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Gambar Produk:</label>
+          <input id="productImageFile" type="file" accept="image/png,image/jpeg,image/webp" />
+          
+          <label style="font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Nomor WhatsApp (Opsional):</label>
+          <input id="productWaPhone" type="text" placeholder="Nomor WA untuk tanya produk (opsional)" />
           <button id="productSubmitButton" type="submit" class="btn-primary">Tambah Produk</button>
           <button id="productCancelEdit" type="button" class="btn-secondary hidden">Batal Edit</button>
         </form>
@@ -84,21 +426,50 @@
         <div id="productsList" style="margin-top: 12px"></div>
       </section>
 
-      <section id="brandingTab" class="auth-card hidden" style="max-width: 900px">
-        <h2>Upload Logo</h2>
+      <section id="brandingTab" class="auth-card admin-panel hidden">
+        <h2>Profil Perusahaan</h2>
+        <form id="companyProfileForm" class="auth-form">
+          <label for="contactNameInput">Nama Perusahaan</label>
+          <input id="contactNameInput" type="text" placeholder="Nama Perusahaan" />
+
+          <label for="contactEmailInput">Email</label>
+          <input id="contactEmailInput" type="email" placeholder="contoh@email.com" />
+
+          <label for="contactPhoneInput">Telepon</label>
+          <input id="contactPhoneInput" type="text" placeholder="08xx-xxxx-xxxx" />
+
+          <label for="contactAddressInput">Alamat</label>
+          <textarea id="contactAddressInput" rows="2" placeholder="Alamat perusahaan"></textarea>
+
+          <label for="aboutInput">Tentang Perusahaan</label>
+          <textarea id="aboutInput" rows="4" placeholder="Deskripsi tentang perusahaan"></textarea>
+
+          <label for="visionInput">Visi</label>
+          <textarea id="visionInput" rows="3" placeholder="Visi perusahaan"></textarea>
+
+          <label for="missionInput">Misi</label>
+          <textarea id="missionInput" rows="3" placeholder="Misi perusahaan"></textarea>
+
+          <button type="submit" class="btn-primary">Simpan Profil Perusahaan</button>
+        </form>
+        <p id="companyProfileMessage" class="message"></p>
+        
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border);" />
+
+        <h2>Upload Logo Invoice & Website</h2>
         <form id="logoForm" class="auth-form">
           <input type="file" id="logoFile" accept="image/*" required />
-          <button type="submit" class="btn-primary">Upload</button>
+          <button type="submit" class="btn-primary">Upload Logo</button>
         </form>
         <p id="logoMessage" class="message"></p>
         <div id="logoPreview" style="margin-top: 12px"></div>
         <p class="empty-state" style="margin-top: 8px">
           Hanya <strong>admin</strong> yang bisa upload logo. File otomatis dikompres ke max 2MB
-          saat upload.
+          saat upload. Logo ini akan tampil di bagian atas web dan juga di Invoice/Nota pembelian.
         </p>
       </section>
 
-      <section id="menuTab" class="auth-card hidden" style="max-width: 900px">
+      <section id="menuTab" class="auth-card admin-panel hidden">
         <h2>Menu & Sub Menu (Kategori Produk)</h2>
         <p id="menuMessage" class="message"></p>
 
@@ -128,45 +499,187 @@
         </p>
       </section>
 
-      <section id="settingsTab" class="auth-card hidden" style="max-width: 900px">
-        <h2>Profil Perusahaan</h2>
-        <form id="companyProfileForm" class="auth-form">
-          <label for="aboutInput">Tentang Perusahaan</label>
-          <textarea
-            id="aboutInput"
-            rows="4"
-            placeholder="Deskripsi tentang perusahaan"
-          ></textarea>
+      <section id="settingsTab" class="auth-card admin-panel hidden">
 
-          <label for="visionInput">Visi</label>
-          <textarea id="visionInput" rows="3" placeholder="Visi perusahaan"></textarea>
-
-          <label for="missionInput">Misi</label>
-          <textarea id="missionInput" rows="3" placeholder="Misi perusahaan"></textarea>
-
-          <label for="contactEmailInput">Email</label>
-          <input id="contactEmailInput" type="email" placeholder="contoh@email.com" />
-
-          <label for="contactPhoneInput">Telepon</label>
-          <input id="contactPhoneInput" type="text" placeholder="08xx-xxxx-xxxx" />
-
-          <label for="contactAddressInput">Alamat</label>
-          <textarea
-            id="contactAddressInput"
-            rows="2"
-            placeholder="Alamat perusahaan"
-          ></textarea>
-
-          <button type="submit" class="btn-primary">Simpan Profil Perusahaan</button>
+        <h2>Pengaturan Jasa Kirim</h2>
+        <p class="empty-state" style="margin-bottom: 12px;">
+          Atur lokasi gudang asal pengiriman, tarif mobil toko, dan opsi Lalamove/GoSend. Tarif resmi mitra membutuhkan kredensial API di file <code>.env</code>.
+        </p>
+        <form id="shippingSettingsForm" class="auth-form">
+          <div class="warehouse-origin-card">
+            <h3 class="warehouse-origin-title">Lokasi GPS Gudang (Asal Barang Dikirim)</h3>
+            <p class="warehouse-origin-help">
+              Semua perhitungan ongkir (Lalamove/GoSend/estimasi jarak) berangkat dari titik ini menuju alamat pelanggan.
+              Buka Google Maps di gudang → klik lokasi → salin koordinat, atau gunakan tombol GPS saat berada di gudang.
+            </p>
+            <div>
+              <label class="field-label" for="shipOriginName">Nama gudang / toko</label>
+              <input type="text" id="shipOriginName" placeholder="Mis: Gudang SJS Cakung" />
+            </div>
+            <div>
+              <label class="field-label" for="shipOriginAddress">Alamat lengkap gudang</label>
+              <textarea id="shipOriginAddress" rows="2" placeholder="Jl. ..., Kota, Provinsi"></textarea>
+            </div>
+            <div class="warehouse-coords-grid">
+              <div>
+                <label class="field-label" for="shipOriginLat">Latitude (Lintang)</label>
+                <input type="number" step="any" id="shipOriginLat" required placeholder="-6.208800" />
+              </div>
+              <div>
+                <label class="field-label" for="shipOriginLng">Longitude (Bujur)</label>
+                <input type="number" step="any" id="shipOriginLng" required placeholder="106.845600" />
+              </div>
+            </div>
+            <div class="warehouse-origin-actions">
+              <button type="button" id="shipOriginGpsBtn" class="btn-secondary">GPS: saya di gudang sekarang</button>
+              <button type="button" id="shipOriginParseBtn" class="btn-secondary">Ambil dari teks koordinat</button>
+              <a id="shipOriginMapLink" class="btn-secondary warehouse-map-link" href="#" target="_blank" rel="noopener">Lihat di Google Maps</a>
+            </div>
+            <div>
+              <label class="field-label" for="shipOriginCoordPaste">Tempel koordinat / link Maps (opsional)</label>
+              <input type="text" id="shipOriginCoordPaste" placeholder="-6.2088, 106.8456 atau link Google Maps" />
+            </div>
+            <p id="shipOriginPreview" class="warehouse-origin-preview empty-state"></p>
+          </div>
+          <hr style="border: none; border-top: 1px solid var(--border); margin: 8px 0;" />
+          <h3 style="margin: 0; font-size: 1rem;">Kirim mobil toko</h3>
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem;">
+            <input type="checkbox" id="shipStoreEnabled" checked /> Aktif
+          </label>
+          <div>
+            <label style="font-size: 0.85rem; font-weight: 500;">Tarif flat (Rp)</label>
+            <input type="number" id="shipStoreFlatFee" min="0" value="50000" />
+          </div>
+          <div>
+            <label style="font-size: 0.85rem; font-weight: 500;">Gratis ongkir jika subtotal ≥ (Rp, 0 = tidak ada)</label>
+            <input type="number" id="shipStoreFreeAbove" min="0" value="0" />
+          </div>
+          <hr style="border: none; border-top: 1px solid var(--border); margin: 8px 0;" />
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem;">
+            <input type="checkbox" id="shipLalamoveEnabled" checked /> Aktifkan Lalamove
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem;">
+            <input type="checkbox" id="shipGosendEnabled" checked /> Aktifkan GoSend
+          </label>
+          <div>
+            <label style="font-size: 0.85rem; font-weight: 500;">Estimasi cadangan: Rp per km</label>
+            <input type="number" id="shipFallbackPerKm" min="0" value="3500" />
+          </div>
+          <button type="submit" class="btn-primary">Simpan Pengaturan Kirim</button>
         </form>
-        <p id="companyProfileMessage" class="message"></p>
-        <p class="empty-state">
-          Perubahan akan tampil di halaman utama setelah disimpan.
+        <p id="shippingSettingsMessage" class="message"></p>
+        <p id="shippingApiStatus" class="empty-state" style="margin-top: 8px;"></p>
+
+        <h2 style="margin-top: 28px;">Pengaturan Pembayaran (QRIS)</h2>
+        <form id="qrisForm" class="auth-form">
+          <label for="qrisFile" style="font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Upload Barcode QRIS</label>
+          <input type="file" id="qrisFile" accept="image/png,image/jpeg,image/webp" />
+          <button type="submit" class="btn-primary" style="margin-top: 8px;">Simpan QRIS</button>
+        </form>
+        <p id="qrisMessage" class="message"></p>
+        <div id="qrisPreview" style="margin-top: 12px"></div>
+        <p class="empty-state" style="margin-top: 8px">
+          Barcode QRIS ini akan ditampilkan di halaman Invoice jika customer memilih metode pembayaran QRIS.
         </p>
       </section>
-    </main>
 
-    <script src="/common.js?v=20260424"></script>
-    <script src="/admin.js?v=20260424"></script>
+      <section id="bannerTab" class="auth-card admin-panel hidden">
+        <h2>Pengaturan Halaman Utama</h2>
+        <p class="empty-state" style="margin-bottom: 12px">Atur slider banner, tagline, dan kartu fitur di halaman depan website.</p>
+
+        <form id="homePageForm" class="auth-form">
+          <div class="info-card" style="margin-bottom: 12px">
+            <h3>Informasi Brand</h3>
+            <label style="font-size: 0.9rem; color: #6b7280;">Tagline (di bawah nama perusahaan):</label>
+            <input type="text" id="homeTagline" placeholder="Your Board Solusions" />
+            <label style="font-size: 0.9rem; color: #6b7280; margin-top: 8px; display: block;">Judul Section Fitur:</label>
+            <input type="text" id="homeSectionTitle" placeholder="Satu tempat yang bikin #SemuaJadiSimple" />
+          </div>
+
+          <div class="info-card" style="margin-bottom: 16px; border-left: 4px solid #5a3e32;">
+            <h3 style="margin-top:0">Foto Slideshow (Slider Beranda)</h3>
+            <p class="empty-state" style="margin-bottom: 12px">
+              Upload foto atau video untuk slider di halaman utama. Disarankan ukuran <strong>1920 × 600 px</strong> (format JPG, PNG, WEBP, atau MP4).
+              Anda bisa menambah beberapa slide — akan berganti otomatis.
+            </p>
+            <div id="homeSlidesContainer"></div>
+            <button type="button" id="addHomeSlideBtn" class="btn-secondary">+ Tambah Slide Baru</button>
+          </div>
+
+          <h3 style="margin-top: 8px;">Kartu Fitur (Foto &amp; Keterangan)</h3>
+          <p class="empty-state" style="margin-bottom: 12px">Upload foto dan isi keterangan untuk setiap kartu di bawah slider.</p>
+          <div id="homeFeaturesContainer"></div>
+
+          <div class="info-card" style="margin-top: 20px; margin-bottom: 16px; border-left: 4px solid #5a3e32;">
+            <h3 style="margin-top:0">Section Tentang / Pengiriman (Halaman 2)</h3>
+            <p class="empty-state" style="margin-bottom: 12px">
+              Bagian yang muncul saat pengunjung scroll ke bawah — statistik, judul, dan kolase 4 foto.
+            </p>
+            <div id="homeAboutContainer"></div>
+          </div>
+
+          <div class="info-card" style="margin-top: 20px; margin-bottom: 16px; border-left: 4px solid #5a3e32;">
+            <h3 style="margin-top:0">Footer &amp; Newsletter (Halaman 3)</h3>
+            <p class="empty-state" style="margin-bottom: 12px">
+              Bagian newsletter, link footer, media sosial, dan copyright di bagian paling bawah halaman utama.
+            </p>
+            <div id="homeFooterContainer"></div>
+          </div>
+
+          <button type="submit" id="homePageSubmitBtn" class="btn-primary">Simpan Halaman Utama</button>
+        </form>
+        <p id="homePageMessage" class="message"></p>
+      </section>
+      <section id="whatsappTab" class="auth-card admin-panel hidden">
+        <h2>Pengaturan WhatsApp Bot AI</h2>
+        <p class="empty-state" style="margin-bottom: 8px">Aktifkan atau nonaktifkan bot WhatsApp AI, dan atur pesan balasan otomatis jika terjadi gangguan teknis.</p>
+        <p class="empty-state" style="margin-bottom: 12px; font-size: 0.85rem;">
+          URL webhook Fonnte (wajib diisi di dashboard Fonnte):<br />
+          <code id="waWebhookUrl" style="word-break: break-all;">/api/whatsapp/webhook</code>
+        </p>
+
+        <form id="waSettingsForm" class="auth-form">
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; margin-bottom: 12px;">
+            <input type="checkbox" id="waBotEnabled" /> Aktifkan WhatsApp Bot
+          </label>
+
+          <div style="margin-bottom: 12px;">
+            <label class="field-label" for="waBotNumber">Nomor WhatsApp Bot</label>
+            <input type="text" id="waBotNumber" placeholder="Contoh: 628123456789 (Kosongkan jika menggunakan nomor perusahaan)" />
+          </div>
+
+          <div>
+            <label class="field-label" for="waBotFallback">Pesan Gangguan Teknis (Fallback)</label>
+            <textarea id="waBotFallback" rows="2" placeholder="Maaf, Sasa sedang mengalami gangguan teknis. Mohon tunggu sebentar ya."></textarea>
+          </div>
+
+          <button type="submit" class="btn-primary" style="margin-top: 12px;">Simpan Pengaturan Bot</button>
+        </form>
+        <p id="waSettingsMessage" class="message"></p>
+
+        <h3 style="margin-top: 28px;">Riwayat Percakapan Terakhir</h3>
+        <button type="button" id="refreshWaSessionsBtn" class="btn-secondary" style="margin-bottom: 12px;">Refresh Data</button>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border);">
+                <th style="padding: 10px;">Tanggal</th>
+                <th style="padding: 10px;">No. Telepon</th>
+                <th style="padding: 10px;">Pesan Masuk</th>
+                <th style="padding: 10px;">Balasan Bot (Sasa)</th>
+              </tr>
+            </thead>
+            <tbody id="waSessionsTbody">
+              <tr><td colspan="4" style="padding: 10px; text-align: center;">Memuat riwayat...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      </main>
+    </div>
+
+    <script src="/common.js?v=10"></script>
+    <script src="/admin.js?v=21"></script>
+    <script src="/admin-points.js?v=1"></script>
   </body>
 </html>

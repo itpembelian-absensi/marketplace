@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invoice Pesanan</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    body { background: #f3f4f6; color: #111827; font-family: 'Inter', sans-serif; padding: 20px; }
+    .invoice-container { max-width: 800px; margin: 0 auto; padding: 40px; background: #fff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .invoice-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e5e7eb; padding-bottom: 20px; margin-bottom: 20px; }
+    .invoice-header h1 { margin: 0; font-size: 2.5rem; color: #1f2937; font-weight: 800; letter-spacing: -0.025em; }
+    .invoice-meta { text-align: right; }
+    .invoice-meta p { margin: 4px 0; font-size: 0.95rem; color: #4b5563; }
+    .company-info { display: flex; align-items: center; gap: 15px; }
+    .company-logo { max-height: 60px; object-fit: contain; }
+    .invoice-details { display: flex; justify-content: space-between; margin-bottom: 30px; gap: 20px; }
+    .invoice-details div { flex: 1; background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #f3f4f6; }
+    .invoice-details h3 { border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-top: 0; margin-bottom: 12px; font-size: 1rem; color: #374151; }
+    .invoice-details p { margin: 6px 0; font-size: 0.95rem; color: #4b5563; line-height: 1.5; }
+    table.invoice-items { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    table.invoice-items th, table.invoice-items td { padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: left; font-size: 0.95rem; }
+    table.invoice-items th { background: #f9fafb; font-weight: 600; color: #374151; }
+    table.invoice-items td { color: #4b5563; }
+    .invoice-total { text-align: right; font-size: 1.3rem; font-weight: 700; margin-top: 20px; padding-top: 15px; border-top: 2px solid #e5e7eb; color: #111827; }
+    .invoice-actions {
+      max-width: 800px;
+      margin: 0 auto 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+    }
+    .invoice-actions .btn-primary,
+    .invoice-actions .btn-secondary {
+      font-size: 0.95rem;
+      padding: 10px 20px;
+      min-width: 120px;
+    }
+    @media print {
+      .no-print { display: none !important; }
+      .invoice-container { border: none; padding: 0; box-shadow: none; max-width: 100%; }
+      body { padding: 0; background: #fff; }
+      @page { margin: 1cm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="no-print invoice-actions">
+    <button type="button" id="invoiceCloseBtn" class="btn-secondary">Tutup</button>
+    <button type="button" id="invoicePrintBtn" class="btn-primary">Cetak</button>
+    <button type="button" id="invoicePdfBtn" class="btn-primary">Export PDF</button>
+  </div>
+
+  <div class="invoice-container" id="invoiceContainer">
+    <div style="text-align:center; padding: 50px; color: #6b7280;">Memuat Invoice...</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
+  <script src="/common.js?v=10"></script>
+  <script src="/invoice.js?v=10"></script>
+</body>
+</html>

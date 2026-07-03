@@ -3,61 +3,204 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PT SAHABAT JAYA SUKSES</title>
-    <link rel="stylesheet" href="/style.css" />
+    <title>PT Sahabat Jaya Sukses</title>
+    <link rel="stylesheet" href="/style.css?v=14" />
+    <link rel="stylesheet" href="/home.css?v=62" />
+    <script src="https://accounts.google.com/gsi/client" async></script>
   </head>
-  <body>
-    <header class="topbar">
-      <a class="brand" href="/">
-        <img id="brandLogo" class="brand-logo hidden" alt="Logo" />
-        <span class="brand-text">
-          <h1>PT SAHABAT JAYA SUKSES</h1>
-          <p>Profil perusahaan</p>
-        </span>
-      </a>
-      <div class="top-actions">
-        <a id="topLoginLink" href="/login.html" class="btn-secondary">Login</a>
-        <div id="userArea"></div>
-        <button id="cartButton" class="btn-secondary">Keranjang (0)</button>
+  <body class="landing-page">
+    <div class="sjs-header-sticky">
+    <header class="sjs-header">
+      <div class="sjs-header-inner">
+        <a class="sjs-brand" href="/">
+          <img id="brandLogo" class="sjs-brand-logo" src="/logo-sjs.png" alt="Logo SJS" />
+          <span class="sjs-brand-fallback hidden" id="brandFallback">SJS</span>
+          <span class="sjs-brand-text">
+            <strong id="companyNameText">PT Sahabat Jaya Sukses</strong>
+            <small id="companyTaglineText">Your Board Solusions</small>
+          </span>
+        </a>
+        <div class="sjs-header-spacer" aria-hidden="true"></div>
+        <div class="sjs-header-right">
+        <form class="sjs-search" id="headerSearchForm" action="/shop.html" method="get">
+          <input type="search" name="q" id="headerSearchInput" placeholder="Cari apa?" autocomplete="off" />
+          <button type="submit" aria-label="Cari">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3-3"/></svg>
+          </button>
+        </form>
+        <div class="sjs-header-actions">
+          <button type="button" id="cartButton" class="sjs-cart-btn" aria-label="Keranjang">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h2l2.5 12h11l2.5-9H6"/></svg>
+            <span id="cartCountBadge" class="sjs-cart-badge">0</span>
+          </button>
+          <div id="userArea" class="sjs-user-area"></div>
+          <button type="button" id="topLoginLink" class="sjs-auth-btn">Masuk / Daftar</button>
+          <div class="sjs-profile-wrap hidden" id="profileWrap">
+            <button type="button" id="topProfileLink" class="sjs-profile-icon" aria-label="Menu profil">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v1.2h19.2v-1.2c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+            </button>
+            <div id="profileDropdown" class="sjs-profile-dropdown hidden">
+              <p class="sjs-profile-name" id="profileDropdownName"></p>
+              <a href="/profile.html">Profil Saya</a>
+              <a href="/addresses.html">Alamat Kirim</a>
+              <a href="/admin.html" id="profileAdminLink" class="hidden">Panel Admin</a>
+              <button type="button" id="headerLogoutBtn">Keluar</button>
+            </div>
+          </div>
+        </div>
+        </div>
       </div>
     </header>
 
-    <main class="container">
-      <section class="auth-card page-card">
-        <h2 class="hero-title">Tentang Perusahaan</h2>
-        <p id="companyAboutText" class="hero-subtitle">
-          PT SAHABAT JAYA SUKSES berfokus pada penyediaan produk berkualitas untuk kebutuhan harian.
-          Kami berkomitmen pada layanan yang cepat, aman, dan transparan.
-        </p>
-
-        <div class="info-grid">
-          <div class="info-card">
-            <h3>Visi</h3>
-            <p id="companyVisionText">
-              Menjadi mitra terpercaya dalam penyediaan produk yang bernilai dan mudah diakses.
-            </p>
-          </div>
-          <div class="info-card">
-            <h3>Misi</h3>
-            <p id="companyMissionText">
-              Memberikan pengalaman yang sederhana, cepat, dan aman melalui platform digital.
-            </p>
-          </div>
+    <nav class="sjs-navbar">
+      <div class="sjs-navbar-inner">
+        <div class="sjs-nav-links">
+          <a href="/" class="sjs-nav-item sjs-nav-home sjs-nav-active" aria-label="Beranda">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-5v-6H11v6H6v-9H3z"/></svg>
+          </a>
+          <a href="/shop.html?promo=1" class="sjs-nav-item sjs-nav-promo">Promo Spesial %</a>
+          <a href="/shop.html" class="sjs-nav-item sjs-nav-all">Semua Kategori</a>
+          <a href="#" class="sjs-nav-item">Layanan</a>
+          <a href="#" class="sjs-nav-item">Daftar Merek</a>
+          <a href="#" class="sjs-nav-item">Blog</a>
+          <a href="#" class="sjs-nav-item">Berita</a>
         </div>
+        <a href="#" class="sjs-nav-track">
+          <svg class="sjs-nav-track-icon" viewBox="0 0 48 32" aria-hidden="true">
+            <g fill="currentColor">
+              <rect x="0" y="5" width="11" height="3" rx="1.5"/>
+              <rect x="0" y="11" width="8" height="3" rx="1.5"/>
+              <rect x="0" y="17" width="5" height="3" rx="1.5"/>
+              <path d="M12 7h21v13H12V7zm20 4h6l4 4v5H32V11z"/>
+              <circle cx="17" cy="23" r="3.2"/>
+              <circle cx="37" cy="23" r="3.2"/>
+            </g>
+          </svg>
+          Lacak pengirimanmu
+        </a>
+      </div>
+    </nav>
+    </div>
 
-        <h3 class="section-heading">Kontak</h3>
-        <ul class="contact-list">
-          <li><strong>Email</strong>: <span id="companyEmailText">info@company.com</span></li>
-          <li><strong>Telepon</strong>: <span id="companyPhoneText">08xx-xxxx-xxxx</span></li>
-          <li><strong>Alamat</strong>: <span id="companyAddressText">(isi alamat perusahaan)</span></li>
-        </ul>
+    <section class="home-hero" id="homeHero">
+      <div class="home-hero-track" id="heroTrack"></div>
+      <button type="button" class="home-hero-arrow prev" id="heroPrev" aria-label="Slide sebelumnya">&#8249;</button>
+      <button type="button" class="home-hero-arrow next" id="heroNext" aria-label="Slide berikutnya">&#8250;</button>
+      <div class="home-hero-dots" id="heroDots"></div>
+    </section>
 
-        <div class="cta-row">
-          <a href="/shop.html" class="btn-primary">Masuk ke Halaman Produk</a>
+    <section class="home-features-section">
+      <h2 class="home-features-title" id="featuresSectionTitle">Satu tempat yang bikin #SemuaJadiSimple</h2>
+      <div class="home-features-grid" id="featuresGrid"></div>
+    </section>
+
+    <section class="home-about-section" id="homeAboutSection">
+      <div class="home-about-wrap">
+        <div class="home-about-left">
+          <div class="home-about-stats" id="aboutStats"></div>
+          <h2 class="home-about-title" id="aboutTitle">Pengiriman Multi-Wilayah</h2>
+          <p class="home-about-subtitle" id="aboutSubtitle">Menjangkau pengiriman ke berbagai daerah di Indonesia</p>
+        </div>
+        <div class="home-about-gallery" id="aboutGallery">
+          <div class="home-about-gallery-inner" id="aboutGalleryInner"></div>
+          <div class="home-about-gallery-vignette" aria-hidden="true"></div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="home-footer" id="homeFooter">
+      <section class="home-footer-newsletter">
+        <div class="home-footer-newsletter-inner">
+          <h2 class="home-footer-newsletter-title" id="footerNewsletterTitle">Jangan sampai ketinggalan informasi &amp; promo dari kami!</h2>
+          <form class="home-footer-newsletter-form" id="footerNewsletterForm" novalidate>
+            <div class="home-footer-newsletter-row">
+              <input type="email" id="footerNewsletterEmail" placeholder="Masukkan e-mail..." autocomplete="email" required />
+              <button type="submit" id="footerNewsletterBtn">Kirim</button>
+            </div>
+            <div class="home-footer-social" id="footerSocial" aria-label="Media sosial">
+              <a href="#" class="home-footer-social-link" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7zm11 1.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>
+              </a>
+              <a href="#" class="home-footer-social-link" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 10V7.5c0-.8.7-1.5 1.5-1.5H16V3h-2.2C11.7 3 10 4.7 10 7v3H8v3.5h2V21h3v-7.5h2.5L16 10h-3z"/></svg>
+              </a>
+              <a href="#" class="home-footer-social-link" target="_blank" rel="noopener noreferrer" aria-label="Tiktok">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.5 3h-3.1v12.4a2.6 2.6 0 1 1-2.6-2.6c.2 0 .5 0 .7.1v-3.2a5.8 5.8 0 1 0 5.8 5.8V8.8c1.1.8 2.4 1.2 3.7 1.2V7c-2 0-3.7-.8-5-2.1V3z"/></svg>
+              </a>
+            </div>
+            <p class="home-footer-msg hidden" id="footerNewsletterMessage"></p>
+          </form>
         </div>
       </section>
-    </main>
+      <section class="home-footer-main">
+        <!-- WhatsApp Chatbot Widget -->
+        <a href="#" class="home-chat-widget" id="whatsappChatWidget" aria-label="Chat via WhatsApp">
+          <div class="home-chat-bubble">Ada yang bisa Sasa bantu?</div>
+          <div class="home-chat-avatar">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="#ffffff" xmlns="http://www.w3.org/2000/svg">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.333.158 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.332 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/>
+            </svg>
+          </div>
+        </a>
+        <div class="home-footer-main-inner">
+          <div class="home-footer-columns" id="footerColumns">
+            <div class="home-footer-col">
+              <h3>Bantuan Pengguna</h3>
+              <ul>
+                <li><a href="#">Cara Berbelanja</a></li>
+                <li><a href="#">Pertanyaan Umum</a></li>
+              </ul>
+            </div>
+            <div class="home-footer-col">
+              <h3>Kerja Sama &amp; Kolaborasi</h3>
+              <ul>
+                <li><a href="#">Pembelian Retail</a></li>
+                <li><a href="#">Kerja Sama Bisnis</a></li>
+              </ul>
+            </div>
+            <div class="home-footer-col">
+              <h3>Kebijakan Kami</h3>
+              <ul>
+                <li><a href="#">Ketentuan Pengguna</a></li>
+                <li><a href="#">Pengembalian Produk</a></li>
+                <li><a href="#">Kebijakan Privasi</a></li>
+                <li><a href="#">Ketentuan Pengiriman</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="home-footer-copy">
+        <div class="home-footer-copy-inner">
+          <p id="footerCopyright">Copyright © 2026 - PT Sahabat Jaya Sukses</p>
+        </div>
+      </section>
+    </footer>
 
-    <script src="/common.js"></script>
+    <div id="authModal" class="sjs-auth-modal hidden" aria-hidden="true">
+      <div class="sjs-auth-modal-backdrop" id="authModalBackdrop"></div>
+      <div class="sjs-auth-modal-card" role="dialog" aria-labelledby="authModalTitle">
+        <button type="button" class="sjs-auth-modal-close" id="authModalClose" aria-label="Tutup">&times;</button>
+        <h2 id="authModalTitle">Masuk / Daftar</h2>
+        <p class="sjs-auth-modal-sub">Masuk ke akun SJS untuk belanja dan lacak pesanan.</p>
+        <form id="headerLoginForm" class="auth-form" autocomplete="off">
+          <div>
+            <label for="headerLoginEmail">Email</label>
+            <input type="email" id="headerLoginEmail" placeholder="contoh@email.com" required autocomplete="email" />
+          </div>
+          <div>
+            <label for="headerLoginPassword">Password</label>
+            <input type="password" id="headerLoginPassword" placeholder="Password" required autocomplete="current-password" />
+          </div>
+          <button type="submit" class="sjs-auth-submit">Masuk</button>
+        </form>
+        <div id="headerGoogleSignIn" class="sjs-google-signin"></div>
+        <p id="headerLoginMessage" class="message"></p>
+        <a href="/register.html" class="sjs-auth-register-link">Belum punya akun? Daftar sekarang</a>
+      </div>
+    </div>
+
+    <script src="/common.js?v=13"></script>
+    <script src="/home.js?v=7"></script>
   </body>
 </html>

@@ -1,0 +1,92 @@
+--- a/public/admin.js
++++ b/public/admin.js
+@@ -879,0 +880,532 @@
++      if (!file) throw new Error("Pilih gambar barcode QRIS terlebih dahulu.");
++
++      const imageUrl = await uploadQrisImage(file);
++
++      await apiFetch("/admin/settings/payment", {
++        method: "PUT",
++        body: JSON.stringify({ qrisImageUrl: imageUrl })
++      });
++
++      if (qrisMessage) {
++        qrisMessage.className = "message success";
++        qrisMessage.textContent = "QRIS berhasil disimpan!";
++      }
++
++      // Refresh preview
++      loadCompanyProfileSettings(); // this will also load QRIS now
++      document.getElementById("qrisFile").value = "";
++    } catch (error) {
++      if (qrisMessage) {
++        qrisMessage.className = "message";
++        qrisMessage.textContent = error.message;
++      }
++    }
++  });
++}
++
++// --- Banner Logic ---
++
++let currentBanners = {
++  main: { imageUrl: '', link: '' },
++  side1: { imageUrl: '', link: '' },
++  side2: { imageUrl: '', link: '' }
++};
++
++async function loadBannerSettings() {
++  if (!bannerForm) return;
++  try {
++    const settings = await apiFetch("/settings");
++    if (settings?.heroBanners) {
++      currentBanners = { ...currentBanners, ...settings.heroBanners };
++      
++      const renderPreview = (id, obj) => {
++        const previewEl = document.getElementById(id);
++        if (obj?.imageUrl) {
++          const isVideo = obj.imageUrl.toLowerCase().match(/\.(mp4|webm|ogg)$/);
++          if (isVideo) {
++            previewEl.innerHTML = `<video src="${obj.imageUrl}" autoplay loop muted playsinline style="max-width: 100%; max-height: 120px; object-fit: contain; border-radius: 8px; display: block; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #e5e7eb;"></video>`;
++          } else {
++            previewEl.innerHTML = `<img src="${obj.imageUrl}" style="max-width: 100%; max-height: 120px; object-fit: contain; border-radius: 8px; display: block; box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+<truncated 4194 bytes>
+olid #f3f4f6;">${new Date(order.created_at).toLocaleString('id-ID')}</td>
++        <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${formatRupiah(order.total)}</td>
++        <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
++          <span style="background: #e5edff; color: #1d4ed8; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">
++            ${order.status}
++          </span>
++        </td>
++        <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
++          <select data-action="change-entity" data-order-id="${order.id}" style="padding: 4px; font-size: 0.8rem; margin-right: 4px; border: 1px solid #d1d5db; border-radius: 4px;">
++            <option value="" ${!order.fulfillment_entity ? 'selected' : ''}>PT Sahabat Jaya Sukses (Default)</option>
++            <option value="SJS" ${order.fulfillment_entity === 'SJS' ? 'selected' : ''}>PT Sahabat Jaya Sukses</option>
++            <option value="SJL" ${order.fulfillment_entity === 'SJL' ? 'selected' : ''}>PT Sukses Jaya Lestari</option>
++          </select>
++          <a href="/invoice.html?id=${order.id}" target="_blank" class="btn-secondary" style="font-size: 0.8rem; padding: 4px 8px; display: inline-block;">Lihat Invoice</a>
++        </td>
++      </tr>
++    `).join("");
++  } catch (error) {
++    if (msg) msg.textContent = error.message;
++    tbody.innerHTML = '<tr><td colspan="6" style="padding: 10px; text-align: center; color: red;">Gagal memuat pesanan.</td></tr>';
++  }
++}
++
++document.getElementById("ordersTbody")?.addEventListener("change", async (event) => {
++  const target = event.target;
++  if (target?.dataset?.action === "change-entity") {
++    const orderId = target.dataset.orderId;
++    const entity = target.value;
++    try {
++      await apiFetch(`/admin/orders/${orderId}/entity`, {
++        method: "PUT",
++        body: JSON.stringify({ entity }),
++      });
++      alert("Entitas invoice berhasil diubah.");
++    } catch (error) {
++      alert("Gagal mengubah entitas: " + error.message);
++    }
++  }
++});
