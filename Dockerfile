@@ -1,12 +1,16 @@
-FROM node:20-bookworm-slim
+FROM node:20.20.2-bookworm-slim
 
+# Native deps untuk sqlite3 + sharp; reinstall npm jika image/cache corrupt
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         python3 \
         make \
         g++ \
         curl \
-    && rm -rf /var/lib/apt/lists/*
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install -g npm@10.9.4 \
+    && npm cache clean --force
 
 WORKDIR /app
 
