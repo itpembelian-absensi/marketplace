@@ -1,4 +1,4 @@
-# Stage 1: npm ci + native modules di Debian bookworm (JANGAN build di host Mint/Ubuntu)
+# Stage 1: npm ci + native modules di Debian bookworm
 FROM node:22-bookworm AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -17,7 +17,10 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 
+# sqlite3 prebuild sering ERR_DLOPEN_FAILED di Node 22 — wajib compile from source
 RUN npm ci --omit=dev --foreground-scripts \
+    && rm -rf node_modules/sqlite3/build \
+    && npm rebuild sqlite3 --build-from-source --foreground-scripts \
     && node -e 'require("sharp"); console.log("sharp OK")' \
     && node -e 'require("sqlite3"); console.log("sqlite3 OK")'
 
