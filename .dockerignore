@@ -1,0 +1,18 @@
+node_modules
+npm-debug.log
+.env
+.env.*
+!.env.production.example
+data
+storage
+.git
+.github
+.cursor
+*.md
+!README.md
+PT Sahabat Jaya Sukses*
+restore.patch
+extract2.txt
+script.py
+buka-aplikasi.bat
+.phpunit.result.cache

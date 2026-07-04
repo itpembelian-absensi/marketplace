@@ -22,6 +22,7 @@ const { handleWebhook } = require("./lib/whatsapp-bot");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || "0.0.0.0";
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-marketplace";
 const SEED_ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || "";
 const SEED_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || "";
@@ -2868,8 +2869,8 @@ app.use((req, res) => {
 
 setupDatabase()
   .then(() => {
-    const server = app.listen(PORT, () => {
-      console.log(`Marketplace app running at http://localhost:${PORT}`);
+    const server = app.listen(PORT, HOST, () => {
+      console.log(`Marketplace app running at http://${HOST}:${PORT}`);
     });
 
     server.on("error", (error) => {
