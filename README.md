@@ -100,15 +100,9 @@ cd /srv/docker/marketplace
 ./scripts/deploy.sh
 ```
 
-Script akan: `git pull` → **npm ci (container Node 22 sementara)** → build image → restart → health check.
+Script akan: `git pull` → **build Docker (npm ci di dalam image bookworm)** → restart → health check.
 
-**Prasyarat:** Docker. Native module (`sqlite3`, `sharp`) harus match Node 22 — default install via container sementara, bukan di Docker build.
-
-Opsional npm di host (Node major harus = `.nvmrc`):
-
-```bash
-INSTALL_DEPS_MODE=host ./scripts/install-deps.sh
-```
+Native module (`sqlite3`, `sharp`) **tidak boleh** di-build di host Mint/Ubuntu — glibc host lebih baru dari container Debian.
 
 Data persisten ada di folder `storage/` (database SQLite + upload gambar).
 

@@ -1,6 +1,30 @@
-FROM node:22-bookworm-slim
+# Stage 1: npm ci + native modules — HARUS di Debian bookworm (bukan di host Mint/Ubuntu)
+FROM node:22-bookworm AS builder
 
-# node_modules di-build via scripts/install-deps.sh (harus match Node 22)
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        python3 \
+        make \
+        g++ \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+COPY server.js ./
+COPY lib ./lib
+COPY public ./public
+
+RUN node -e "require('sharp'); require('sqlite3'); console.log('native modules OK')"
+
+# Stage 2: runtime slim (copy hasil build, tanpa npm)
+FROM node:22-bookworm-slim AS runtime
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         curl \
@@ -9,11 +33,11 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-COPY node_modules ./node_modules
-COPY server.js ./
-COPY lib ./lib
-COPY public ./public
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/server.js ./server.js
+COPY --from=builder /app/lib ./lib
+COPY --from=builder /app/public ./public
 
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
