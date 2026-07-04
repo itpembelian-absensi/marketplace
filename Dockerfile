@@ -9,18 +9,18 @@ RUN apt-get update \
         make \
         g++ \
         ca-certificates \
+        libsqlite3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev \
+    && node -e 'require("sharp"); console.log("sharp OK"); require("sqlite3"); console.log("sqlite3 OK")'
 
 COPY server.js ./
 COPY lib ./lib
 COPY public ./public
-
-RUN node -e "require('sharp'); require('sqlite3'); console.log('native modules OK')"
 
 # Stage 2: runtime slim (copy hasil build, tanpa npm)
 FROM node:22-bookworm-slim AS runtime
@@ -29,6 +29,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         curl \
         ca-certificates \
+        libsqlite3-0 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
