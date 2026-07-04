@@ -100,9 +100,13 @@ cd /srv/docker/marketplace
 ./scripts/deploy.sh
 ```
 
-Script akan: `git pull` → **build Docker (npm ci di dalam image bookworm)** → restart → health check.
+Script otomatis handle:
+- reset git (tanpa konflik pull)
+- hapus `node_modules` host
+- build Docker (npm ci di dalam image)
+- restart + health check + tampilkan log kalau crash
 
-Native module (`sqlite3`, `sharp`) **tidak boleh** di-build di host Mint/Ubuntu — glibc host lebih baru dari container Debian.
+Build cepat (pakai cache): `FORCE_REBUILD=0 ./scripts/deploy.sh`
 
 Data persisten ada di folder `storage/` (database SQLite + upload gambar).
 

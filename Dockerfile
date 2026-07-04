@@ -1,4 +1,4 @@
-# Stage 1: npm ci + native modules — HARUS di Debian bookworm (bukan di host Mint/Ubuntu)
+# Stage 1: npm ci + native modules di Debian bookworm (JANGAN build di host Mint/Ubuntu)
 FROM node:22-bookworm AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -10,19 +10,22 @@ RUN apt-get update \
         g++ \
         ca-certificates \
         libsqlite3-dev \
+        libvips-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev \
-    && node -e 'require("sharp"); console.log("sharp OK"); require("sqlite3"); console.log("sqlite3 OK")'
+
+RUN npm ci --omit=dev --foreground-scripts \
+    && node -e 'require("sharp"); console.log("sharp OK")' \
+    && node -e 'require("sqlite3"); console.log("sqlite3 OK")'
 
 COPY server.js ./
 COPY lib ./lib
 COPY public ./public
 
-# Stage 2: runtime slim (copy hasil build, tanpa npm)
+# Stage 2: runtime
 FROM node:22-bookworm-slim AS runtime
 
 RUN apt-get update \
@@ -30,6 +33,7 @@ RUN apt-get update \
         curl \
         ca-certificates \
         libsqlite3-0 \
+        libvips42 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -49,7 +53,7 @@ ENV HOST=0.0.0.0
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD curl -fsS "http://127.0.0.1:3000/api/categories" > /dev/null || exit 1
 
 ENTRYPOINT ["entrypoint.sh"]
