@@ -1,16 +1,15 @@
-FROM node:20.20.2-bookworm-slim
+# Stage 1: build native modules (sqlite3, sharp) on full Debian image
+FROM node:20-bookworm AS builder
 
-# Native deps untuk sqlite3 + sharp; reinstall npm jika image/cache corrupt
+ENV DEBIAN_FRONTEND=noninteractive
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         python3 \
         make \
         g++ \
-        curl \
         ca-certificates \
-    && rm -rf /var/lib/apt/lists/* \
-    && npm install -g npm@10.9.4 \
-    && npm cache clean --force
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -20,6 +19,23 @@ RUN npm ci --omit=dev
 COPY . .
 
 RUN node -e "require('sharp'); require('sqlite3')"
+
+# Stage 2: lean runtime (no npm — avoids corrupt npm in slim images)
+FROM node:20-bookworm-slim AS runtime
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        curl \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/server.js ./server.js
+COPY --from=builder /app/lib ./lib
+COPY --from=builder /app/public ./public
 
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
