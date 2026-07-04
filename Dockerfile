@@ -1,6 +1,6 @@
-FROM node:20-bookworm-slim
+FROM node:22-bookworm-slim
 
-# Tidak ada npm ci di sini — node_modules di-build di host via scripts/deploy.sh
+# node_modules di-build via scripts/install-deps.sh (harus match Node 22)
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         curl \

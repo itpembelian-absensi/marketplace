@@ -73,5 +73,6 @@ for i in $(seq 1 12); do
 done
 
 echo "Health check gagal pada port ${APP_PORT}" >&2
-echo "Cek log: ./scripts/dc.sh logs -f app" >&2
+echo "Cek log: ./scripts/dc.sh logs --tail 80 app" >&2
+docker compose --env-file "$ENV_FILE" logs --tail 80 app >&2 || true
 exit 1

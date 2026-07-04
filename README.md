@@ -100,15 +100,14 @@ cd /srv/docker/marketplace
 ./scripts/deploy.sh
 ```
 
-Script akan: `git pull` → **npm ci di host** → build image Docker → restart container → health check.
+Script akan: `git pull` → **npm ci (container Node 22 sementara)** → build image → restart → health check.
 
-**Prasyarat host:** Node.js 20+ dan npm (dependency di-install di server, bukan di Docker build).
+**Prasyarat:** Docker. Native module (`sqlite3`, `sharp`) harus match Node 22 — default install via container sementara, bukan di Docker build.
+
+Opsional npm di host (Node major harus = `.nvmrc`):
 
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
-# jika sqlite3 gagal compile:
-sudo apt install -y python3 make g++
+INSTALL_DEPS_MODE=host ./scripts/install-deps.sh
 ```
 
 Data persisten ada di folder `storage/` (database SQLite + upload gambar).
