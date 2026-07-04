@@ -27,7 +27,7 @@ else
 fi
 echo
 
-for cmd in git curl docker; do
+for cmd in git curl docker node npm; do
 	if command -v "$cmd" >/dev/null 2>&1; then
 		ver=$("$cmd" --version 2>&1 | head -1)
 		pass "$cmd — $ver"
@@ -35,6 +35,15 @@ for cmd in git curl docker; do
 		fail_msg "$cmd not found"
 	fi
 done
+
+if command -v node >/dev/null 2>&1; then
+	node_major=$(node -v | sed 's/v//' | cut -d. -f1)
+	if [ "$node_major" -ge 20 ] 2>/dev/null; then
+		pass "Node.js major version >= 20"
+	else
+		fail_msg "Node.js $(node -v) — butuh v20+ (npm di-build di host, bukan Docker)"
+	fi
+fi
 
 if docker compose version >/dev/null 2>&1; then
 	pass "docker compose — $(docker compose version --short 2>/dev/null || docker compose version | head -1)"

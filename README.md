@@ -100,7 +100,16 @@ cd /srv/docker/marketplace
 ./scripts/deploy.sh
 ```
 
-Script akan: `git pull` → build image → restart container → health check.
+Script akan: `git pull` → **npm ci di host** → build image Docker → restart container → health check.
+
+**Prasyarat host:** Node.js 20+ dan npm (dependency di-install di server, bukan di Docker build).
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+# jika sqlite3 gagal compile:
+sudo apt install -y python3 make g++
+```
 
 Data persisten ada di folder `storage/` (database SQLite + upload gambar).
 

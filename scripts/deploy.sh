@@ -51,8 +51,12 @@ for dir in picture product banner profile_pictures qris; do
 	fi
 done
 
+echo "==> Install dependencies (host npm — tidak di dalam Docker build)"
+chmod +x scripts/install-deps.sh
+./scripts/install-deps.sh
+
 echo "==> Build & start containers"
-docker compose --env-file "$ENV_FILE" build --pull
+docker compose --env-file "$ENV_FILE" build
 docker compose --env-file "$ENV_FILE" up -d --remove-orphans
 
 APP_PORT="$(grep -E '^APP_PORT=' "$ENV_FILE" | cut -d= -f2 | tr -d '\r' | tr -d ' ')"
