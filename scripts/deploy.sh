@@ -78,7 +78,11 @@ fi
 log "Prepare storage"
 mkdir -p \
 	storage/data \
-	storage/uploads/picture \
+	storage/uploads/picture/slides \
+	storage/uploads/picture/features \
+	storage/uploads/picture/about \
+	storage/uploads/picture/logo \
+	storage/uploads/picture/products \
 	storage/uploads/product \
 	storage/uploads/banner \
 	storage/uploads/profile_pictures \

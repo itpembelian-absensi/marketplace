@@ -2863,7 +2863,49 @@ app.use((err, req, res, next) => {
   next();
 });
 
+const STATIC_ASSET_EXT = new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".webp",
+  ".gif",
+  ".svg",
+  ".ico",
+  ".mp4",
+  ".webm",
+  ".css",
+  ".js",
+  ".map",
+  ".woff",
+  ".woff2",
+  ".ttf",
+  ".json",
+]);
+
 app.use((req, res) => {
+  const ext = path.extname(req.path || "").toLowerCase();
+
+  if (req.path.startsWith("/api/")) {
+    res.status(404).json({ message: "Endpoint tidak ditemukan." });
+    return;
+  }
+
+  // Jangan arahkan request gambar/file ke index.html — supaya 404 jelas, bukan halaman web
+  if (STATIC_ASSET_EXT.has(ext)) {
+    res.status(404).type("text/plain").send("Not found");
+    return;
+  }
+
+  if (ext === ".html") {
+    const htmlPath = path.join(__dirname, "public", req.path);
+    if (fs.existsSync(htmlPath)) {
+      res.sendFile(htmlPath);
+      return;
+    }
+    res.status(404).type("text/plain").send("Not found");
+    return;
+  }
+
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
