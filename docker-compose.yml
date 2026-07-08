@@ -1,0 +1,39 @@
+# Linux Mint 22 / Ubuntu 24.04
+#
+# Setup pertama:
+#   cp .env.production.example .env.production   # edit secret
+#   ./scripts/deploy.sh
+#
+# Update (pull + rebuild + restart):
+#   ./scripts/deploy.sh
+
+name: ${COMPOSE_PROJECT_NAME:-marketplace}
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${COMPOSE_PROJECT_NAME:-marketplace}-app:latest
+    container_name: ${COMPOSE_PROJECT_NAME:-marketplace}-app
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      PORT: "3000"
+      HOST: "0.0.0.0"
+      NODE_ENV: production
+    ports:
+      - "${APP_PORT:-5057}:3000"
+    volumes:
+      - ./storage/data:/app/data
+      - ./storage/uploads/picture:/app/public/picture
+      - ./storage/uploads/product:/app/public/product
+      - ./storage/uploads/banner:/app/public/banner
+      - ./storage/uploads/profile_pictures:/app/public/profile_pictures
+      - ./storage/uploads/qris:/app/public/qris
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/api/categories"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s

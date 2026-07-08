@@ -24,6 +24,7 @@ const { handleWebhook } = require("./lib/whatsapp-bot");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || "0.0.0.0";
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-marketplace";
 const SEED_ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || "";
 const SEED_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || "";
@@ -3026,14 +3027,56 @@ app.use((err, req, res, next) => {
   next();
 });
 
+const STATIC_ASSET_EXT = new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".webp",
+  ".gif",
+  ".svg",
+  ".ico",
+  ".mp4",
+  ".webm",
+  ".css",
+  ".js",
+  ".map",
+  ".woff",
+  ".woff2",
+  ".ttf",
+  ".json",
+]);
+
 app.use((req, res) => {
+  const ext = path.extname(req.path || "").toLowerCase();
+
+  if (req.path.startsWith("/api/")) {
+    res.status(404).json({ message: "Endpoint tidak ditemukan." });
+    return;
+  }
+
+  // Jangan arahkan request gambar/file ke index.html — supaya 404 jelas, bukan halaman web
+  if (STATIC_ASSET_EXT.has(ext)) {
+    res.status(404).type("text/plain").send("Not found");
+    return;
+  }
+
+  if (ext === ".html") {
+    const htmlPath = path.join(__dirname, "public", req.path);
+    if (fs.existsSync(htmlPath)) {
+      res.sendFile(htmlPath);
+      return;
+    }
+    res.status(404).type("text/plain").send("Not found");
+    return;
+  }
+
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 setupDatabase()
   .then(() => {
-    const server = app.listen(PORT, () => {
-      console.log(`Marketplace app running at http://localhost:${PORT}`);
+    const server = app.listen(PORT, HOST, () => {
+      console.log(`Marketplace app running at http://${HOST}:${PORT}`);
     });
 
     server.on("error", (error) => {

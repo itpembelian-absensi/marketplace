@@ -65,6 +65,59 @@ Project ini sudah mendukung file `.env`.
 
 Database tersimpan di `data/marketplace.db` dan akan otomatis membuat data produk awal saat pertama kali dijalankan.
 
+## Deploy dengan Docker (Linux Mint 22)
+
+### Prasyarat
+
+- Docker Engine + plugin `docker compose` (v2)
+- User ada di grup `docker`
+
+Cek server:
+
+```bash
+chmod +x scripts/*.sh
+./scripts/server-check.sh
+```
+
+### Setup pertama di server
+
+```bash
+git clone <repo-url> /srv/docker/marketplace
+cd /srv/docker/marketplace
+
+cp .env.production.example .env.production
+nano .env.production   # JWT_SECRET, password admin, API keys
+
+./scripts/deploy.sh
+```
+
+Aplikasi tersedia di `http://<server>:5057` (port bisa diubah lewat `APP_PORT`).
+
+### Update (satu perintah)
+
+```bash
+cd /srv/docker/marketplace
+./scripts/deploy.sh
+```
+
+Script otomatis handle:
+- reset git (tanpa konflik pull)
+- hapus `node_modules` host
+- build Docker (npm ci di dalam image)
+- restart + health check + tampilkan log kalau crash
+
+Build cepat (pakai cache): `FORCE_REBUILD=0 ./scripts/deploy.sh`
+
+Data persisten ada di folder `storage/` (database SQLite + upload gambar).
+
+Perintah Docker lain:
+
+```bash
+./scripts/dc.sh logs -f app
+./scripts/dc.sh ps
+./scripts/dc.sh down
+```
+
 ## Role (Admin / Manager / User)
 
 - **User**: bisa belanja & checkout
