@@ -1171,12 +1171,275 @@ a {
   border-radius: 10px;
   max-height: 350px;
   object-fit: cover;
+  display: block;
+}
+
+.product-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.product-gallery-main {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gallery-image-btn {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  position: relative;
+  cursor: zoom-in;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.gallery-image-btn .detail-image {
+  width: 100%;
+  transition: transform 0.2s ease;
+}
+
+.gallery-image-btn:hover .detail-image {
+  transform: scale(1.02);
+}
+
+.gallery-zoom-hint {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  background: rgba(17, 24, 39, 0.72);
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.gallery-nav,
+.lightbox-nav {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #111827;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.gallery-nav:hover,
+.lightbox-nav:hover {
+  background: #fff;
+}
+
+.gallery-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.gallery-dot {
+  width: 8px;
+  height: 8px;
+  border: none;
+  border-radius: 999px;
+  background: #d1d5db;
+  cursor: pointer;
+  padding: 0;
+}
+
+.gallery-dot.active {
+  background: var(--primary, #2563eb);
+  width: 20px;
+}
+
+.product-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.product-lightbox.hidden {
+  display: none;
+}
+
+.product-lightbox-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.88);
+}
+
+.product-lightbox-content {
+  position: relative;
+  z-index: 1;
+  width: min(92vw, 980px);
+  max-height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 56px;
+}
+
+.lightbox-image {
+  max-width: 100%;
+  max-height: 82vh;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #111827;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.lightbox-prev {
+  left: 8px;
+}
+
+.lightbox-next {
+  right: 8px;
+}
+
+.lightbox-counter {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+body.lightbox-open {
+  overflow: hidden;
+}
+
+.product-images-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 8px 0 12px;
+}
+
+.product-image-preview-item {
+  position: relative;
+  width: 88px;
+  height: 88px;
+}
+
+.product-image-preview-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.product-image-preview-item button {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .detail-product-title {
   margin: 0 0 10px;
   font-size: 2rem;
   line-height: 1.15;
+}
+
+.product-description {
+  margin: 12px 0 0;
+  line-height: 1.7;
+  color: #374151;
+  font-size: 0.95rem;
+}
+
+.product-description p {
+  margin: 0 0 14px;
+}
+
+.product-description p:last-child {
+  margin-bottom: 0;
+}
+
+.product-description ul {
+  margin: 0 0 14px;
+  padding-left: 0;
+  list-style: none;
+}
+
+.product-description li {
+  position: relative;
+  padding-left: 18px;
+  margin-bottom: 10px;
+}
+
+.product-description li::before {
+  content: "-";
+  position: absolute;
+  left: 0;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.product-description li:last-child {
+  margin-bottom: 0;
+}
+
+.product-description .product-desc-heading {
+  margin: 18px 0 12px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.4;
+}
+
+.product-description .product-desc-heading:first-child {
+  margin-top: 0;
+}
+
+.product-description strong {
+  color: #111827;
 }
 
 .detail-actions {

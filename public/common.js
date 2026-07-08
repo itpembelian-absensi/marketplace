@@ -13,6 +13,75 @@ function formatRupiah(number) {
   }).format(number || 0);
 }
 
+function escapeHtml(str) {
+  return String(str || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function formatInlineMarkdown(text) {
+  return escapeHtml(text).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+}
+
+function formatProductDescription(text) {
+  const raw = String(text || "").trim();
+  if (!raw) return "";
+
+  const blocks = raw.split(/\n\s*\n/);
+  const parts = [];
+
+  for (const block of blocks) {
+    const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
+    if (!lines.length) continue;
+
+    const isList = lines.every((line) => /^[-•]\s+/.test(line));
+    if (isList) {
+      const items = lines.map((line) => {
+        const content = line.replace(/^[-•]\s+/, "");
+        return `<li>${formatInlineMarkdown(content)}</li>`;
+      });
+      parts.push(`<ul>${items.join("")}</ul>`);
+      continue;
+    }
+
+    if (lines.length === 1) {
+      const line = lines[0];
+      const headingMatch = line.match(/^#{2,3}\s+(.+)$/);
+      if (headingMatch) {
+        parts.push(`<h3 class="product-desc-heading">${formatInlineMarkdown(headingMatch[1])}</h3>`);
+        continue;
+      }
+      if (/^[\p{Extended_Pictographic}\u2600-\u27BF]/u.test(line)) {
+        parts.push(`<h3 class="product-desc-heading">${formatInlineMarkdown(line)}</h3>`);
+        continue;
+      }
+    }
+
+    const paragraphHtml = lines.map((line) => formatInlineMarkdown(line)).join("<br>");
+    parts.push(`<p>${paragraphHtml}</p>`);
+  }
+
+  return parts.join("");
+}
+
+function getProductImages(product) {
+  if (!product) return [];
+  if (Array.isArray(product.images) && product.images.length) {
+    return product.images.filter(Boolean);
+  }
+  if (typeof product.images === "string" && product.images.trim()) {
+    try {
+      const parsed = JSON.parse(product.images);
+      if (Array.isArray(parsed) && parsed.length) return parsed.filter(Boolean);
+    } catch {
+      // ignore invalid JSON
+    }
+  }
+  return product.image ? [product.image] : [];
+}
+
 function getCartLineKey(item) {
   return `${Number(item.id)}::${String(item.selectedSize || "").trim()}`;
 }

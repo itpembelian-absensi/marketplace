@@ -16,6 +16,8 @@ const {
   mergeShippingSettings,
   getShippingOptions,
   calculateShippingQuote,
+  getShippingProviderStatus,
+  testShippingProvider,
 } = require("./lib/shipping");
 const { ensurePictureDirs, isValidFolder, processUpload } = require("./lib/media");
 const { handleWebhook } = require("./lib/whatsapp-bot");
@@ -435,6 +437,57 @@ function readPointsFromPayload(payload) {
   return Number(payload.pointsPerPurchase ?? payload.loyalty_points ?? payload.points_per_purchase) || 0;
 }
 
+function parseProductImagesField(product) {
+  const images = [];
+  if (product?.images) {
+    try {
+      const parsed = typeof product.images === "string" ? JSON.parse(product.images) : product.images;
+      if (Array.isArray(parsed)) {
+        parsed.forEach((url) => {
+          const trimmed = String(url || "").trim();
+          if (trimmed && !images.includes(trimmed)) images.push(trimmed);
+        });
+      }
+    } catch {
+      // ignore invalid JSON
+    }
+  }
+  const primary = String(product?.image || "").trim();
+  if (primary && !images.includes(primary)) images.unshift(primary);
+  return images;
+}
+
+function serializeProductImages(payload) {
+  let images = [];
+  if (Array.isArray(payload.images)) {
+    images = payload.images.map((url) => String(url || "").trim()).filter(Boolean);
+  } else if (typeof payload.images === "string" && payload.images.trim()) {
+    try {
+      const parsed = JSON.parse(payload.images);
+      if (Array.isArray(parsed)) {
+        images = parsed.map((url) => String(url || "").trim()).filter(Boolean);
+      }
+    } catch {
+      // ignore invalid JSON
+    }
+  }
+  const image = String(payload.image || "").trim();
+  if (!images.length && image) images = [image];
+  if (image && !images.includes(image)) images.unshift(image);
+  if (!images.length) return { image: "", imagesJson: "[]" };
+  return { image: images[0], imagesJson: JSON.stringify(images) };
+}
+
+function enrichProduct(product) {
+  if (!product) return product;
+  const images = parseProductImagesField(product);
+  return {
+    ...product,
+    image: images[0] || product.image || "",
+    images,
+  };
+}
+
 function formatRupiahServer(amount) {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -629,6 +682,15 @@ async function setupDatabase() {
   const hasPointsColumn = productColumns.some((col) => col.name === "points_per_purchase");
   if (!hasPointsColumn) {
     await runQuery("ALTER TABLE products ADD COLUMN points_per_purchase INTEGER NOT NULL DEFAULT 0");
+  }
+
+  const hasImagesColumn = productColumns.some((col) => col.name === "images");
+  if (!hasImagesColumn) {
+    await runQuery("ALTER TABLE products ADD COLUMN images TEXT");
+    const existingProducts = await allQuery("SELECT id, image FROM products WHERE image IS NOT NULL AND image != ''");
+    for (const product of existingProducts) {
+      await runQuery("UPDATE products SET images = ? WHERE id = ?", [JSON.stringify([product.image]), product.id]);
+    }
   }
 
   await runQuery(`
@@ -1203,6 +1265,82 @@ app.patch(
   }
 );
 
+app.patch(
+  "/api/users/:id",
+  authMiddleware,
+  requireRole(["admin"]),
+  async (req, res) => {
+    const { name, email, password, role } = req.body;
+    const userId = Number(req.params.id);
+
+    if (!userId) {
+      res.status(400).json({ message: "ID user tidak valid." });
+      return;
+    }
+
+    if (!name || !email) {
+      res.status(400).json({ message: "Nama dan email wajib diisi." });
+      return;
+    }
+
+    const newRole = (role || "user").toLowerCase();
+    if (!["admin", "manager", "user"].includes(newRole)) {
+      res.status(400).json({ message: "Role tidak valid." });
+      return;
+    }
+
+    if (password && password.length < 6) {
+      res.status(400).json({ message: "Password minimal 6 karakter." });
+      return;
+    }
+
+    if (req.user.id === userId && newRole !== "admin") {
+      res.status(400).json({ message: "Admin tidak boleh menurunkan role dirinya sendiri." });
+      return;
+    }
+
+    try {
+      const existing = await getQuery("SELECT id FROM users WHERE id = ?", [userId]);
+      if (!existing) {
+        res.status(404).json({ message: "User tidak ditemukan." });
+        return;
+      }
+
+      const emailOwner = await getQuery("SELECT id FROM users WHERE email = ? AND id != ?", [
+        email,
+        userId,
+      ]);
+      if (emailOwner) {
+        res.status(409).json({ message: "Email sudah terdaftar." });
+        return;
+      }
+
+      if (password) {
+        const passwordHash = await bcrypt.hash(password, 10);
+        await runQuery(
+          "UPDATE users SET name = ?, email = ?, role = ?, password_hash = ? WHERE id = ?",
+          [name, email, newRole, passwordHash, userId]
+        );
+      } else {
+        await runQuery("UPDATE users SET name = ?, email = ?, role = ? WHERE id = ?", [
+          name,
+          email,
+          newRole,
+          userId,
+        ]);
+      }
+
+      const userRow = await getQuery(
+        "SELECT id, name, email, role, created_at FROM users WHERE id = ?",
+        [userId]
+      );
+      res.json({ message: "User berhasil diperbarui.", user: userRow });
+    } catch (error) {
+      res.status(500).json({ message: "Gagal memperbarui user." });
+    }
+  }
+);
+
 app.delete(
   "/api/users/:id",
   authMiddleware,
@@ -1232,6 +1370,9 @@ app.delete(
         await runQuery("DELETE FROM order_items WHERE order_id = ?", [order.id]);
       }
       await runQuery("DELETE FROM orders WHERE user_id = ?", [userId]);
+      await runQuery("DELETE FROM user_point_history WHERE user_id = ?", [userId]);
+      await runQuery("DELETE FROM user_points WHERE user_id = ?", [userId]);
+      await runQuery("DELETE FROM user_addresses WHERE user_id = ?", [userId]);
       await runQuery("DELETE FROM users WHERE id = ?", [userId]);
 
       res.json({ message: `User "${existing.name}" berhasil dihapus.` });
@@ -1520,15 +1661,38 @@ app.post("/api/shipping/quote", authMiddleware, async (req, res) => {
 app.get("/api/admin/settings/shipping", authMiddleware, requireRole(["admin"]), async (req, res) => {
   try {
     const settings = await getShippingSettingsFromDb();
+    const providers = getShippingProviderStatus();
     res.json({
       settings,
-      lalamoveConfigured: Boolean(process.env.LALAMOVE_API_KEY && process.env.LALAMOVE_API_SECRET),
-      gosendConfigured: Boolean(
-        process.env.GOSEND_API_BASE && process.env.GOSEND_CLIENT_ID && process.env.GOSEND_PASS_KEY
-      ),
+      lalamoveConfigured: providers.lalamove.configured,
+      gosendConfigured: providers.gosend.configured,
+      providers,
     });
   } catch (error) {
     res.status(500).json({ message: "Gagal memuat pengaturan pengiriman." });
+  }
+});
+
+app.post("/api/admin/settings/shipping/test", authMiddleware, requireRole(["admin"]), async (req, res) => {
+  try {
+    const provider = String(req.body?.provider || "").toLowerCase();
+    if (!["lalamove", "gosend", "all"].includes(provider)) {
+      res.status(400).json({ message: "Provider harus lalamove, gosend, atau all." });
+      return;
+    }
+    const settings = await getShippingSettingsFromDb();
+    if (provider === "all") {
+      const [lalamove, gosend] = await Promise.all([
+        testShippingProvider("lalamove", settings),
+        testShippingProvider("gosend", settings),
+      ]);
+      res.json({ results: [lalamove, gosend] });
+      return;
+    }
+    const result = await testShippingProvider(provider, settings);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ message: error.message || "Gagal menguji koneksi API." });
   }
 });
 
@@ -1898,7 +2062,7 @@ app.post(
 app.get("/api/admin/products", authMiddleware, requireRole(["admin"]), async (req, res) => {
   try {
     const rows = await allQuery("SELECT * FROM products ORDER BY id DESC");
-    res.json(rows);
+    res.json(rows.map(enrichProduct));
   } catch (error) {
     res.status(500).json({ message: "Gagal mengambil data produk admin." });
   }
@@ -1929,7 +2093,7 @@ app.post("/api/admin/products", authMiddleware, requireRole(["admin"]), async (r
   const category = String(payload.category || "").trim();
   const subcategory = String(payload.subcategory || "Umum").trim() || "Umum";
   const description = String(payload.description || "").trim();
-  const image = String(payload.image || "").trim();
+  const { image: primaryImage, imagesJson } = serializeProductImages(payload);
   const waPhone = String(payload.waPhone || "").trim();
   const price = Number(payload.price);
   const rating = Number(payload.rating || 4.5);
@@ -1938,16 +2102,16 @@ app.post("/api/admin/products", authMiddleware, requireRole(["admin"]), async (r
   const sizesStr = normalizeSizesPayload(payload.sizes);
   const pointsPerPurchase = readPointsFromPayload(payload);
 
-  if (!name || !category || !description || !image || Number.isNaN(price) || price <= 0 || stockSjs < 0 || stockSjl < 0) {
+  if (!name || !category || !description || !primaryImage || Number.isNaN(price) || price <= 0 || stockSjs < 0 || stockSjl < 0) {
     res.status(400).json({ message: "Nama, kategori, deskripsi, gambar, harga, dan stok wajib valid." });
     return;
   }
 
   try {
     const result = await runQuery(
-      `INSERT INTO products (name, category, subcategory, price, rating, description, image, discount, wa_phone, stock, stock_sjs, stock_sjl, sizes, points_per_purchase)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [name, category, subcategory, Math.round(price), Number.isNaN(rating) ? 4.5 : rating, description, image, discount, waPhone, stock, stockSjs, stockSjl, sizesStr, pointsPerPurchase]
+      `INSERT INTO products (name, category, subcategory, price, rating, description, image, images, discount, wa_phone, stock, stock_sjs, stock_sjl, sizes, points_per_purchase)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [name, category, subcategory, Math.round(price), Number.isNaN(rating) ? 4.5 : rating, description, primaryImage, imagesJson, discount, waPhone, stock, stockSjs, stockSjl, sizesStr, pointsPerPurchase]
     );
 
     if (stock > 0) {
@@ -1975,7 +2139,7 @@ app.put("/api/admin/products/:id", authMiddleware, requireRole(["admin"]), async
   const category = String(payload.category || "").trim();
   const subcategory = String(payload.subcategory || "Umum").trim() || "Umum";
   const description = String(payload.description || "").trim();
-  const image = String(payload.image || "").trim();
+  const { image: primaryImage, imagesJson } = serializeProductImages(payload);
   const waPhone = String(payload.waPhone || "").trim();
   const price = Number(payload.price);
   const rating = Number(payload.rating || 4.5);
@@ -1984,7 +2148,7 @@ app.put("/api/admin/products/:id", authMiddleware, requireRole(["admin"]), async
   const sizesStr = normalizeSizesPayload(payload.sizes);
   const pointsPerPurchase = readPointsFromPayload(payload);
 
-  if (!name || !category || !description || !image || Number.isNaN(price) || price <= 0 || stockSjs < 0 || stockSjl < 0) {
+  if (!name || !category || !description || !primaryImage || Number.isNaN(price) || price <= 0 || stockSjs < 0 || stockSjl < 0) {
     res.status(400).json({ message: "Nama, kategori, deskripsi, gambar, harga, dan stok wajib valid." });
     return;
   }
@@ -2001,9 +2165,9 @@ app.put("/api/admin/products/:id", authMiddleware, requireRole(["admin"]), async
 
     await runQuery(
       `UPDATE products
-       SET name = ?, category = ?, subcategory = ?, price = ?, rating = ?, description = ?, image = ?, discount = ?, wa_phone = ?, stock = ?, stock_sjs = ?, stock_sjl = ?, sizes = ?, points_per_purchase = ?
+       SET name = ?, category = ?, subcategory = ?, price = ?, rating = ?, description = ?, image = ?, images = ?, discount = ?, wa_phone = ?, stock = ?, stock_sjs = ?, stock_sjl = ?, sizes = ?, points_per_purchase = ?
        WHERE id = ?`,
-      [name, category, subcategory, Math.round(price), Number.isNaN(rating) ? 4.5 : rating, description, image, discount, waPhone, stock, stockSjs, stockSjl, sizesStr, pointsPerPurchase, id]
+      [name, category, subcategory, Math.round(price), Number.isNaN(rating) ? 4.5 : rating, description, primaryImage, imagesJson, discount, waPhone, stock, stockSjs, stockSjl, sizesStr, pointsPerPurchase, id]
     );
 
     if (diff > 0) {
@@ -2145,7 +2309,7 @@ app.post(
 app.get("/api/products", async (req, res) => {
   try {
     const products = await allQuery("SELECT * FROM products ORDER BY id DESC");
-    res.json(products);
+    res.json(products.map(enrichProduct));
   } catch (error) {
     res.status(500).json({ message: "Gagal mengambil produk." });
   }
@@ -2160,7 +2324,7 @@ app.get("/api/products/:id", async (req, res) => {
       res.status(404).json({ message: "Produk tidak ditemukan." });
       return;
     }
-    res.json(product);
+    res.json(enrichProduct(product));
   } catch (error) {
     res.status(500).json({ message: "Gagal mengambil detail produk." });
   }

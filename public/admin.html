@@ -46,7 +46,7 @@
         <p id="usersMessage" class="message"></p>
         <div id="usersTable"></div>
 
-        <h3 style="margin-top: 18px">Create User</h3>
+        <h3 id="createUserHeading" style="margin-top: 18px">Create User</h3>
         <form id="createUserForm" class="auth-form" autocomplete="off">
           <div>
             <label for="name" style="font-size:0.9rem; font-weight:500;">Nama Lengkap <span style="color:var(--danger)">*</span></label>
@@ -57,7 +57,7 @@
             <input type="email" id="email" placeholder="contoh@email.com" required autocomplete="new-password" style="margin-top:4px; width:100%; box-sizing:border-box;" />
           </div>
           <div>
-            <label for="password" style="font-size:0.9rem; font-weight:500;">Password <span style="color:var(--danger)">*</span></label>
+            <label for="password" id="passwordLabel" style="font-size:0.9rem; font-weight:500;">Password <span style="color:var(--danger)">*</span></label>
             <input
               type="password"
               id="password"
@@ -76,7 +76,10 @@
               <option value="admin">admin</option>
             </select>
           </div>
-          <button type="submit" class="btn-primary" style="margin-top:8px;">Buat User</button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+            <button type="submit" id="createUserSubmitButton" class="btn-primary">Buat User</button>
+            <button type="button" id="createUserCancelButton" class="btn-secondary hidden">Batal Edit</button>
+          </div>
         </form>
         <p id="createMessage" class="message"></p>
         <p class="empty-state" style="margin-top: 8px">
@@ -393,7 +396,13 @@
           <input id="productPoints" type="number" min="0" placeholder="Poin per 1 barang terjual (0 = tidak ada poin)" value="0" required />
 
           <label style="font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Deskripsi Produk:</label>
-          <textarea id="productDescription" rows="3" placeholder="Deskripsi produk" required></textarea>
+          <textarea id="productDescription" rows="10" placeholder="Paragraf pembuka produk...
+
+🌟 Keunggulan Utama
+
+- **Judul Fitur:** Penjelasan fitur
+- **Judul Fitur 2:** Penjelasan fitur" required></textarea>
+          <p style="font-size: 0.78rem; color: #6b7280; margin: 4px 0 12px; line-height: 1.5;">Tips format: pisahkan paragraf dengan baris kosong, gunakan <strong>-</strong> untuk poin, <strong>**teks**</strong> untuk tebal, atau <strong>## Judul</strong> / emoji di awal baris untuk judul section.</p>
           
           <label style="font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Pilihan Ukuran & Harga (Opsional):</label>
           <div style="display: flex; gap: 8px; font-size: 0.8rem; font-weight: 600; color: #6b7280; margin-bottom: 4px; padding: 0 8px;">
@@ -415,7 +424,9 @@
           <input id="productRating" type="number" min="1" max="5" step="0.1" placeholder="Rating (default 4.5)" />
           
           <label style="font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Gambar Produk:</label>
-          <input id="productImageFile" type="file" accept="image/png,image/jpeg,image/webp" />
+          <input id="productImageFile" type="file" accept="image/png,image/jpeg,image/webp" multiple />
+          <p style="font-size: 0.78rem; color: #6b7280; margin: 4px 0 8px; line-height: 1.5;">Bisa pilih lebih dari 1 gambar. Gambar pertama jadi thumbnail utama.</p>
+          <div id="productImagesPreview" class="product-images-preview"></div>
           
           <label style="font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Nomor WhatsApp (Opsional):</label>
           <input id="productWaPhone" type="text" placeholder="Nomor WA untuk tanya produk (opsional)" />
@@ -555,20 +566,60 @@
             <input type="number" id="shipStoreFreeAbove" min="0" value="0" />
           </div>
           <hr style="border: none; border-top: 1px solid var(--border); margin: 8px 0;" />
+          <h3 style="margin: 0; font-size: 1rem;">Lalamove & GoSend</h3>
+          <p class="empty-state" style="margin: 8px 0 12px;">
+            Kredensial API diisi di file <code>.env</code> lalu restart server. Setelah itu klik <strong>Uji API</strong> di bawah.
+          </p>
           <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem;">
             <input type="checkbox" id="shipLalamoveEnabled" checked /> Aktifkan Lalamove
           </label>
-          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem;">
+          <div>
+            <label class="field-label" for="shipLalamoveServiceType">Tipe kendaraan Lalamove</label>
+            <select id="shipLalamoveServiceType" style="width:100%; box-sizing:border-box;">
+              <option value="MOTORCYCLE">Motor (MOTORCYCLE)</option>
+              <option value="MPV">MPV</option>
+              <option value="VAN">Van</option>
+              <option value="TRUCK330">Truck kecil</option>
+            </select>
+          </div>
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; margin-top: 8px;">
             <input type="checkbox" id="shipGosendEnabled" checked /> Aktifkan GoSend
           </label>
           <div>
-            <label style="font-size: 0.85rem; font-weight: 500;">Estimasi cadangan: Rp per km</label>
+            <label class="field-label" for="shipGosendMethod">Layanan GoSend</label>
+            <select id="shipGosendMethod" style="width:100%; box-sizing:border-box;">
+              <option value="Instant">Instant</option>
+              <option value="SameDay">Same Day</option>
+              <option value="InstantCar">Instant Car</option>
+            </select>
+          </div>
+          <hr style="border: none; border-top: 1px solid var(--border); margin: 8px 0;" />
+          <h3 style="margin: 0; font-size: 1rem;">Estimasi cadangan (jika API belum aktif)</h3>
+          <div>
+            <label style="font-size: 0.85rem; font-weight: 500;">Rp per km</label>
             <input type="number" id="shipFallbackPerKm" min="0" value="3500" />
+          </div>
+          <div>
+            <label style="font-size: 0.85rem; font-weight: 500;">Ongkir minimum (Rp)</label>
+            <input type="number" id="shipFallbackMinFee" min="0" value="15000" />
           </div>
           <button type="submit" class="btn-primary">Simpan Pengaturan Kirim</button>
         </form>
+        <div class="warehouse-origin-actions" style="margin-top: 12px;">
+          <button type="button" id="shipTestLalamoveBtn" class="btn-secondary">Uji API Lalamove</button>
+          <button type="button" id="shipTestGosendBtn" class="btn-secondary">Uji API GoSend</button>
+        </div>
         <p id="shippingSettingsMessage" class="message"></p>
         <p id="shippingApiStatus" class="empty-state" style="margin-top: 8px;"></p>
+        <div id="shippingApiGuide" class="auth-card" style="margin-top: 12px; padding: 14px; background: #f8fafc;">
+          <h3 style="margin: 0 0 8px; font-size: 0.95rem;">Cara mendapatkan kredensial</h3>
+          <ol style="margin: 0; padding-left: 18px; font-size: 0.88rem; color: #374151; line-height: 1.6;">
+            <li><strong>Lalamove:</strong> Daftar di <a href="https://developers.lalamove.com/" target="_blank" rel="noopener">developers.lalamove.com</a> → Partner Portal → Developers → salin API Key & Secret (sandbox: <code>pk_test</code>).</li>
+            <li><strong>GoSend:</strong> Isi formulir di <a href="https://www.gojek.com/id-id/gosend/api" target="_blank" rel="noopener">gojek.com/gosend/api</a> → tim GoSend kirim Client ID & Pass Key untuk staging.</li>
+            <li>Buka file <code>.env</code> di folder proyek, isi variabel <code>LALAMOVE_*</code> dan <code>GOSEND_*</code>.</li>
+            <li>Restart server (<code>npm run dev</code>) lalu klik tombol Uji API di atas.</li>
+          </ol>
+        </div>
 
         <h2 style="margin-top: 28px;">Pengaturan Pembayaran (QRIS)</h2>
         <form id="qrisForm" class="auth-form">
@@ -678,8 +729,8 @@
       </main>
     </div>
 
-    <script src="/common.js?v=10"></script>
-    <script src="/admin.js?v=21"></script>
+    <script src="/common.js?v=11"></script>
+    <script src="/admin.js?v=24"></script>
     <script src="/admin-points.js?v=1"></script>
   </body>
 </html>

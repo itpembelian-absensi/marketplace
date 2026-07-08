@@ -27,6 +27,208 @@ function getWhatsAppUrl(phone, productName) {
   return `https://wa.me/${cleaned}?text=${message}`;
 }
 
+function renderProductGallery(images, productName) {
+  const safeName = escapeHtml(productName || "Produk");
+  const hasMultiple = images.length > 1;
+  const dotsHtml = hasMultiple
+    ? `<div class="gallery-dots">${images.map((_, index) => `<button type="button" class="gallery-dot${index === 0 ? " active" : ""}" data-index="${index}" aria-label="Gambar ${index + 1}"></button>`).join("")}</div>`
+    : "";
+
+  return `
+    <div class="product-gallery" data-gallery>
+      <div class="product-gallery-main">
+        ${
+          hasMultiple
+            ? `<button type="button" class="gallery-nav gallery-prev" aria-label="Gambar sebelumnya">&#8249;</button>`
+            : ""
+        }
+        <button type="button" class="gallery-image-btn" aria-label="Perbesar gambar produk">
+          <img class="detail-image gallery-image" src="${escapeHtml(images[0])}" alt="${safeName}" />
+          <span class="gallery-zoom-hint">Klik untuk zoom</span>
+        </button>
+        ${
+          hasMultiple
+            ? `<button type="button" class="gallery-nav gallery-next" aria-label="Gambar berikutnya">&#8250;</button>`
+            : ""
+        }
+      </div>
+      ${dotsHtml}
+    </div>
+  `;
+}
+
+function initProductGallery(images, productName) {
+  const gallery = detailCard.querySelector("[data-gallery]");
+  if (!gallery || !images.length) return;
+
+  let currentIndex = 0;
+  const imageEl = gallery.querySelector(".gallery-image");
+  const prevBtn = gallery.querySelector(".gallery-prev");
+  const nextBtn = gallery.querySelector(".gallery-next");
+  const dots = Array.from(gallery.querySelectorAll(".gallery-dot"));
+  const zoomBtn = gallery.querySelector(".gallery-image-btn");
+
+  function updateGallery(index) {
+    currentIndex = (index + images.length) % images.length;
+    if (imageEl) {
+      imageEl.src = images[currentIndex];
+      imageEl.alt = productName || "Produk";
+    }
+    dots.forEach((dot, dotIndex) => {
+      dot.classList.toggle("active", dotIndex === currentIndex);
+    });
+  }
+
+  if (prevBtn) {
+    prevBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      updateGallery(currentIndex - 1);
+    });
+  }
+
+  if (nextBtn) {
+    nextBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      updateGallery(currentIndex + 1);
+    });
+  }
+
+  dots.forEach((dot) => {
+    dot.addEventListener("click", () => {
+      updateGallery(Number(dot.dataset.index) || 0);
+    });
+  });
+
+  let touchStartX = 0;
+  gallery.addEventListener(
+    "touchstart",
+    (event) => {
+      touchStartX = event.changedTouches[0].screenX;
+    },
+    { passive: true }
+  );
+  gallery.addEventListener(
+    "touchend",
+    (event) => {
+      if (images.length <= 1) return;
+      const diff = event.changedTouches[0].screenX - touchStartX;
+      if (Math.abs(diff) < 50) return;
+      updateGallery(diff > 0 ? currentIndex - 1 : currentIndex + 1);
+    },
+    { passive: true }
+  );
+
+  if (zoomBtn) {
+    zoomBtn.addEventListener("click", () => {
+      openProductLightbox(images, currentIndex, productName, updateGallery);
+    });
+  }
+}
+
+function ensureProductLightbox() {
+  let lightbox = document.getElementById("productLightbox");
+  if (lightbox) return lightbox;
+
+  lightbox = document.createElement("div");
+  lightbox.id = "productLightbox";
+  lightbox.className = "product-lightbox hidden";
+  lightbox.innerHTML = `
+    <div class="product-lightbox-backdrop" data-close-lightbox></div>
+    <div class="product-lightbox-content" role="dialog" aria-modal="true" aria-label="Pratinjau gambar produk">
+      <button type="button" class="lightbox-close" aria-label="Tutup">&times;</button>
+      <button type="button" class="lightbox-nav lightbox-prev" aria-label="Gambar sebelumnya">&#8249;</button>
+      <img class="lightbox-image" src="" alt="" />
+      <button type="button" class="lightbox-nav lightbox-next" aria-label="Gambar berikutnya">&#8250;</button>
+      <p class="lightbox-counter"></p>
+    </div>
+  `;
+  document.body.appendChild(lightbox);
+  return lightbox;
+}
+
+function openProductLightbox(images, startIndex, productName, onIndexChange) {
+  const lightbox = ensureProductLightbox();
+  const imageEl = lightbox.querySelector(".lightbox-image");
+  const counterEl = lightbox.querySelector(".lightbox-counter");
+  const prevBtn = lightbox.querySelector(".lightbox-prev");
+  const nextBtn = lightbox.querySelector(".lightbox-next");
+  const closeBtn = lightbox.querySelector(".lightbox-close");
+  let index = startIndex;
+
+  function renderLightbox() {
+    index = (index + images.length) % images.length;
+    imageEl.src = images[index];
+    imageEl.alt = productName || "Produk";
+    counterEl.textContent = images.length > 1 ? `${index + 1} / ${images.length}` : "";
+    prevBtn.classList.toggle("hidden", images.length <= 1);
+    nextBtn.classList.toggle("hidden", images.length <= 1);
+    counterEl.classList.toggle("hidden", images.length <= 1);
+    if (typeof onIndexChange === "function") onIndexChange(index);
+  }
+
+  function closeLightbox() {
+    lightbox.classList.add("hidden");
+    document.body.classList.remove("lightbox-open");
+    lightbox.removeEventListener("click", handleLightboxClick);
+    document.removeEventListener("keydown", handleLightboxKeydown);
+    lightbox.removeEventListener("touchstart", handleTouchStart);
+    lightbox.removeEventListener("touchend", handleTouchEnd);
+  }
+
+  function handleLightboxClick(event) {
+    if (event.target.closest("[data-close-lightbox]") || event.target.closest(".lightbox-close")) {
+      closeLightbox();
+      return;
+    }
+    if (event.target.closest(".lightbox-prev")) {
+      index -= 1;
+      renderLightbox();
+      return;
+    }
+    if (event.target.closest(".lightbox-next")) {
+      index += 1;
+      renderLightbox();
+    }
+  }
+
+  function handleLightboxKeydown(event) {
+    if (event.key === "Escape") {
+      closeLightbox();
+      return;
+    }
+    if (images.length <= 1) return;
+    if (event.key === "ArrowLeft") {
+      index -= 1;
+      renderLightbox();
+    }
+    if (event.key === "ArrowRight") {
+      index += 1;
+      renderLightbox();
+    }
+  }
+
+  let touchStartX = 0;
+  function handleTouchStart(event) {
+    touchStartX = event.changedTouches[0].screenX;
+  }
+  function handleTouchEnd(event) {
+    if (images.length <= 1) return;
+    const diff = event.changedTouches[0].screenX - touchStartX;
+    if (Math.abs(diff) < 50) return;
+    index += diff > 0 ? -1 : 1;
+    renderLightbox();
+  }
+
+  lightbox.addEventListener("click", handleLightboxClick);
+  document.addEventListener("keydown", handleLightboxKeydown);
+  lightbox.addEventListener("touchstart", handleTouchStart, { passive: true });
+  lightbox.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+  renderLightbox();
+  lightbox.classList.remove("hidden");
+  document.body.classList.add("lightbox-open");
+}
+
 async function loadProductDetail() {
   if (!productId) {
     renderError("ID produk tidak valid.");
@@ -37,9 +239,10 @@ async function loadProductDetail() {
     const product = await apiFetch(`/products/${productId}`);
     const sizes = parseSizes(product);
     const showHeaderPrice = sizes.length === 0;
+    const images = getProductImages(product);
     detailCard.innerHTML = `
       <div class="detail-layout">
-        <img class="detail-image" src="${product.image}" alt="${product.name}" />
+        ${renderProductGallery(images, product.name)}
         <div>
           <h2 class="detail-product-title">${product.name}</h2>
           <p class="product-meta">${product.category} | Rating ${product.rating}</p>
@@ -57,7 +260,7 @@ async function loadProductDetail() {
               : ""
           }
           ${showHeaderPrice ? `<p><strong>${formatRupiah(getFinalPrice(product))}</strong></p>` : ""}
-          <p>${product.description}</p>
+          <div class="product-description">${formatProductDescription(product.description)}</div>
           <div class="detail-actions">
             ${
               getWhatsAppUrl(product.wa_phone, product.name)
@@ -70,6 +273,8 @@ async function loadProductDetail() {
         </div>
       </div>
     `;
+    initProductGallery(images, product.name);
+
     if (sizes.length > 0) {
       const sizesInfoDiv = document.createElement("div");
       sizesInfoDiv.style.cssText = "margin-top: 12px; margin-bottom: 8px;";

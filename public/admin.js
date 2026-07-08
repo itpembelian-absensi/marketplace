@@ -2,6 +2,11 @@ const usersTable = document.getElementById("usersTable");
 const usersMessage = document.getElementById("usersMessage");
 const createUserForm = document.getElementById("createUserForm");
 const createMessage = document.getElementById("createMessage");
+const createUserHeading = document.getElementById("createUserHeading");
+const createUserSubmitButton = document.getElementById("createUserSubmitButton");
+const createUserCancelButton = document.getElementById("createUserCancelButton");
+const passwordInput = document.getElementById("password");
+const passwordLabel = document.getElementById("passwordLabel");
 const roleSelect = document.getElementById("roleSelect");
 const logoForm = document.getElementById("logoForm");
 const logoFile = document.getElementById("logoFile");
@@ -30,6 +35,7 @@ const productPriceInput = document.getElementById("productPrice");
 const productDiscountInput = document.getElementById("productDiscount");
 const productRatingInput = document.getElementById("productRating");
 const productImageFileInput = document.getElementById("productImageFile");
+const productImagesPreview = document.getElementById("productImagesPreview");
 const productWaPhoneInput = document.getElementById("productWaPhone");
 const productDescriptionInput = document.getElementById("productDescription");
 const productSubmitButton = document.getElementById("productSubmitButton");
@@ -58,8 +64,44 @@ const tabs = Array.from(document.querySelectorAll(".admin-sidebar .tab"));
 
 const MAX_LOGO_FILE_SIZE = 2 * 1024 * 1024;
 let editingProductId = null;
-let editingProductImageUrl = "";
+let editingProductImages = [];
+let editingUserId = null;
 let cachedMenuCategories = [];
+
+function resetUserForm() {
+  editingUserId = null;
+  createUserForm.reset();
+  if (createUserHeading) createUserHeading.textContent = "Create User";
+  if (createUserSubmitButton) createUserSubmitButton.textContent = "Buat User";
+  if (createUserCancelButton) createUserCancelButton.classList.add("hidden");
+  if (passwordInput) {
+    passwordInput.required = true;
+    passwordInput.placeholder = "Minimal 6 karakter";
+  }
+  if (passwordLabel) {
+    passwordLabel.innerHTML = 'Password <span style="color:var(--danger)">*</span>';
+  }
+  applyRoleRulesToUI();
+}
+
+function fillUserForm(user) {
+  editingUserId = user.id;
+  document.getElementById("name").value = user.name || "";
+  document.getElementById("email").value = user.email || "";
+  roleSelect.value = user.role || "user";
+  if (passwordInput) {
+    passwordInput.value = "";
+    passwordInput.required = false;
+    passwordInput.placeholder = "Kosongkan jika tidak diubah";
+  }
+  if (passwordLabel) {
+    passwordLabel.textContent = "Password baru (opsional)";
+  }
+  if (createUserHeading) createUserHeading.textContent = `Edit User #${user.id}`;
+  if (createUserSubmitButton) createUserSubmitButton.textContent = "Simpan Perubahan";
+  if (createUserCancelButton) createUserCancelButton.classList.remove("hidden");
+  createUserForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
 function renderTable(users) {
   if (!users.length) {
@@ -96,11 +138,19 @@ function renderTable(users) {
                   ${
                     currentRole === "admin"
                       ? `
-                        <select data-action="change-role" data-user-id="${u.id}" style="padding:8px; border:1px solid #e5e7eb; border-radius:8px">
-                          <option value="user" ${u.role === "user" ? "selected" : ""}>user</option>
-                          <option value="manager" ${u.role === "manager" ? "selected" : ""}>manager</option>
-                          <option value="admin" ${u.role === "admin" ? "selected" : ""}>admin</option>
-                        </select>
+                        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap">
+                          <select data-action="change-role" data-user-id="${u.id}" style="padding:8px; border:1px solid #e5e7eb; border-radius:8px">
+                            <option value="user" ${u.role === "user" ? "selected" : ""}>user</option>
+                            <option value="manager" ${u.role === "manager" ? "selected" : ""}>manager</option>
+                            <option value="admin" ${u.role === "admin" ? "selected" : ""}>admin</option>
+                          </select>
+                          <button type="button" class="btn-secondary" data-action="edit-user" data-user='${encodeURIComponent(
+                            JSON.stringify(u)
+                          )}'>Edit</button>
+                          <button type="button" class="btn-danger" data-action="delete-user" data-id="${u.id}" data-name="${encodeURIComponent(
+                            u.name || ""
+                          )}">Hapus</button>
+                        </div>
                       `
                       : `<span class="empty-state">-</span>`
                   }
@@ -183,21 +233,72 @@ createUserForm.addEventListener("submit", async (event) => {
 
   const name = document.getElementById("name").value.trim();
   const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
+  const password = passwordInput.value;
   const role = roleSelect.value;
 
   try {
-    await apiFetch("/users", {
-      method: "POST",
-      body: JSON.stringify({ name, email, password, role }),
-    });
-    createMessage.classList.add("success");
-    createMessage.textContent = "User berhasil dibuat.";
-    createUserForm.reset();
-    applyRoleRulesToUI();
+    if (editingUserId) {
+      const payload = { name, email, role };
+      if (password) payload.password = password;
+      await apiFetch(`/users/${editingUserId}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      });
+      createMessage.classList.add("success");
+      createMessage.textContent = "User berhasil diperbarui.";
+      resetUserForm();
+    } else {
+      await apiFetch("/users", {
+        method: "POST",
+        body: JSON.stringify({ name, email, password, role }),
+      });
+      createMessage.classList.add("success");
+      createMessage.textContent = "User berhasil dibuat.";
+      resetUserForm();
+    }
     loadUsers();
   } catch (error) {
     createMessage.textContent = error.message;
+  }
+});
+
+if (createUserCancelButton) {
+  createUserCancelButton.addEventListener("click", () => {
+    resetUserForm();
+    createMessage.textContent = "";
+  });
+}
+
+usersTable.addEventListener("click", async (event) => {
+  const btn = event.target.closest("button[data-action]");
+  if (!btn) return;
+  const action = btn.dataset.action;
+
+  if (action === "edit-user") {
+    const user = JSON.parse(decodeURIComponent(btn.dataset.user || ""));
+    fillUserForm(user);
+    createMessage.textContent = "Mode edit user aktif.";
+    return;
+  }
+
+  if (action === "delete-user") {
+    const id = Number(btn.dataset.id);
+    const name = decodeURIComponent(btn.dataset.name || "user ini");
+    if (!id) return;
+    const ok = confirm(`Hapus user "${name}"? Tindakan ini tidak bisa dibatalkan.`);
+    if (!ok) return;
+    try {
+      await apiFetch(`/users/${id}`, { method: "DELETE" });
+      usersMessage.classList.add("success");
+      usersMessage.textContent = `User "${name}" berhasil dihapus.`;
+      if (editingUserId === id) {
+        resetUserForm();
+        createMessage.textContent = "";
+      }
+      loadUsers();
+    } catch (error) {
+      alert(error.message);
+    }
   }
 });
 
@@ -468,11 +569,30 @@ if (addSizeRowBtn) {
   addSizeRowBtn.addEventListener("click", () => addSizeRow());
 }
 
+function renderProductImagePreviews() {
+  if (!productImagesPreview) return;
+  if (!editingProductImages.length) {
+    productImagesPreview.innerHTML = "";
+    return;
+  }
+  productImagesPreview.innerHTML = editingProductImages
+    .map(
+      (url, index) => `
+        <div class="product-image-preview-item">
+          <img src="${url}" alt="Gambar produk ${index + 1}" />
+          <button type="button" data-remove-image="${index}" aria-label="Hapus gambar">×</button>
+        </div>
+      `
+    )
+    .join("");
+}
+
 function resetProductForm() {
   if (!productForm) return;
   editingProductId = null;
-  editingProductImageUrl = "";
+  editingProductImages = [];
   productForm.reset();
+  renderProductImagePreviews();
   clearSizeRows();
   updateGlobalStockFromSizes();
   updateProductSubcategoryOptions(productCategoryInput.value);
@@ -497,7 +617,8 @@ function fillProductForm(product) {
   if (productPointsInput) productPointsInput.value = product.points_per_purchase ?? product.loyalty_points ?? 0;
   productDiscountInput.value = product.discount || 0;
   productRatingInput.value = product.rating || "";
-  editingProductImageUrl = product.image || "";
+  editingProductImages = getProductImages(product);
+  renderProductImagePreviews();
   productWaPhoneInput.value = product.wa_phone || "";
   productDescriptionInput.value = product.description || "";
   
@@ -922,15 +1043,24 @@ if (productForm) {
       sizes: getSizesFromForm(),
       discount: Number(productDiscountInput.value || 0),
       rating: Number(productRatingInput.value || 4.5),
-      image: editingProductImageUrl,
+      images: editingProductImages,
+      image: editingProductImages[0] || "",
       waPhone: productWaPhoneInput.value.trim(),
       description: productDescriptionInput.value.trim(),
     };
 
     try {
-      const pickedFile = productImageFileInput?.files?.[0];
-      if (pickedFile) {
-        payload.image = await uploadProductImage(pickedFile);
+      const pickedFiles = productImageFileInput?.files;
+      if (pickedFiles && pickedFiles.length) {
+        for (const file of pickedFiles) {
+          const compressed = await compressImageToMax2MB(file);
+          const uploadedUrl = await uploadProductImage(compressed);
+          if (uploadedUrl) editingProductImages.push(uploadedUrl);
+        }
+        payload.images = editingProductImages;
+        payload.image = editingProductImages[0] || "";
+        productImageFileInput.value = "";
+        renderProductImagePreviews();
       }
       if (!payload.image) {
         throw new Error("Gambar produk wajib diupload.");
@@ -960,6 +1090,17 @@ if (productForm) {
   productCancelEditButton.addEventListener("click", () => {
     resetProductForm();
     setProductsMessage("");
+  });
+}
+
+if (productImagesPreview) {
+  productImagesPreview.addEventListener("click", (event) => {
+    const btn = event.target.closest("[data-remove-image]");
+    if (!btn) return;
+    const index = Number(btn.dataset.removeImage);
+    if (Number.isNaN(index)) return;
+    editingProductImages.splice(index, 1);
+    renderProductImagePreviews();
   });
 }
 
@@ -1822,10 +1963,20 @@ async function loadShippingSettings() {
     setVal("shipStoreFreeAbove", s.storeDelivery?.freeAboveSubtotal ?? 0);
     setCheck("shipLalamoveEnabled", s.lalamove?.enabled !== false);
     setCheck("shipGosendEnabled", s.gosend?.enabled !== false);
+    setVal("shipLalamoveServiceType", s.lalamove?.serviceType || "MOTORCYCLE");
+    setVal("shipGosendMethod", s.gosend?.shipmentMethod || "Instant");
     setVal("shipFallbackPerKm", s.fallback?.perKmRate ?? 3500);
+    setVal("shipFallbackMinFee", s.fallback?.minFee ?? 15000);
     updateWarehouseOriginPreview();
     if (shippingApiStatus) {
-      shippingApiStatus.textContent = `API Lalamove: ${data.lalamoveConfigured ? "terhubung (.env)" : "belum — pakai estimasi jarak"}. API GoSend: ${data.gosendConfigured ? "terhubung (.env)" : "belum — pakai estimasi jarak"}.`;
+      const p = data.providers || {};
+      const lala = p.lalamove?.configured
+        ? `terhubung (${p.lalamove.sandbox ? "sandbox" : "production"}${p.lalamove.keyPreview ? `, ${p.lalamove.keyPreview}` : ""})`
+        : "belum — pakai estimasi jarak";
+      const gos = p.gosend?.configured
+        ? `terhubung (${p.gosend.baseUrl || "URL terisi"})`
+        : "belum — pakai estimasi jarak";
+      shippingApiStatus.textContent = `API Lalamove: ${lala}. API GoSend: ${gos}.`;
     }
   } catch (error) {
     if (shippingSettingsMessage) shippingSettingsMessage.textContent = error.message;
@@ -1861,10 +2012,17 @@ if (shippingSettingsForm) {
         freeAboveSubtotal: Number(document.getElementById("shipStoreFreeAbove")?.value || 0),
         label: "Kirim mobil toko",
       },
-      lalamove: { enabled: document.getElementById("shipLalamoveEnabled")?.checked },
-      gosend: { enabled: document.getElementById("shipGosendEnabled")?.checked },
+      lalamove: {
+        enabled: document.getElementById("shipLalamoveEnabled")?.checked,
+        serviceType: document.getElementById("shipLalamoveServiceType")?.value || "MOTORCYCLE",
+      },
+      gosend: {
+        enabled: document.getElementById("shipGosendEnabled")?.checked,
+        shipmentMethod: document.getElementById("shipGosendMethod")?.value || "Instant",
+      },
       fallback: {
         perKmRate: Number(document.getElementById("shipFallbackPerKm")?.value || 3500),
+        minFee: Number(document.getElementById("shipFallbackMinFee")?.value || 15000),
       },
     };
     try {
@@ -1885,6 +2043,29 @@ if (shippingSettingsForm) {
     }
   });
 }
+
+async function testShippingApi(provider) {
+  if (!shippingSettingsMessage) return;
+  shippingSettingsMessage.classList.remove("success");
+  shippingSettingsMessage.textContent = `Menguji API ${provider}...`;
+  try {
+    const result = await apiFetch("/admin/settings/shipping/test", {
+      method: "POST",
+      body: JSON.stringify({ provider }),
+    });
+    if (result.ok) {
+      shippingSettingsMessage.classList.add("success");
+      shippingSettingsMessage.textContent = `${provider}: ${result.message}`;
+    } else {
+      shippingSettingsMessage.textContent = `${provider}: ${result.message}`;
+    }
+  } catch (error) {
+    shippingSettingsMessage.textContent = error.message;
+  }
+}
+
+document.getElementById("shipTestLalamoveBtn")?.addEventListener("click", () => testShippingApi("lalamove"));
+document.getElementById("shipTestGosendBtn")?.addEventListener("click", () => testShippingApi("gosend"));
 
 async function loadOrders() {
   const tbody = document.getElementById("ordersTbody");
