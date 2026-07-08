@@ -1,0 +1,27 @@
+name: Deploy to Self-Hosted
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          clean: true
+          fetch-depth: 0
+        
+      - name: Make scripts executable
+        run: chmod +x ./deploy.sh ./scripts/*.sh
+        
+      - name: Run Deployment
+        env:
+          BRANCH: ${{ github.ref_name }}
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          ./deploy.sh
