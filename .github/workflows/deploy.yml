@@ -7,21 +7,19 @@ on:
 
 jobs:
   deploy:
-    runs-on: self-hosted
-    
+    # Runner di server harus punya label: self-hosted + marketplace
+    runs-on: [self-hosted, marketplace]
+
+    defaults:
+      run:
+        working-directory: /srv/docker/marketplace
+
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          clean: true
-          fetch-depth: 0
-        
       - name: Make scripts executable
         run: chmod +x ./deploy.sh ./scripts/*.sh
-        
+
       - name: Run Deployment
         env:
           BRANCH: ${{ github.ref_name }}
           GIT_SHA: ${{ github.sha }}
-        run: |
-          ./deploy.sh
+        run: ./deploy.sh
