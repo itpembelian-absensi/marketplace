@@ -125,7 +125,7 @@ fi
 log "Start container"
 compose up -d --remove-orphans
 
-APP_PORT="$(grep -E '^APP_PORT=' "$ENV_FILE" | cut -d= -f2 | tr -d '\r' | tr -d ' ')"
+APP_PORT="$(grep -E '^APP_PORT=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 | tr -d '\r' | tr -d ' ' || true)"
 APP_PORT="${APP_PORT:-5057}"
 
 log "Health check http://127.0.0.1:${APP_PORT}/api/categories"
