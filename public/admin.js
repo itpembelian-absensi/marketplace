@@ -7,6 +7,7 @@ const createUserSubmitButton = document.getElementById("createUserSubmitButton")
 const createUserCancelButton = document.getElementById("createUserCancelButton");
 const passwordInput = document.getElementById("password");
 const passwordLabel = document.getElementById("passwordLabel");
+const togglePasswordBtn = document.getElementById("togglePasswordBtn");
 const roleSelect = document.getElementById("roleSelect");
 const logoForm = document.getElementById("logoForm");
 const logoFile = document.getElementById("logoFile");
@@ -68,6 +69,18 @@ let editingProductImages = [];
 let editingUserId = null;
 let cachedMenuCategories = [];
 
+function setPasswordVisibility(visible) {
+  if (!passwordInput || !togglePasswordBtn) return;
+  passwordInput.type = visible ? "text" : "password";
+  const eyeIcon = togglePasswordBtn.querySelector(".icon-eye");
+  const eyeOffIcon = togglePasswordBtn.querySelector(".icon-eye-off");
+  if (eyeIcon) eyeIcon.classList.toggle("hidden", visible);
+  if (eyeOffIcon) eyeOffIcon.classList.toggle("hidden", !visible);
+  const label = visible ? "Sembunyikan password" : "Tampilkan password";
+  togglePasswordBtn.setAttribute("aria-label", label);
+  togglePasswordBtn.title = label;
+}
+
 function resetUserForm() {
   editingUserId = null;
   createUserForm.reset();
@@ -81,6 +94,7 @@ function resetUserForm() {
   if (passwordLabel) {
     passwordLabel.innerHTML = 'Password <span style="color:var(--danger)">*</span>';
   }
+  setPasswordVisibility(false);
   applyRoleRulesToUI();
 }
 
@@ -97,6 +111,7 @@ function fillUserForm(user) {
   if (passwordLabel) {
     passwordLabel.textContent = "Password baru (opsional)";
   }
+  setPasswordVisibility(false);
   if (createUserHeading) createUserHeading.textContent = `Edit User #${user.id}`;
   if (createUserSubmitButton) createUserSubmitButton.textContent = "Simpan Perubahan";
   if (createUserCancelButton) createUserCancelButton.classList.remove("hidden");
@@ -266,6 +281,12 @@ if (createUserCancelButton) {
   createUserCancelButton.addEventListener("click", () => {
     resetUserForm();
     createMessage.textContent = "";
+  });
+}
+
+if (togglePasswordBtn && passwordInput) {
+  togglePasswordBtn.addEventListener("click", () => {
+    setPasswordVisibility(passwordInput.type === "password");
   });
 }
 
