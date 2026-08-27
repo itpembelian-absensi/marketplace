@@ -16,8 +16,13 @@ jobs:
         working-directory: /srv/docker/marketplace
 
     steps:
-      - name: Server disk before deploy
-        run: df -h && docker system df || true
+      - name: Free Docker disk before deploy
+        run: |
+          df -h || true
+          docker system df || true
+          docker builder prune -af || true
+          docker image prune -f || true
+          df -h || true
 
       - name: Make scripts executable
         run: chmod +x ./deploy.sh ./scripts/*.sh
@@ -26,4 +31,5 @@ jobs:
         env:
           BRANCH: ${{ github.ref_name }}
           GIT_SHA: ${{ github.sha }}
+          FORCE_REBUILD: "0"
         run: ./deploy.sh

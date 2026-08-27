@@ -105,7 +105,10 @@ done
 # --- Docker ---
 log "Stop container lama"
 compose down --remove-orphans 2>/dev/null || true
+log "Bersihkan cache Docker agar build tidak kehabisan disk"
+docker builder prune -af >/dev/null 2>&1 || true
 docker image prune -f >/dev/null 2>&1 || true
+df -h || true
 
 BUILD_LOG="$(mktemp)"
 trap 'rm -f "$BUILD_LOG"' EXIT
