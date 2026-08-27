@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -15,6 +16,9 @@ jobs:
         working-directory: /srv/docker/marketplace
 
     steps:
+      - name: Server disk before deploy
+        run: df -h && docker system df || true
+
       - name: Make scripts executable
         run: chmod +x ./deploy.sh ./scripts/*.sh
 

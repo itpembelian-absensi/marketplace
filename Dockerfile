@@ -22,7 +22,8 @@ RUN npm ci --omit=dev --foreground-scripts \
     && rm -rf node_modules/sqlite3/build \
     && npm rebuild sqlite3 --build-from-source --foreground-scripts \
     && node -e 'require("sharp"); console.log("sharp OK")' \
-    && node -e 'require("sqlite3"); console.log("sqlite3 OK")'
+    && node -e 'require("sqlite3"); console.log("sqlite3 OK")' \
+    && node -e 'require("archiver"); require("unzipper"); console.log("backup deps OK")'
 
 COPY server.js ./
 COPY lib ./lib

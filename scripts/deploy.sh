@@ -83,6 +83,7 @@ mkdir -p \
 	storage/uploads/picture/about \
 	storage/uploads/picture/logo \
 	storage/uploads/picture/products \
+	storage/uploads/picture/brands \
 	storage/uploads/product \
 	storage/uploads/banner \
 	storage/uploads/profile_pictures \
@@ -104,6 +105,7 @@ done
 # --- Docker ---
 log "Stop container lama"
 compose down --remove-orphans 2>/dev/null || true
+docker image prune -f >/dev/null 2>&1 || true
 
 BUILD_LOG="$(mktemp)"
 trap 'rm -f "$BUILD_LOG"' EXIT
@@ -151,6 +153,7 @@ for i in $(seq 1 18); do
 done
 
 warn "Health check timeout"
+df -h >&2 || true
 compose ps >&2 || true
 compose logs --tail 80 app >&2 || true
 die "App tidak merespons di port ${APP_PORT}"

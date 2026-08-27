@@ -8,6 +8,7 @@ mkdir -p \
     /app/public/picture/about \
     /app/public/picture/logo \
     /app/public/picture/products \
+    /app/public/picture/brands \
     /app/public/product \
     /app/public/banner \
     /app/public/profile_pictures \
