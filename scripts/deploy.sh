@@ -26,7 +26,15 @@ if ! docker compose version >/dev/null 2>&1; then
 	die "Plugin docker compose tidak ditemukan"
 fi
 
-if ! docker info >/dev/null 2>&1; then
+docker_ok=0
+for i in 1 2 3 4 5; do
+	if docker info >/dev/null 2>&1; then
+		docker_ok=1
+		break
+	fi
+	sleep 2
+done
+if [ "$docker_ok" != "1" ]; then
 	die "Docker tidak accessible — jalankan: sudo usermod -aG docker \$USER && newgrp docker"
 fi
 
@@ -50,8 +58,11 @@ chmod +x scripts/*.sh 2>/dev/null || true
 [ -f docker/entrypoint.sh ] && chmod +x docker/entrypoint.sh
 
 # --- Git: hard reset (tanpa konflik pull) ---
-log "Sync code → origin/${BRANCH}"
-if [ -d .git ] && git remote get-url origin >/dev/null 2>&1; then
+if [ -n "${GIT_SHA:-}" ] && [ "$(git rev-parse HEAD 2>/dev/null || true)" = "$GIT_SHA" ]; then
+	log "Skip git sync (sudah di ${GIT_SHA:0:7})"
+elif [ -d .git ] && git remote get-url origin >/dev/null 2>&1; then
+	log "Sync code → origin/${BRANCH}"
+	rm -f .git/index.lock .git/HEAD.lock
 	git fetch origin "$BRANCH"
 	if [ -n "${GIT_SHA:-}" ]; then
 		git reset --hard "$GIT_SHA"
@@ -105,10 +116,7 @@ done
 # --- Docker ---
 log "Stop container lama"
 compose down --remove-orphans 2>/dev/null || true
-log "Bersihkan cache Docker agar build tidak kehabisan disk"
-docker builder prune -af >/dev/null 2>&1 || true
 docker image prune -f >/dev/null 2>&1 || true
-df -h || true
 
 BUILD_LOG="$(mktemp)"
 trap 'rm -f "$BUILD_LOG"' EXIT

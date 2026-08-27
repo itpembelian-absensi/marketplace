@@ -16,16 +16,23 @@ jobs:
         working-directory: /srv/docker/marketplace
 
     steps:
-      - name: Free Docker disk before deploy
+      - name: Free dangling Docker data
         run: |
           df -h || true
           docker system df || true
-          docker builder prune -af || true
+          docker builder prune -f || true
           docker image prune -f || true
           df -h || true
 
-      - name: Make scripts executable
-        run: chmod +x ./deploy.sh ./scripts/*.sh
+      - name: Sync code
+        env:
+          BRANCH: ${{ github.ref_name }}
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          rm -f .git/index.lock .git/HEAD.lock
+          git fetch origin "$BRANCH"
+          git reset --hard "$GIT_SHA"
+          chmod +x ./deploy.sh ./scripts/*.sh
 
       - name: Run Deployment
         env:
