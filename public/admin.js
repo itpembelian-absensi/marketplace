@@ -223,6 +223,18 @@ function applyRoleRulesToUI() {
       productsTab.disabled = true;
       productsTab.title = "Hanya admin yang bisa mengelola produk";
     }
+
+    const backupTab = document.querySelector('[data-tab="backupTab"]');
+    if (backupTab) {
+      backupTab.disabled = true;
+      backupTab.title = "Hanya admin yang bisa backup dan restore";
+    }
+
+    const brandsTab = document.querySelector('[data-tab="brandsTab"]');
+    if (brandsTab) {
+      brandsTab.disabled = true;
+      brandsTab.title = "Hanya admin yang bisa mengatur merek";
+    }
   }
 }
 
@@ -469,7 +481,7 @@ function initTabs() {
       tabs.forEach((t) => t.classList.remove("active"));
       tab.classList.add("active");
 
-      ["usersTab", "productsTab", "menuTab", "brandingTab", "settingsTab", "ordersTab", "salesTab", "inventoryTab", "pointsTab", "bannerTab", "whatsappTab"].forEach((id) => {
+      ["usersTab", "productsTab", "menuTab", "brandsTab", "brandingTab", "settingsTab", "ordersTab", "salesTab", "inventoryTab", "pointsTab", "bannerTab", "whatsappTab", "backupTab"].forEach((id) => {
         const el = document.getElementById(id);
         if (!el) return;
         el.classList.toggle("hidden", id !== tabId);
@@ -480,6 +492,7 @@ function initTabs() {
       if (tabId === "salesTab") loadSalesReport();
       if (tabId === "inventoryTab") loadInventoryReport();
       if (tabId === "bannerTab") loadHomePageSettings();
+      if (tabId === "brandsTab") loadAdminBrands();
     });
   });
 }
@@ -1881,14 +1894,28 @@ function shippingMethodLabel(method) {
   return method || "-";
 }
 
+function parseCoordInput(value) {
+  const normalized = String(value || "").trim().replace(",", ".");
+  const num = Number(normalized);
+  return Number.isFinite(num) ? num : NaN;
+}
+
 function updateWarehouseOriginPreview() {
-  const lat = Number(document.getElementById("shipOriginLat")?.value);
-  const lng = Number(document.getElementById("shipOriginLng")?.value);
+  const latRaw = document.getElementById("shipOriginLat")?.value;
+  const lngRaw = document.getElementById("shipOriginLng")?.value;
+  const lat = parseCoordInput(latRaw);
+  const lng = parseCoordInput(lngRaw);
   const name = document.getElementById("shipOriginName")?.value?.trim() || "Gudang";
   const address = document.getElementById("shipOriginAddress")?.value?.trim() || "";
   const preview = document.getElementById("shipOriginPreview");
   const mapLink = document.getElementById("shipOriginMapLink");
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+  const hasCoords =
+    String(latRaw || "").trim() !== "" &&
+    String(lngRaw || "").trim() !== "" &&
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    !(Math.abs(lat) < 0.0001 && Math.abs(lng) < 0.0001);
+  if (!hasCoords) {
     if (preview) {
       preview.textContent = "Isi latitude dan longitude gudang untuk mengaktifkan perhitungan ongkir.";
       preview.classList.add("empty-state");
@@ -1903,18 +1930,6 @@ function updateWarehouseOriginPreview() {
   if (mapLink) {
     mapLink.href = `https://www.google.com/maps?q=${lat},${lng}`;
   }
-}
-
-function parseCoordinatesFromText(text) {
-  const raw = String(text || "").trim();
-  if (!raw) return null;
-  const atMatch = raw.match(/@(-?\d+\.?\d*),\s*(-?\d+\.?\d*)/);
-  if (atMatch) return { lat: Number(atMatch[1]), lng: Number(atMatch[2]) };
-  const qMatch = raw.match(/[?&]q=(-?\d+\.?\d*),\s*(-?\d+\.?\d*)/);
-  if (qMatch) return { lat: Number(qMatch[1]), lng: Number(qMatch[2]) };
-  const pairMatch = raw.match(/(-?\d+\.?\d*)\s*[,;\s]\s*(-?\d+\.?\d*)/);
-  if (pairMatch) return { lat: Number(pairMatch[1]), lng: Number(pairMatch[2]) };
-  return null;
 }
 
 function handleWarehouseOriginGps() {
@@ -1946,19 +1961,126 @@ function handleWarehouseOriginGps() {
   );
 }
 
-function handleParseWarehouseCoords() {
+function setWarehouseCoordStatus(text, isSuccess) {
+  const status = document.getElementById("shipOriginCoordStatus");
+  if (!status) return;
+  status.textContent = text || "";
+  status.style.color = isSuccess ? "#047857" : "#b45309";
+}
+
+function applyWarehouseCoords(lat, lng, address) {
+  const latEl = document.getElementById("shipOriginLat");
+  const lngEl = document.getElementById("shipOriginLng");
+  const addressEl = document.getElementById("shipOriginAddress");
+  const latNum = Number(lat);
+  const lngNum = Number(lng);
+  if (latEl) latEl.value = latNum.toFixed(6);
+  if (lngEl) lngEl.value = lngNum.toFixed(6);
+  if (address && addressEl && !addressEl.value.trim()) {
+    addressEl.value = address;
+  }
+  updateWarehouseOriginPreview();
+  setWarehouseCoordStatus(
+    `Lintang ${latNum.toFixed(6)} / Bujur ${lngNum.toFixed(6)} diambil dari link share Maps. Klik Simpan Pengaturan Kirim.`,
+    true
+  );
+}
+
+function parseCoordinatesFromText(text) {
+  const raw = String(text || "").trim();
+  if (!raw) return null;
+  const tryPair = (a, b) => {
+    let lat = Number(a);
+    let lng = Number(b);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    if (Math.abs(lat) > 90 && Math.abs(lng) <= 90) {
+      const swapped = lat;
+      lat = lng;
+      lng = swapped;
+    }
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+    if (Math.abs(lat) < 0.0001 && Math.abs(lng) < 0.0001) return null;
+    return { lat, lng };
+  };
+  const bang = raw.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+  if (bang) {
+    const pair = tryPair(bang[1], bang[2]);
+    if (pair) return pair;
+  }
+  const at = raw.match(/@(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/);
+  if (at) {
+    const pair = tryPair(at[1], at[2]);
+    if (pair) return pair;
+  }
+  const query = raw.match(/[?&#](?:q|query|ll|sll|destination|center|daddr)=(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/i);
+  if (query) {
+    const pair = tryPair(query[1], query[2]);
+    if (pair) return pair;
+  }
+  const geo = raw.match(/geo:\s*(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/i);
+  if (geo) {
+    const pair = tryPair(geo[1], geo[2]);
+    if (pair) return pair;
+  }
+  const pair = raw.match(/(-?\d+\.\d+)\s*[,;]\s*(-?\d+\.\d+)/);
+  if (pair) return tryPair(pair[1], pair[2]);
+  return null;
+}
+
+async function handleParseWarehouseCoords() {
   const paste = document.getElementById("shipOriginCoordPaste")?.value || "";
-  const parsed = parseCoordinatesFromText(paste);
-  if (!parsed || !Number.isFinite(parsed.lat) || !Number.isFinite(parsed.lng)) {
-    alert("Format tidak dikenali. Contoh: -6.2088, 106.8456 atau link Google Maps.");
+  if (!String(paste).trim()) {
+    if (shippingSettingsMessage) {
+      shippingSettingsMessage.classList.remove("success");
+      shippingSettingsMessage.textContent = "Tempel link Google Maps dulu, lalu tekan Enter.";
+    }
     return;
   }
-  document.getElementById("shipOriginLat").value = parsed.lat.toFixed(6);
-  document.getElementById("shipOriginLng").value = parsed.lng.toFixed(6);
-  updateWarehouseOriginPreview();
+  const btn = document.getElementById("shipOriginParseBtn");
+  if (btn) btn.disabled = true;
   if (shippingSettingsMessage) {
-    shippingSettingsMessage.classList.add("success");
-    shippingSettingsMessage.textContent = "Koordinat berhasil diisi. Klik Simpan Pengaturan Kirim.";
+    shippingSettingsMessage.classList.remove("success");
+    shippingSettingsMessage.textContent = "Mengambil koordinat dari link...";
+  }
+  try {
+    const looksLikeShortMap =
+      /maps\.app\.goo\.gl|goo\.gl\/maps|share\.google/i.test(paste);
+    const local = looksLikeShortMap ? null : parseCoordinatesFromText(paste);
+    if (local) {
+      applyWarehouseCoords(local.lat, local.lng);
+      if (shippingSettingsMessage) {
+        shippingSettingsMessage.classList.add("success");
+        shippingSettingsMessage.textContent =
+          "Koordinat berhasil diambil dari link. Klik Simpan Pengaturan Kirim.";
+      }
+      return;
+    }
+    const parsed = await apiFetch("/shipping/resolve-location", {
+      method: "POST",
+      body: JSON.stringify({ text: paste }),
+    });
+    if (!parsed || !Number.isFinite(Number(parsed.lat)) || !Number.isFinite(Number(parsed.lng))) {
+      throw new Error("Koordinat tidak ditemukan di link itu.");
+    }
+    applyWarehouseCoords(parsed.lat, parsed.lng, parsed.address);
+    if (shippingSettingsMessage) {
+      shippingSettingsMessage.classList.add("success");
+      shippingSettingsMessage.textContent =
+        "Koordinat berhasil diambil dari link. Klik Simpan Pengaturan Kirim.";
+    }
+  } catch (error) {
+    setWarehouseCoordStatus(
+      error.message || "Link share Maps belum bisa dibaca. Tempel ulang link lengkap, lalu klik Ambil koordinat.",
+      false
+    );
+    if (shippingSettingsMessage) {
+      shippingSettingsMessage.classList.remove("success");
+      shippingSettingsMessage.textContent =
+        error.message ||
+        "Link belum bisa dibaca. Pastikan itu link Google Maps, lalu tekan Enter lagi.";
+    }
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
@@ -1981,6 +2103,7 @@ async function loadShippingSettings() {
     setVal("shipOriginAddress", s.originAddress || "");
     setCheck("shipStoreEnabled", s.storeDelivery?.enabled !== false);
     setVal("shipStoreFlatFee", s.storeDelivery?.flatFee ?? 50000);
+    setVal("shipStorePerKm", s.storeDelivery?.perKmRate ?? 0);
     setVal("shipStoreFreeAbove", s.storeDelivery?.freeAboveSubtotal ?? 0);
     setCheck("shipLalamoveEnabled", s.lalamove?.enabled !== false);
     setCheck("shipGosendEnabled", s.gosend?.enabled !== false);
@@ -2006,6 +2129,21 @@ async function loadShippingSettings() {
 
 document.getElementById("shipOriginGpsBtn")?.addEventListener("click", handleWarehouseOriginGps);
 document.getElementById("shipOriginParseBtn")?.addEventListener("click", handleParseWarehouseCoords);
+document.getElementById("shipOriginCoordPaste")?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    event.stopPropagation();
+    handleParseWarehouseCoords();
+  }
+});
+document.getElementById("shipOriginCoordPaste")?.addEventListener("paste", () => {
+  setTimeout(() => {
+    const value = document.getElementById("shipOriginCoordPaste")?.value || "";
+    if (/https?:\/\/|maps\.app\.goo\.gl|-?\d+\.\d+\s*,\s*-?\d+\.\d+/i.test(value)) {
+      handleParseWarehouseCoords();
+    }
+  }, 0);
+});
 ["shipOriginLat", "shipOriginLng", "shipOriginName", "shipOriginAddress"].forEach((id) => {
   document.getElementById(id)?.addEventListener("input", updateWarehouseOriginPreview);
 });
@@ -2013,13 +2151,27 @@ document.getElementById("shipOriginParseBtn")?.addEventListener("click", handleP
 if (shippingSettingsForm) {
   shippingSettingsForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (shippingSettingsMessage) shippingSettingsMessage.textContent = "";
-    const originLat = Number(document.getElementById("shipOriginLat")?.value);
-    const originLng = Number(document.getElementById("shipOriginLng")?.value);
-    if (!Number.isFinite(originLat) || !Number.isFinite(originLng)) {
-      if (shippingSettingsMessage) {
-        shippingSettingsMessage.textContent = "Latitude dan longitude gudang wajib diisi dengan benar.";
-      }
+    const saveButtons = shippingSettingsForm.querySelectorAll('button[type="submit"]');
+    const setSaveFeedback = (ok, text) => {
+      [document.getElementById("shippingSaveMessage"), shippingSettingsMessage].forEach((el) => {
+        if (!el) return;
+        el.classList.toggle("success", Boolean(ok));
+        el.textContent = text;
+      });
+      document.getElementById("shippingSaveMessage")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    };
+    setSaveFeedback(false, "");
+    const originLat = parseCoordInput(document.getElementById("shipOriginLat")?.value);
+    const originLng = parseCoordInput(document.getElementById("shipOriginLng")?.value);
+    if (
+      !Number.isFinite(originLat) ||
+      !Number.isFinite(originLng) ||
+      (Math.abs(originLat) < 0.0001 && Math.abs(originLng) < 0.0001)
+    ) {
+      setSaveFeedback(
+        false,
+        "Gagal: latitude dan longitude gudang wajib diisi. Ambil dari link Maps dulu."
+      );
       return;
     }
     const payload = {
@@ -2030,6 +2182,7 @@ if (shippingSettingsForm) {
       storeDelivery: {
         enabled: document.getElementById("shipStoreEnabled")?.checked,
         flatFee: Number(document.getElementById("shipStoreFlatFee")?.value || 0),
+        perKmRate: Number(document.getElementById("shipStorePerKm")?.value || 0),
         freeAboveSubtotal: Number(document.getElementById("shipStoreFreeAbove")?.value || 0),
         label: "Kirim mobil toko",
       },
@@ -2046,21 +2199,32 @@ if (shippingSettingsForm) {
         minFee: Number(document.getElementById("shipFallbackMinFee")?.value || 15000),
       },
     };
+    saveButtons.forEach((btn) => {
+      btn.disabled = true;
+    });
+    setSaveFeedback(false, "Menyimpan pengaturan kirim...");
     try {
       await apiFetch("/admin/settings/shipping", {
         method: "PUT",
         body: JSON.stringify({ settings: payload }),
       });
-      if (shippingSettingsMessage) {
-        shippingSettingsMessage.classList.add("success");
-        shippingSettingsMessage.textContent = "Pengaturan pengiriman berhasil disimpan.";
-      }
+      setSaveFeedback(
+        true,
+        `Berhasil disimpan. Asal kirim: ${originLat.toFixed(6)}, ${originLng.toFixed(6)}`
+      );
       loadShippingSettings();
     } catch (error) {
-      if (shippingSettingsMessage) {
-        shippingSettingsMessage.classList.remove("success");
-        shippingSettingsMessage.textContent = error.message;
-      }
+      const tokenError = /token|kadaluarsa|sesi/i.test(error.message || "");
+      setSaveFeedback(
+        false,
+        tokenError
+          ? "Gagal disimpan: sesi login habis. Logout, masuk lagi, lalu simpan ulang."
+          : `Gagal disimpan: ${error.message || "terjadi kesalahan."}`
+      );
+    } finally {
+      saveButtons.forEach((btn) => {
+        btn.disabled = false;
+      });
     }
   });
 }
@@ -2111,9 +2275,10 @@ async function loadOrders() {
           <span style="font-size: 0.78rem; color: #6b7280;">${shippingMethodLabel(order.shipping_method)}${order.shipping_fee ? ` · ongkir ${formatRupiah(order.shipping_fee)}` : ""}</span>
         </td>
         <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
-          <span style="background: #e5edff; color: #1d4ed8; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">
-            ${order.status}
-          </span>
+          <select data-action="change-status" data-order-id="${order.id}" style="padding: 4px 8px; font-size: 0.8rem; border: 1px solid #d1d5db; border-radius: 4px; font-weight: 600; color: ${String(order.status).toLowerCase() === "paid" ? "#047857" : "#c2410c"};">
+            <option value="unpaid" ${String(order.status).toLowerCase() !== "paid" ? "selected" : ""}>Belum dibayar</option>
+            <option value="paid" ${String(order.status).toLowerCase() === "paid" ? "selected" : ""}>Lunas</option>
+          </select>
         </td>
         <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
           <select data-action="change-entity" data-order-id="${order.id}" style="padding: 4px; font-size: 0.8rem; margin-right: 4px; border: 1px solid #d1d5db; border-radius: 4px;">
@@ -2269,7 +2434,7 @@ async function loadSalesReport() {
           <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${new Date(order.created_at).toLocaleString("id-ID")}</td>
           <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${paymentMethodLabel(order.payment_method)}</td>
           <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
-            <span style="background: #e5edff; color: #1d4ed8; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">${order.status}</span>
+            <span style="background: ${String(order.status).toLowerCase() === "paid" ? "#d1fae5" : "#ffedd5"}; color: ${String(order.status).toLowerCase() === "paid" ? "#047857" : "#c2410c"}; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">${String(order.status).toLowerCase() === "paid" ? "Lunas" : "Belum dibayar"}</span>
           </td>
           <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right;">${formatRupiah(order.total)}</td>
           <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
@@ -2315,7 +2480,7 @@ function exportSalesReportCsv() {
     "Order ID,Customer,Tanggal,Pembayaran,Status,Total",
     ...(orders || []).map(
       (o) =>
-        `${o.id},"${String(o.customer_name).replace(/"/g, '""')}",${o.created_at},${paymentMethodLabel(o.payment_method)},${o.status},${o.total}`
+        `${o.id},"${String(o.customer_name).replace(/"/g, '""')}",${o.created_at},${paymentMethodLabel(o.payment_method)},${String(o.status).toLowerCase() === "paid" ? "Lunas" : "Belum dibayar"},${o.total}`
     ),
   ];
   const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
@@ -2396,11 +2561,26 @@ document.getElementById("ordersTbody")?.addEventListener("change", async (event)
       alert("Gagal mengubah entitas: " + error.message);
     }
   }
+  if (target?.dataset?.action === "change-status") {
+    const orderId = target.dataset.orderId;
+    const status = target.value;
+    try {
+      await apiFetch(`/admin/orders/${orderId}/status`, {
+        method: "PUT",
+        body: JSON.stringify({ status }),
+      });
+      target.style.color = status === "paid" ? "#047857" : "#c2410c";
+    } catch (error) {
+      alert("Gagal mengubah status pembayaran: " + error.message);
+      loadOrders();
+    }
+  }
 });
 
 // --- WhatsApp Bot Admin Logic ---
 const waSettingsForm = document.getElementById("waSettingsForm");
 const waBotEnabled = document.getElementById("waBotEnabled");
+const sasaWebChatEnabled = document.getElementById("sasaWebChatEnabled");
 const waBotNumber = document.getElementById("waBotNumber");
 const waBotFallback = document.getElementById("waBotFallback");
 const waSettingsMessage = document.getElementById("waSettingsMessage");
@@ -2416,6 +2596,7 @@ async function loadWaSettings() {
   try {
     const data = await apiFetch("/admin/settings/whatsapp");
     if (waBotEnabled) waBotEnabled.checked = !!data.enabled;
+    if (sasaWebChatEnabled) sasaWebChatEnabled.checked = data.webChatEnabled !== false;
     if (waBotNumber) waBotNumber.value = data.botNumber || "";
     if (waBotFallback) waBotFallback.value = data.fallbackMessage || "";
   } catch (err) {
@@ -2461,6 +2642,7 @@ if (waSettingsForm) {
     try {
       const payload = {
         enabled: waBotEnabled.checked,
+        webChatEnabled: sasaWebChatEnabled ? sasaWebChatEnabled.checked : true,
         botNumber: waBotNumber ? waBotNumber.value.trim() : "",
         fallbackMessage: waBotFallback.value.trim()
       };
@@ -2488,6 +2670,270 @@ if (refreshWaSessionsBtn) {
   refreshWaSessionsBtn.addEventListener("click", loadWaSessions);
 }
 
+function setBackupMessage(text, ok) {
+  const el = document.getElementById("backupMessage");
+  if (!el) return;
+  el.classList.toggle("success", !!ok);
+  el.textContent = text || "";
+}
+
+const backupDownloadBtn = document.getElementById("backupDownloadBtn");
+if (backupDownloadBtn) {
+  backupDownloadBtn.addEventListener("click", async () => {
+    setBackupMessage("Menyiapkan file ZIP backup...", false);
+    backupDownloadBtn.disabled = true;
+    try {
+      const response = await fetch("/api/admin/backup", {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const contentType = response.headers.get("content-type") || "";
+      if (!response.ok) {
+        const data = contentType.includes("application/json")
+          ? await response.json().catch(() => ({}))
+          : {};
+        throw new Error(data.message || "Gagal mengunduh backup.");
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const disposition = response.headers.get("content-disposition") || "";
+      const match = disposition.match(/filename="?([^"]+)"?/i);
+      link.href = url;
+      link.download = match?.[1] || "sjs-backup.zip";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setBackupMessage("Backup ZIP berhasil diunduh. Simpan file ini untuk restore di komputer lain.", true);
+    } catch (error) {
+      setBackupMessage(error.message || "Gagal mengunduh backup.", false);
+    } finally {
+      backupDownloadBtn.disabled = false;
+    }
+  });
+}
+
+const backupRestoreBtn = document.getElementById("backupRestoreBtn");
+const backupRestoreFile = document.getElementById("backupRestoreFile");
+if (backupRestoreBtn && backupRestoreFile) {
+  backupRestoreBtn.addEventListener("click", async () => {
+    const file = backupRestoreFile.files?.[0];
+    if (!file) {
+      setBackupMessage("Pilih file ZIP backup terlebih dahulu.", false);
+      return;
+    }
+    if (!confirm("Restore akan MENIMPA database, produk, dan semua foto yang ada sekarang dengan isi ZIP. Data lama diganti, bukan digabung. Lanjutkan?")) {
+      return;
+    }
+    setBackupMessage("Mengunggah dan merestore backup...", false);
+    backupRestoreBtn.disabled = true;
+    try {
+      const formData = new FormData();
+      formData.append("backup", file);
+      const response = await fetch("/api/admin/backup/restore", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${getToken()}` },
+        body: formData,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.message || "Gagal merestore backup.");
+      }
+      setBackupMessage(
+        data.message || "Restore menimpa data lama. Refresh halaman admin.",
+        true
+      );
+    } catch (error) {
+      setBackupMessage(error.message || "Gagal merestore backup.", false);
+    } finally {
+      backupRestoreBtn.disabled = false;
+    }
+  });
+}
+
+let editingBrandId = null;
+
+function setBrandsMessage(text, isSuccess = false) {
+  const el = document.getElementById("brandsMessage");
+  if (!el) return;
+  el.classList.toggle("success", !!isSuccess);
+  el.textContent = text || "";
+}
+
+function renderBrandImagePreview(containerId, url) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!url) {
+    el.innerHTML = "";
+    return;
+  }
+  el.innerHTML = `<img src="${escapeHtml(url)}" alt="" style="max-height:120px; max-width:220px; object-fit:contain; border:1px solid #e5e7eb; border-radius:8px; background:#fff; padding:6px;">`;
+}
+
+function resetBrandForm() {
+  editingBrandId = null;
+  const form = document.getElementById("brandForm");
+  if (form) form.reset();
+  const coverUrl = document.getElementById("brandCoverUrl");
+  const logoUrl = document.getElementById("brandLogoUrl");
+  if (coverUrl) coverUrl.value = "";
+  if (logoUrl) logoUrl.value = "";
+  renderBrandImagePreview("brandCoverPreview", "");
+  renderBrandImagePreview("brandLogoPreview", "");
+  const submitBtn = document.getElementById("brandSubmitBtn");
+  const cancelBtn = document.getElementById("brandCancelEdit");
+  if (submitBtn) submitBtn.textContent = "Tambah Merek";
+  if (cancelBtn) cancelBtn.classList.add("hidden");
+}
+
+function fillBrandForm(brand) {
+  editingBrandId = brand.id;
+  document.getElementById("brandNameInput").value = brand.name || "";
+  document.getElementById("brandSortInput").value = String(brand.sortOrder || 0);
+  document.getElementById("brandCoverUrl").value = brand.coverUrl || "";
+  document.getElementById("brandLogoUrl").value = brand.logoUrl || "";
+  renderBrandImagePreview("brandCoverPreview", brand.coverUrl || "");
+  renderBrandImagePreview("brandLogoPreview", brand.logoUrl || "");
+  const submitBtn = document.getElementById("brandSubmitBtn");
+  const cancelBtn = document.getElementById("brandCancelEdit");
+  if (submitBtn) submitBtn.textContent = "Simpan Perubahan";
+  if (cancelBtn) cancelBtn.classList.remove("hidden");
+}
+
+async function loadAdminBrands() {
+  const grid = document.getElementById("adminBrandsGrid");
+  if (!grid) return;
+  try {
+    const brands = await apiFetch("/brands");
+    if (!brands.length) {
+      grid.innerHTML = '<p class="empty-state">Belum ada merek. Isi form di atas lalu simpan.</p>';
+      return;
+    }
+    grid.innerHTML = brands
+      .map((brand) => {
+        const cover = brand.coverUrl
+          ? `<img class="cover" src="${escapeHtml(brand.coverUrl)}" alt="">`
+          : "";
+        const logo = brand.logoUrl
+          ? `<img class="logo" src="${escapeHtml(brand.logoUrl)}" alt="">`
+          : "";
+        return `
+          <article class="admin-brand-card">
+            <div class="admin-brand-card-tile">
+              ${cover}
+              ${logo}
+              <div class="name">${escapeHtml(brand.name)}</div>
+            </div>
+            <div class="admin-brand-card-actions">
+              <button type="button" class="btn-secondary" data-action="edit-brand" data-brand="${encodeURIComponent(
+                JSON.stringify(brand)
+              )}" style="font-size:0.8rem; padding:4px 8px;">Edit</button>
+              <button type="button" class="btn-danger" data-action="delete-brand" data-id="${brand.id}" data-name="${encodeURIComponent(
+                brand.name || ""
+              )}" style="font-size:0.8rem; padding:4px 8px;">Hapus</button>
+            </div>
+          </article>`;
+      })
+      .join("");
+  } catch (error) {
+    setBrandsMessage(error.message);
+    grid.innerHTML = `<p class="empty-state" style="color:#b91c1c;">${escapeHtml(error.message)}</p>`;
+  }
+}
+
+async function uploadBrandImage(file) {
+  return uploadPictureImage(file, "brands");
+}
+
+document.getElementById("brandCoverFile")?.addEventListener("change", async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  try {
+    setBrandsMessage("Mengunggah foto latar...");
+    const url = await uploadBrandImage(file);
+    document.getElementById("brandCoverUrl").value = url;
+    renderBrandImagePreview("brandCoverPreview", url);
+    setBrandsMessage("Foto latar berhasil diupload.", true);
+  } catch (error) {
+    setBrandsMessage(error.message);
+  }
+});
+
+document.getElementById("brandLogoFile")?.addEventListener("change", async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  try {
+    setBrandsMessage("Mengunggah logo merek...");
+    const url = await uploadBrandImage(file);
+    document.getElementById("brandLogoUrl").value = url;
+    renderBrandImagePreview("brandLogoPreview", url);
+    setBrandsMessage("Logo merek berhasil diupload.", true);
+  } catch (error) {
+    setBrandsMessage(error.message);
+  }
+});
+
+document.getElementById("brandForm")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const name = document.getElementById("brandNameInput")?.value.trim();
+  const coverUrl = document.getElementById("brandCoverUrl")?.value.trim() || "";
+  const logoUrl = document.getElementById("brandLogoUrl")?.value.trim() || "";
+  const sortOrder = Number(document.getElementById("brandSortInput")?.value || 0);
+  if (!name) {
+    setBrandsMessage("Nama merek wajib diisi.");
+    return;
+  }
+  try {
+    if (editingBrandId) {
+      await apiFetch(`/admin/brands/${editingBrandId}`, {
+        method: "PUT",
+        body: JSON.stringify({ name, coverUrl, logoUrl, sortOrder }),
+      });
+      setBrandsMessage("Merek diperbarui.", true);
+    } else {
+      await apiFetch("/admin/brands", {
+        method: "POST",
+        body: JSON.stringify({ name, coverUrl, logoUrl, sortOrder }),
+      });
+      setBrandsMessage("Merek ditambahkan.", true);
+    }
+    resetBrandForm();
+    loadAdminBrands();
+  } catch (error) {
+    setBrandsMessage(error.message);
+  }
+});
+
+document.getElementById("brandCancelEdit")?.addEventListener("click", () => {
+  resetBrandForm();
+  setBrandsMessage("");
+});
+
+document.getElementById("adminBrandsGrid")?.addEventListener("click", async (event) => {
+  const target = event.target.closest("button");
+  if (!target) return;
+  if (target.dataset.action === "edit-brand") {
+    try {
+      fillBrandForm(JSON.parse(decodeURIComponent(target.dataset.brand)));
+      document.getElementById("brandForm")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch {
+      setBrandsMessage("Gagal membuka data merek.");
+    }
+  }
+  if (target.dataset.action === "delete-brand") {
+    const name = decodeURIComponent(target.dataset.name || "");
+    if (!confirm(`Hapus merek "${name}"?`)) return;
+    try {
+      await apiFetch(`/admin/brands/${target.dataset.id}`, { method: "DELETE" });
+      setBrandsMessage("Merek dihapus.", true);
+      if (Number(target.dataset.id) === editingBrandId) resetBrandForm();
+      loadAdminBrands();
+    } catch (error) {
+      setBrandsMessage(error.message);
+    }
+  }
+});
+
 // ----------------
 
 renderUserArea();
@@ -2499,6 +2945,7 @@ if (guardAccess()) {
   loadUsers();
   loadAdminProducts();
   loadMenu();
+  loadAdminBrands();
   loadCompanyProfileSettings();
   loadShippingSettings();
   loadWaSettings();

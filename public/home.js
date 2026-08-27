@@ -362,16 +362,7 @@ async function loadHomePage() {
     // Bind WhatsApp Chatbot Widget
     const waWidget = document.getElementById("whatsappChatWidget");
     if (waWidget) {
-      let waNumber = settings?.whatsappBotNumber || settings?.companyProfile?.phone || "";
-      waNumber = String(waNumber).replace(/[^\d]/g, ""); // Bersihkan karakter non-angka
-      if (waNumber) {
-        waWidget.href = `https://wa.me/${waNumber}?text=Halo%20Sasa,%20bisa%20bantu%20saya?`;
-        waWidget.target = "_blank";
-        waWidget.rel = "noopener noreferrer";
-        waWidget.style.display = "flex";
-      } else {
-        waWidget.style.display = "none"; // Sembunyikan jika belum ada nomor
-      }
+      waWidget.style.display = "none";
     }
   } catch (error) {
     renderSlides(DEFAULT_SLIDES);

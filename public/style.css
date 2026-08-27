@@ -686,6 +686,28 @@ a {
   border: 1px dashed #7dd3fc;
 }
 
+.warehouse-origin-card .message {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.warehouse-origin-card .message.success {
+  background: #ecfdf5;
+  border: 1px solid #6ee7b7;
+}
+
+.warehouse-origin-card .message:empty {
+  display: none;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
 .field-label {
   font-size: 0.85rem;
   font-weight: 500;
@@ -694,9 +716,29 @@ a {
   color: #374151;
 }
 
+.warehouse-link-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.warehouse-link-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.warehouse-link-row .btn-primary {
+  white-space: nowrap;
+  padding: 8px 14px;
+}
+
 @media (max-width: 600px) {
   .warehouse-coords-grid {
     grid-template-columns: 1fr;
+  }
+
+  .warehouse-link-row {
+    flex-direction: column;
   }
 }
 
@@ -1720,4 +1762,243 @@ body.lightbox-open {
   border: 1px dashed #d1d5db;
   border-radius: 8px;
   background: #f9fafb;
+}
+
+.cs-chat-root {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 80;
+  font-family: inherit;
+}
+
+.cs-chat-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.cs-chat-toggle-bubble {
+  background: #fff;
+  color: #4a3228;
+  border-radius: 16px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  max-width: 170px;
+  text-align: left;
+}
+
+.cs-chat-toggle-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #25d366;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(37, 211, 102, 0.35);
+}
+
+.cs-chat-toggle.is-open .cs-chat-toggle-bubble {
+  display: none;
+}
+
+.cs-chat-panel {
+  width: min(360px, calc(100vw - 28px));
+  height: min(480px, calc(100vh - 110px));
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cs-chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #4a3228;
+  color: #fff;
+}
+
+.cs-chat-header small {
+  display: block;
+  opacity: 0.85;
+  font-size: 0.72rem;
+  margin-top: 2px;
+}
+
+.cs-chat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cs-chat-hide {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: transparent;
+  color: #fff;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.cs-chat-restore {
+  border: none;
+  background: #4a3228;
+  color: #fff;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+}
+
+.cs-chat-root.is-minimized .cs-chat-toggle,
+.cs-chat-root.is-minimized .cs-chat-panel {
+  display: none;
+}
+
+.cs-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #f8f5f2;
+}
+
+.cs-chat-msg {
+  max-width: 88%;
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.cs-chat-msg.is-bot {
+  background: #fff;
+  color: #374151;
+  align-self: flex-start;
+}
+
+.cs-chat-msg.is-user {
+  background: #25d366;
+  color: #fff;
+  align-self: flex-end;
+}
+
+.cs-chat-form {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid #eee;
+}
+
+.cs-chat-form input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.cs-chat-form button {
+  border: none;
+  background: #4a3228;
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.cs-chat-wa {
+  display: block;
+  text-align: center;
+  font-size: 0.78rem;
+  padding: 8px;
+  color: #128c7e;
+  text-decoration: none;
+}
+
+.admin-brands-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.admin-brand-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.admin-brand-card-tile {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  background: #e5e7eb;
+}
+
+.admin-brand-card-tile::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent 48%);
+  pointer-events: none;
+}
+
+.admin-brand-card-tile img.cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.admin-brand-card-tile img.logo {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 55%;
+  max-height: 40%;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.35));
+  z-index: 1;
+}
+
+.admin-brand-card-tile .name {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 8px;
+  z-index: 1;
+  text-align: center;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  text-shadow: 0 1px 3px rgba(0,0,0,.7);
+}
+
+.admin-brand-card-actions {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
 }

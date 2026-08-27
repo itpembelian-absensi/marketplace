@@ -82,6 +82,9 @@ async function loadInvoice() {
     const companyPhone = company.phone || "-";
     const companyEmail = company.email || "-";
 
+    const isPaid = String(order.status || "").toLowerCase() === "paid";
+    const statusLabel = isPaid ? "LUNAS" : "BELUM DIBAYAR";
+    const statusColor = isPaid ? "#059669" : "#c2410c";
     const dateStr = new Date(order.created_at).toLocaleString('id-ID');
     let shippingMeta = {};
     try {
@@ -129,7 +132,7 @@ async function loadInvoice() {
           <h1>INVOICE</h1>
           <p><strong>Order ID:</strong> #${order.id}</p>
           <p><strong>Tanggal:</strong> ${dateStr}</p>
-          <p><strong>Status:</strong> <span style="color: #059669; font-weight: 600;">${order.status.toUpperCase()}</span></p>
+          <p><strong>Status:</strong> <span style="color: ${statusColor}; font-weight: 600;">${statusLabel}</span></p>
         </div>
       </div>
 
@@ -145,7 +148,8 @@ async function loadInvoice() {
         <div>
           <h3>Info Pembayaran</h3>
           <p><strong>Metode Pembayaran:</strong> ${order.payment_method === 'qris' ? 'QRIS' : order.payment_method}</p>
-          ${order.payment_method === 'qris' && settings?.qrisImageUrl ? `
+          <p><strong>Pembayaran:</strong> ${isPaid ? "Sudah diterima" : "Menunggu pembayaran"}</p>
+          ${!isPaid && order.payment_method === 'qris' && settings?.qrisImageUrl ? `
             <div style="margin-top: 15px; padding: 15px; background: #fff; border-radius: 8px; border: 1px dashed #2563eb; text-align: center;">
               <p style="margin: 0 0 10px 0; font-weight: 600; color: #1f2937;">Scan Barcode QRIS di bawah ini:</p>
               <img src="${settings.qrisImageUrl}" alt="QRIS Barcode" style="max-width: 100%; max-height: 250px; border-radius: 8px; margin: 0 auto; display: block;">
@@ -176,7 +180,7 @@ async function loadInvoice() {
       </div>
       
       <div style="margin-top: 40px; font-size: 0.85rem; color: #6b7280; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 15px;">
-        <p>Terima kasih atas pesanan Anda.</p>
+        <p>${isPaid ? "Terima kasih atas pembayaran Anda." : "Invoice ini belum lunas. Silakan selesaikan pembayaran."}</p>
         <p>Barang yang sudah dibeli tidak dapat ditukar atau dikembalikan.</p>
       </div>
     `;

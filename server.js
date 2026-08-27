@@ -18,9 +18,12 @@ const {
   calculateShippingQuote,
   getShippingProviderStatus,
   testShippingProvider,
+  resolveLocationFromText,
 } = require("./lib/shipping");
 const { ensurePictureDirs, isValidFolder, processUpload } = require("./lib/media");
 const { handleWebhook } = require("./lib/whatsapp-bot");
+const { answerCustomerQuestion } = require("./lib/cs-ai");
+const { applyIncomingDatabase, streamBackup, restoreFromZip } = require("./lib/backup");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -30,7 +33,9 @@ const SEED_ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || "";
 const SEED_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || "";
 const SEED_ADMIN_NAME = process.env.SEED_ADMIN_NAME || "Admin";
 const dbPath = path.join(__dirname, "data", "marketplace.db");
-const db = new sqlite3.Database(dbPath);
+fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+applyIncomingDatabase(__dirname, dbPath);
+let db = new sqlite3.Database(dbPath);
 const uploadDir = path.join(__dirname, "public", "picture");
 const productUploadDir = path.join(__dirname, "public", "product");
 const bannerUploadDir = path.join(__dirname, "public", "banner");
@@ -234,7 +239,15 @@ function normalizeHomePage(raw, heroBanners) {
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
+app.use(
+  express.static(path.join(__dirname, "public"), {
+    setHeaders(res, filePath) {
+      if (filePath.endsWith(".html") || filePath.endsWith(".js") || filePath.endsWith(".css")) {
+        res.setHeader("Cache-Control", "no-store");
+      }
+    },
+  })
+);
 fs.mkdirSync(uploadDir, { recursive: true });
 ensurePictureDirs();
 fs.mkdirSync(productUploadDir, { recursive: true });
@@ -365,6 +378,29 @@ const qrisImageUpload = multer({
   },
 });
 
+const backupZipUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      const dir = path.join(__dirname, "data", "tmp");
+      fs.mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+      cb(null, `restore-${Date.now()}.zip`);
+    },
+  }),
+  limits: { fileSize: 512 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const name = String(file.originalname || "").toLowerCase();
+    const type = String(file.mimetype || "");
+    if (name.endsWith(".zip") || type.includes("zip")) {
+      cb(null, true);
+      return;
+    }
+    cb(new Error("File restore harus berupa ZIP hasil backup SJS."));
+  },
+});
+
 function runQuery(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.run(sql, params, function onRun(err) {
@@ -397,6 +433,31 @@ function getQuery(sql, params = []) {
         return;
       }
       resolve(row);
+    });
+  });
+}
+
+function closeLiveDatabase() {
+  return new Promise((resolve, reject) => {
+    db.close((err) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
+function openLiveDatabase() {
+  return new Promise((resolve, reject) => {
+    const next = new sqlite3.Database(dbPath, (err) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      db = next;
+      resolve();
     });
   });
 }
@@ -695,6 +756,17 @@ async function setupDatabase() {
   }
 
   await runQuery(`
+    CREATE TABLE IF NOT EXISTS brands (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      cover_url TEXT NOT NULL DEFAULT '',
+      logo_url TEXT NOT NULL DEFAULT '',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await runQuery(`
     CREATE TABLE IF NOT EXISTS point_rewards (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -808,7 +880,7 @@ async function setupDatabase() {
       customer_address TEXT NOT NULL,
       payment_method TEXT NOT NULL,
       total INTEGER NOT NULL,
-      status TEXT NOT NULL DEFAULT 'paid',
+      status TEXT NOT NULL DEFAULT 'unpaid',
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(user_id) REFERENCES users(id)
     )
@@ -1417,13 +1489,14 @@ app.get("/api/settings", async (req, res) => {
     }
     const homePage = normalizeHomePage(homePageRaw, heroBanners);
 
-    // Get WhatsApp bot number: prefer DB setting, fallback to .env
     let whatsappBotNumber = process.env.WHATSAPP_BOT_NUMBER || "";
+    let sasaChatEnabled = true;
     try {
       const waRow = await getQuery("SELECT value FROM app_settings WHERE key = 'whatsapp_settings'");
       if (waRow?.value) {
         const waSettings = JSON.parse(waRow.value);
         if (waSettings.botNumber) whatsappBotNumber = waSettings.botNumber;
+        if (waSettings.webChatEnabled === false) sasaChatEnabled = false;
       }
     } catch (_) {}
 
@@ -1434,6 +1507,7 @@ app.get("/api/settings", async (req, res) => {
       homePage,
       qrisImageUrl: qrisRow?.value || "",
       whatsappBotNumber,
+      sasaChatEnabled,
     });
   } catch (error) {
     res.status(500).json({ message: "Gagal mengambil settings." });
@@ -1633,20 +1707,45 @@ app.get("/api/shipping/options", async (req, res) => {
   }
 });
 
+app.post("/api/shipping/resolve-location", async (req, res) => {
+  const text = String(req.body?.text || "").trim();
+  if (!text) {
+    res.status(400).json({
+      message: "Tempel link Maps, share location WhatsApp, atau koordinat lat,lng.",
+    });
+    return;
+  }
+  try {
+    const resolved = await resolveLocationFromText(text);
+    if (!resolved) {
+      res.status(400).json({
+        message:
+          "Tidak bisa membaca koordinat dari link itu. Salin ulang link Google Maps yang lengkap.",
+      });
+      return;
+    }
+    res.json(resolved);
+  } catch (error) {
+    res.status(400).json({ message: error.message || "Gagal membaca lokasi dari tautan." });
+  }
+});
+
 app.post("/api/shipping/quote", authMiddleware, async (req, res) => {
   const { method, address, destLat, destLng, productsSubtotal } = req.body || {};
   if (!method) {
     res.status(400).json({ message: "Pilih metode pengiriman." });
     return;
   }
-  if (!address && !(destLat && destLng) && method !== "store") {
-    res.status(400).json({ message: "Isi alamat pengiriman terlebih dahulu." });
-    return;
-  }
   try {
     const settings = await getShippingSettingsFromDb();
+    const methodKey = String(method).trim();
+    const storeNeedsDestination = methodKey === "store" && Number(settings.storeDelivery?.perKmRate) > 0;
+    if (!address && !(destLat && destLng) && (methodKey !== "store" || storeNeedsDestination)) {
+      res.status(400).json({ message: "Isi alamat pengiriman terlebih dahulu." });
+      return;
+    }
     const quote = await calculateShippingQuote({
-      method: String(method).trim(),
+      method: methodKey,
       address: String(address || "").trim(),
       destLat,
       destLng,
@@ -1671,6 +1770,29 @@ app.get("/api/admin/settings/shipping", authMiddleware, requireRole(["admin"]), 
     });
   } catch (error) {
     res.status(500).json({ message: "Gagal memuat pengaturan pengiriman." });
+  }
+});
+
+app.post("/api/admin/settings/shipping/resolve-location", authMiddleware, requireRole(["admin"]), async (req, res) => {
+  const text = String(req.body?.text || "").trim();
+  if (!text) {
+    res.status(400).json({
+      message: "Tempel link Maps, share location WhatsApp, atau koordinat lat,lng.",
+    });
+    return;
+  }
+  try {
+    const resolved = await resolveLocationFromText(text);
+    if (!resolved) {
+      res.status(400).json({
+        message:
+          "Tidak bisa membaca koordinat. Kirim lokasi biasa di WhatsApp (bukan live location), lalu salin link Maps-nya.",
+      });
+      return;
+    }
+    res.json(resolved);
+  } catch (error) {
+    res.status(400).json({ message: error.message || "Gagal membaca lokasi dari tautan." });
   }
 });
 
@@ -1701,6 +1823,18 @@ app.put("/api/admin/settings/shipping", authMiddleware, requireRole(["admin"]), 
   try {
     const payload = req.body?.settings || req.body || {};
     const settings = mergeShippingSettings(payload);
+    const originLat = Number(settings.originLat);
+    const originLng = Number(settings.originLng);
+    if (
+      !Number.isFinite(originLat) ||
+      !Number.isFinite(originLng) ||
+      (Math.abs(originLat) < 0.0001 && Math.abs(originLng) < 0.0001)
+    ) {
+      res.status(400).json({
+        message: "Koordinat gudang tidak valid. Ambil dari GPS, link Maps, atau share location WhatsApp.",
+      });
+      return;
+    }
     await runQuery(
       "INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
       ["shipping_settings", JSON.stringify(settings)]
@@ -1934,6 +2068,96 @@ app.get("/api/categories", async (req, res) => {
     res.json(Array.from(byCategory.values()));
   } catch (error) {
     res.status(500).json({ message: "Gagal mengambil kategori." });
+  }
+});
+
+function mapBrandRow(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    coverUrl: row.cover_url || "",
+    logoUrl: row.logo_url || "",
+    sortOrder: Number(row.sort_order) || 0,
+  };
+}
+
+app.get("/api/brands", async (req, res) => {
+  try {
+    const rows = await allQuery("SELECT * FROM brands ORDER BY sort_order ASC, id ASC");
+    res.json(rows.map(mapBrandRow));
+  } catch (error) {
+    res.status(500).json({ message: "Gagal mengambil daftar merek." });
+  }
+});
+
+app.post("/api/admin/brands", authMiddleware, requireRole(["admin"]), async (req, res) => {
+  const name = String(req.body?.name || "").trim();
+  const coverUrl = String(req.body?.coverUrl || "").trim();
+  const logoUrl = String(req.body?.logoUrl || "").trim();
+  const sortOrder = Number(req.body?.sortOrder);
+  if (!name) {
+    res.status(400).json({ message: "Nama merek wajib diisi." });
+    return;
+  }
+  try {
+    const result = await runQuery(
+      "INSERT INTO brands (name, cover_url, logo_url, sort_order) VALUES (?, ?, ?, ?)",
+      [name, coverUrl, logoUrl, Number.isFinite(sortOrder) ? sortOrder : 0]
+    );
+    const row = await getQuery("SELECT * FROM brands WHERE id = ?", [result.lastID]);
+    res.status(201).json({ message: "Merek berhasil ditambahkan.", brand: mapBrandRow(row) });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal menambah merek." });
+  }
+});
+
+app.put("/api/admin/brands/:id", authMiddleware, requireRole(["admin"]), async (req, res) => {
+  const id = Number(req.params.id);
+  const name = String(req.body?.name || "").trim();
+  const coverUrl = String(req.body?.coverUrl || "").trim();
+  const logoUrl = String(req.body?.logoUrl || "").trim();
+  const sortOrder = Number(req.body?.sortOrder);
+  if (!id) {
+    res.status(400).json({ message: "ID merek tidak valid." });
+    return;
+  }
+  if (!name) {
+    res.status(400).json({ message: "Nama merek wajib diisi." });
+    return;
+  }
+  try {
+    const existing = await getQuery("SELECT id FROM brands WHERE id = ?", [id]);
+    if (!existing) {
+      res.status(404).json({ message: "Merek tidak ditemukan." });
+      return;
+    }
+    await runQuery(
+      "UPDATE brands SET name = ?, cover_url = ?, logo_url = ?, sort_order = ? WHERE id = ?",
+      [name, coverUrl, logoUrl, Number.isFinite(sortOrder) ? sortOrder : 0, id]
+    );
+    const row = await getQuery("SELECT * FROM brands WHERE id = ?", [id]);
+    res.json({ message: "Merek berhasil diperbarui.", brand: mapBrandRow(row) });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal memperbarui merek." });
+  }
+});
+
+app.delete("/api/admin/brands/:id", authMiddleware, requireRole(["admin"]), async (req, res) => {
+  const id = Number(req.params.id);
+  if (!id) {
+    res.status(400).json({ message: "ID merek tidak valid." });
+    return;
+  }
+  try {
+    const existing = await getQuery("SELECT id FROM brands WHERE id = ?", [id]);
+    if (!existing) {
+      res.status(404).json({ message: "Merek tidak ditemukan." });
+      return;
+    }
+    await runQuery("DELETE FROM brands WHERE id = ?", [id]);
+    res.json({ message: "Merek dihapus." });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal menghapus merek." });
   }
 });
 
@@ -2490,7 +2714,7 @@ app.post("/api/checkout", authMiddleware, async (req, res) => {
     const checkoutResult = await withTransaction(async () => {
       const orderResult = await runQuery(
         `INSERT INTO orders (user_id, customer_name, customer_phone, customer_address, payment_method, total, status, shipping_method, shipping_fee, products_subtotal, shipping_meta)
-         VALUES (?, ?, ?, ?, ?, ?, 'paid', ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, 'unpaid', ?, ?, ?, ?)`,
         [
           req.user.id,
           String(customerName).trim(),
@@ -2552,7 +2776,7 @@ app.post("/api/checkout", authMiddleware, async (req, res) => {
     });
 
     res.json({
-      message: "Pembayaran berhasil diproses. Stok telah diperbarui.",
+      message: "Pesanan berhasil dibuat. Selesaikan pembayaran agar status menjadi lunas.",
       orderId: checkoutResult.orderId,
       total: grandTotal,
       productsSubtotal,
@@ -2792,6 +3016,35 @@ app.get("/api/orders/:id", authMiddleware, async (req, res) => {
   }
 });
 
+app.put("/api/admin/orders/:id/status", authMiddleware, requireRole(["admin", "manager"]), async (req, res) => {
+  const orderId = Number(req.params.id);
+  const status = String(req.body?.status || "").trim().toLowerCase();
+  if (!orderId) {
+    res.status(400).json({ message: "ID pesanan tidak valid." });
+    return;
+  }
+  if (status !== "paid" && status !== "unpaid") {
+    res.status(400).json({ message: "Status harus unpaid atau paid." });
+    return;
+  }
+
+  try {
+    const existing = await getQuery("SELECT id FROM orders WHERE id = ?", [orderId]);
+    if (!existing) {
+      res.status(404).json({ message: "Pesanan tidak ditemukan." });
+      return;
+    }
+
+    await runQuery("UPDATE orders SET status = ? WHERE id = ?", [status, orderId]);
+    res.json({
+      message: status === "paid" ? "Pesanan ditandai lunas." : "Pesanan ditandai belum dibayar.",
+      status,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal memperbarui status pesanan." });
+  }
+});
+
 app.put("/api/admin/orders/:id/entity", authMiddleware, requireRole(["admin", "manager"]), async (req, res) => {
   const orderId = Number(req.params.id);
   const { entity } = req.body;
@@ -2978,6 +3231,47 @@ app.post("/api/whatsapp/webhook", (req, res) => {
   });
 });
 
+const csChatRate = new Map();
+app.post("/api/chat", async (req, res) => {
+  const message = String(req.body?.message || "").trim();
+  const history = Array.isArray(req.body?.history) ? req.body.history.slice(-8) : [];
+  if (!message) {
+    res.status(400).json({ message: "Tulis pertanyaan dulu." });
+    return;
+  }
+  const ip = String(req.ip || req.headers["x-forwarded-for"] || "local").split(",")[0].trim();
+  const now = Date.now();
+  const bucket = csChatRate.get(ip) || { count: 0, start: now };
+  if (now - bucket.start > 60 * 1000) {
+    bucket.count = 0;
+    bucket.start = now;
+  }
+  bucket.count += 1;
+  csChatRate.set(ip, bucket);
+  if (bucket.count > 20) {
+    res.status(429).json({ message: "Terlalu banyak pertanyaan. Coba lagi sebentar." });
+    return;
+  }
+  try {
+    const reply = await answerCustomerQuestion({
+      message,
+      history,
+      getQuery,
+      allQuery,
+    });
+    res.json({
+      reply,
+      source: "ai",
+      note: "Jawaban AI sementara berdasarkan data produk, harga, dan fungsi di toko ini.",
+    });
+  } catch (error) {
+    console.error("CS chat error:", error);
+    res.status(400).json({
+      message: "Sasa sedang sibuk. Silakan tanya lagi atau lanjut ke WhatsApp CS.",
+    });
+  }
+});
+
 // --- WhatsApp Bot Admin Settings ---
 app.get("/api/admin/settings/whatsapp", authMiddleware, requireRole(["admin", "manager"]), async (req, res) => {
   try {
@@ -2990,13 +3284,28 @@ app.get("/api/admin/settings/whatsapp", authMiddleware, requireRole(["admin", "m
 });
 
 app.put("/api/admin/settings/whatsapp", authMiddleware, requireRole(["admin", "manager"]), async (req, res) => {
-  const settings = req.body;
   try {
+    const row = await getQuery("SELECT value FROM app_settings WHERE key = 'whatsapp_settings'");
+    let current = {};
+    if (row?.value) {
+      try {
+        current = JSON.parse(row.value) || {};
+      } catch {
+        current = {};
+      }
+    }
+    const settings = {
+      ...current,
+      enabled: Boolean(req.body?.enabled),
+      botNumber: String(req.body?.botNumber || "").trim(),
+      fallbackMessage: String(req.body?.fallbackMessage || "").trim(),
+      webChatEnabled: req.body?.webChatEnabled !== false,
+    };
     await runQuery(
       "INSERT INTO app_settings (key, value) VALUES ('whatsapp_settings', ?) ON CONFLICT(key) DO UPDATE SET value = ?",
       [JSON.stringify(settings), JSON.stringify(settings)]
     );
-    res.json({ message: "Pengaturan WhatsApp berhasil disimpan." });
+    res.json({ message: "Pengaturan WhatsApp berhasil disimpan.", settings });
   } catch (error) {
     res.status(500).json({ message: "Gagal menyimpan pengaturan WhatsApp." });
   }
@@ -3011,13 +3320,78 @@ app.get("/api/admin/whatsapp/sessions", authMiddleware, requireRole(["admin", "m
   }
 });
 
+app.get("/api/admin/backup", authMiddleware, requireRole(["admin"]), async (req, res) => {
+  try {
+    await streamBackup({ res, runQuery, rootDir: __dirname, dbPath });
+  } catch (error) {
+    console.error("Backup error:", error);
+    if (!res.headersSent) {
+      res.status(500).json({ message: error.message || "Gagal membuat backup." });
+    }
+  }
+});
+
+app.post(
+  "/api/admin/backup/restore",
+  authMiddleware,
+  requireRole(["admin"]),
+  backupZipUpload.single("backup"),
+  async (req, res) => {
+    if (!req.file?.path) {
+      res.status(400).json({ message: "Unggah file ZIP backup terlebih dahulu." });
+      return;
+    }
+    try {
+      const result = await restoreFromZip({
+        zipPath: req.file.path,
+        rootDir: __dirname,
+      });
+      let applied = false;
+      let dbClosed = false;
+      try {
+        await closeLiveDatabase();
+        dbClosed = true;
+        applyIncomingDatabase(__dirname, dbPath);
+        await openLiveDatabase();
+        applied = true;
+        await setupDatabase();
+      } catch (swapError) {
+        console.error("Restore DB overwrite:", swapError);
+        if (dbClosed && !applied) {
+          try {
+            await openLiveDatabase();
+          } catch (reopenError) {
+            console.error("Gagal membuka ulang database:", reopenError);
+          }
+        }
+      }
+      res.json({
+        ...result,
+        overwritten: true,
+        needsRestart: !applied,
+        message: applied
+          ? "Restore menimpa database, produk, dan semua foto dengan isi ZIP. Refresh halaman untuk melihat data baru."
+          : "Foto sudah ditimpa. Restart server agar database backup aktif.",
+      });
+    } catch (error) {
+      console.error("Restore error:", error);
+      try {
+        if (req.file?.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      } catch {
+        /* ignore */
+      }
+      res.status(400).json({ message: error.message || "Gagal merestore backup." });
+    }
+  }
+);
+
 app.use("/api", (req, res) => {
   res.status(404).json({ message: "Endpoint API tidak ditemukan." });
 });
 
 app.use((err, req, res, next) => {
   if (err?.code === "LIMIT_FILE_SIZE") {
-    res.status(400).json({ message: "Ukuran file maksimal 2MB." });
+    res.status(400).json({ message: "Ukuran file terlalu besar untuk diunggah." });
     return;
   }
   if (err) {

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Manajemen User - PT SAHABAT JAYA SUKSES</title>
-    <link rel="stylesheet" href="/style.css?v=13" />
+    <link rel="stylesheet" href="/style.css?v=16" />
   </head>
   <body class="admin-page">
     <header class="topbar">
@@ -29,6 +29,7 @@
           <button type="button" class="tab active" data-tab="usersTab">User</button>
           <button type="button" class="tab" data-tab="productsTab">Produk</button>
           <button type="button" class="tab" data-tab="menuTab">Menu</button>
+          <button type="button" class="tab" data-tab="brandsTab">Merek</button>
           <button type="button" class="tab" data-tab="brandingTab">Profil Perusahaan</button>
           <button type="button" class="tab" data-tab="bannerTab">Slideshow &amp; Beranda</button>
           <button type="button" class="tab" data-tab="ordersTab">Pesanan</button>
@@ -36,6 +37,7 @@
           <button type="button" class="tab" data-tab="inventoryTab">Laporan Stok</button>
           <button type="button" class="tab" data-tab="pointsTab">Poin Loyalitas</button>
           <button type="button" class="tab" data-tab="settingsTab">Lainnya</button>
+          <button type="button" class="tab" data-tab="backupTab">Backup</button>
           <button type="button" class="tab" data-tab="whatsappTab">WhatsApp Bot</button>
         </nav>
       </aside>
@@ -149,7 +151,8 @@
           <input type="number" id="salesYear" placeholder="Tahun" style="padding: 8px; width: 100px;" />
           <select id="salesStatus" style="padding: 8px;">
             <option value="all">Semua Status</option>
-            <option value="paid">Paid</option>
+            <option value="unpaid">Belum dibayar</option>
+            <option value="paid">Lunas</option>
           </select>
           <button type="button" id="salesFilterBtn" class="btn-primary">Tampilkan</button>
           <button type="button" id="salesExportBtn" class="btn-secondary" disabled>Export CSV</button>
@@ -529,6 +532,35 @@
         </p>
       </section>
 
+      <section id="brandsTab" class="auth-card admin-panel hidden">
+        <h2>Daftar Merek</h2>
+        <p class="empty-state" style="margin-bottom: 12px;">
+          Upload foto latar dan logo merek. Hasilnya tampil di menu <strong>Daftar Merek</strong> seperti kotak merek di website.
+        </p>
+        <form id="brandForm" class="auth-form">
+          <label for="brandNameInput">Nama merek</label>
+          <input id="brandNameInput" type="text" placeholder="Contoh: SINGA PLYWOOD" required />
+
+          <label for="brandSortInput">Urutan tampil</label>
+          <input id="brandSortInput" type="number" min="0" value="0" />
+
+          <label for="brandCoverFile">Foto latar (kayu/papan, dll.)</label>
+          <input id="brandCoverFile" type="file" accept="image/png,image/jpeg,image/webp" />
+          <input type="hidden" id="brandCoverUrl" />
+          <div id="brandCoverPreview" style="margin: 8px 0 12px;"></div>
+
+          <label for="brandLogoFile">Logo merek (opsional, transparan lebih bagus)</label>
+          <input id="brandLogoFile" type="file" accept="image/png,image/jpeg,image/webp" />
+          <input type="hidden" id="brandLogoUrl" />
+          <div id="brandLogoPreview" style="margin: 8px 0 12px;"></div>
+
+          <button type="submit" id="brandSubmitBtn" class="btn-primary">Tambah Merek</button>
+          <button type="button" id="brandCancelEdit" class="btn-secondary hidden">Batal Edit</button>
+        </form>
+        <p id="brandsMessage" class="message"></p>
+        <div id="adminBrandsGrid" class="admin-brands-grid"></div>
+      </section>
+
       <section id="settingsTab" class="auth-card admin-panel hidden">
 
         <h2>Pengaturan Jasa Kirim</h2>
@@ -539,8 +571,7 @@
           <div class="warehouse-origin-card">
             <h3 class="warehouse-origin-title">Lokasi GPS Gudang (Asal Barang Dikirim)</h3>
             <p class="warehouse-origin-help">
-              Semua perhitungan ongkir (Lalamove/GoSend/estimasi jarak) berangkat dari titik ini menuju alamat pelanggan.
-              Buka Google Maps di gudang → klik lokasi → salin koordinat, atau gunakan tombol GPS saat berada di gudang.
+              Semua perhitungan ongkir berangkat dari titik ini. Tempel link Google Maps di bawah, lalu tekan <strong>Enter</strong> atau tombol <strong>Ambil koordinat</strong>.
             </p>
             <div>
               <label class="field-label" for="shipOriginName">Nama gudang / toko</label>
@@ -550,36 +581,53 @@
               <label class="field-label" for="shipOriginAddress">Alamat lengkap gudang</label>
               <textarea id="shipOriginAddress" rows="2" placeholder="Jl. ..., Kota, Provinsi"></textarea>
             </div>
+            <div>
+              <label class="field-label" for="shipOriginCoordPaste">Link Google Maps</label>
+              <div class="warehouse-link-row">
+                <input type="text" id="shipOriginCoordPaste" placeholder="Tempel link Google Maps, lalu Enter" autocomplete="off" />
+                <button type="button" id="shipOriginParseBtn" class="btn-primary">Ambil koordinat</button>
+              </div>
+              <p class="warehouse-origin-help" style="margin-top:6px;">
+                Contoh: buka lokasi di Google Maps → Bagikan → salin link → tempel di sini → Enter.
+              </p>
+            </div>
             <div class="warehouse-coords-grid">
               <div>
                 <label class="field-label" for="shipOriginLat">Latitude (Lintang)</label>
-                <input type="number" step="any" id="shipOriginLat" required placeholder="-6.208800" />
+                <input type="text" inputmode="decimal" id="shipOriginLat" required placeholder="-6.208800" lang="en" autocomplete="off" />
               </div>
               <div>
                 <label class="field-label" for="shipOriginLng">Longitude (Bujur)</label>
-                <input type="number" step="any" id="shipOriginLng" required placeholder="106.845600" />
+                <input type="text" inputmode="decimal" id="shipOriginLng" required placeholder="106.845600" lang="en" autocomplete="off" />
               </div>
             </div>
+            <p id="shipOriginCoordStatus" class="warehouse-origin-help"></p>
             <div class="warehouse-origin-actions">
               <button type="button" id="shipOriginGpsBtn" class="btn-secondary">GPS: saya di gudang sekarang</button>
-              <button type="button" id="shipOriginParseBtn" class="btn-secondary">Ambil dari teks koordinat</button>
               <a id="shipOriginMapLink" class="btn-secondary warehouse-map-link" href="#" target="_blank" rel="noopener">Lihat di Google Maps</a>
             </div>
-            <div>
-              <label class="field-label" for="shipOriginCoordPaste">Tempel koordinat / link Maps (opsional)</label>
-              <input type="text" id="shipOriginCoordPaste" placeholder="-6.2088, 106.8456 atau link Google Maps" />
-            </div>
             <p id="shipOriginPreview" class="warehouse-origin-preview empty-state"></p>
+            <button type="submit" class="btn-primary" id="shipOriginSaveBtn">Simpan Pengaturan Kirim</button>
+            <p id="shippingSaveMessage" class="message" role="status" aria-live="polite"></p>
           </div>
           <hr style="border: none; border-top: 1px solid var(--border); margin: 8px 0;" />
           <h3 style="margin: 0; font-size: 1rem;">Kirim mobil toko</h3>
           <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem;">
             <input type="checkbox" id="shipStoreEnabled" checked /> Aktif
           </label>
-          <div>
-            <label style="font-size: 0.85rem; font-weight: 500;">Tarif flat (Rp)</label>
-            <input type="number" id="shipStoreFlatFee" min="0" value="50000" />
+          <div class="warehouse-coords-grid">
+            <div>
+              <label class="field-label" for="shipStoreFlatFee">Tarif flat / minimum (Rp)</label>
+              <input type="number" id="shipStoreFlatFee" min="0" value="50000" />
+            </div>
+            <div>
+              <label class="field-label" for="shipStorePerKm">Tarif per km (Rp)</label>
+              <input type="number" id="shipStorePerKm" min="0" value="0" />
+            </div>
           </div>
+          <p class="empty-state" style="margin: 0;">
+            Isi tarif per km agar ongkir dihitung dari jarak gudang ke alamat pelanggan. Tarif flat jadi ongkir minimum. Isi 0 pada per km untuk tetap pakai tarif flat saja.
+          </p>
           <div>
             <label style="font-size: 0.85rem; font-weight: 500;">Gratis ongkir jika subtotal ≥ (Rp, 0 = tidak ada)</label>
             <input type="number" id="shipStoreFreeAbove" min="0" value="0" />
@@ -700,9 +748,34 @@
         </form>
         <p id="homePageMessage" class="message"></p>
       </section>
+      <section id="backupTab" class="auth-card admin-panel hidden">
+        <h2>Backup &amp; Restore</h2>
+        <p class="empty-state" style="margin-bottom: 12px;">
+          Unduh ZIP berisi database, data produk, dan semua foto (produk, banner, logo, QRIS, dll).
+          File yang sama bisa di-restore di komputer lokal atau di server.
+        </p>
+        <div class="warehouse-origin-card">
+          <h3 class="warehouse-origin-title">Backup</h3>
+          <p class="warehouse-origin-help">
+            Simpan file ZIP di komputer. Contoh: backup dari server, lalu restore di lokal.
+          </p>
+          <button type="button" id="backupDownloadBtn" class="btn-primary">Unduh Backup ZIP</button>
+        </div>
+        <div class="warehouse-origin-card" style="margin-top: 16px; background: #fff7ed; border-color: #fdba74;">
+          <h3 class="warehouse-origin-title">Restore</h3>
+          <p class="warehouse-origin-help">
+            Restore <strong>menimpa</strong> database, produk, dan semua foto yang ada sekarang dengan isi ZIP.
+            Data lama diganti, bukan digabung. Salinan singkat database lama disimpan sebagai
+            <code>data/marketplace.pre-restore.db</code>.
+          </p>
+          <input type="file" id="backupRestoreFile" accept=".zip,application/zip" />
+          <button type="button" id="backupRestoreBtn" class="btn-primary" style="margin-top: 10px;">Restore dari ZIP</button>
+        </div>
+        <p id="backupMessage" class="message" role="status" aria-live="polite"></p>
+      </section>
       <section id="whatsappTab" class="auth-card admin-panel hidden">
-        <h2>Pengaturan WhatsApp Bot AI</h2>
-        <p class="empty-state" style="margin-bottom: 8px">Aktifkan atau nonaktifkan bot WhatsApp AI, dan atur pesan balasan otomatis jika terjadi gangguan teknis.</p>
+        <h2>Pengaturan WhatsApp Bot &amp; Sasa</h2>
+        <p class="empty-state" style="margin-bottom: 8px">Atur bot WhatsApp AI dan apakah widget Sasa muncul di website.</p>
         <p class="empty-state" style="margin-bottom: 12px; font-size: 0.85rem;">
           URL webhook Fonnte (wajib diisi di dashboard Fonnte):<br />
           <code id="waWebhookUrl" style="word-break: break-all;">/api/whatsapp/webhook</code>
@@ -712,6 +785,12 @@
           <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; margin-bottom: 12px;">
             <input type="checkbox" id="waBotEnabled" /> Aktifkan WhatsApp Bot
           </label>
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; margin-bottom: 12px;">
+            <input type="checkbox" id="sasaWebChatEnabled" checked /> Tampilkan Sasa di website
+          </label>
+          <p class="empty-state" style="margin: -4px 0 12px;">
+            Jika dicentang, pengunjung bisa membuka/menutup chat Sasa. Jika tidak, widget Sasa disembunyikan di semua halaman.
+          </p>
 
           <div style="margin-bottom: 12px;">
             <label class="field-label" for="waBotNumber">Nomor WhatsApp Bot</label>
@@ -749,7 +828,7 @@
     </div>
 
     <script src="/common.js?v=11"></script>
-    <script src="/admin.js?v=24"></script>
+    <script src="/admin.js?v=34"></script>
     <script src="/admin-points.js?v=1"></script>
   </body>
 </html>

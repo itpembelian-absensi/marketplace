@@ -3,6 +3,7 @@ let selectedIndices = new Set();
 let shippingQuoteState = null;
 let checkoutDestCoords = null;
 let cachedCheckoutAddresses = [];
+let shippingOptionsCache = [];
 
 const cartTableBody = document.getElementById("cartTableBody");
 const cartSelectAll = document.getElementById("cartSelectAll");
@@ -240,10 +241,12 @@ async function loadShippingOptions() {
   try {
     const data = await apiFetch("/shipping/options");
     const options = Array.isArray(data?.options) ? data.options : [];
+    shippingOptionsCache = options;
     checkoutShippingMethodSelect.innerHTML =
       '<option value="">— Pilih jasa kirim —</option>' +
       options.map((opt) => `<option value="${opt.id}">${opt.label}</option>`).join("");
   } catch {
+    shippingOptionsCache = [];
     checkoutShippingMethodSelect.innerHTML = `
       <option value="">— Pilih jasa kirim —</option>
       <option value="store">Kirim mobil toko</option>
@@ -261,7 +264,9 @@ async function handleQuoteShipping() {
     alert("Pilih jasa kirim terlebih dahulu.");
     return;
   }
-  if (method !== "store" && !address && !checkoutDestCoords) {
+  const selectedOption = shippingOptionsCache.find((opt) => opt.id === method);
+  const needsDestination = method !== "store" || Boolean(selectedOption?.distanceBased);
+  if (needsDestination && !address && !checkoutDestCoords) {
     alert("Isi alamat pengiriman atau gunakan GPS.");
     return;
   }
@@ -287,6 +292,7 @@ async function handleQuoteShipping() {
       label: quote.label || method,
       estimated: Boolean(quote.estimated),
       note: quote.note || "",
+      distanceKm: quote.distanceKm ?? null,
     };
     if (checkoutShippingMessage) {
       checkoutShippingMessage.classList.add("success");
@@ -297,7 +303,9 @@ async function handleQuoteShipping() {
     if (checkoutShippingSummary) {
       checkoutShippingSummary.classList.remove("empty-state");
       const estTag = quote.estimated ? " (estimasi)" : "";
-      checkoutShippingSummary.textContent = `${quote.label}${estTag}: ${formatRupiah(quote.fee)}${quote.note ? ` — ${quote.note}` : ""}`;
+      const distanceTag =
+        quote.distanceKm != null ? ` · ${Number(quote.distanceKm).toFixed(1)} km` : "";
+      checkoutShippingSummary.textContent = `${quote.label}${estTag}: ${formatRupiah(quote.fee)}${distanceTag}${quote.note ? ` — ${quote.note}` : ""}`;
     }
     updateCheckoutTotalsDisplay();
   } catch (error) {
@@ -421,7 +429,7 @@ async function handleCheckout() {
     if (checkoutSection) checkoutSection.classList.add("hidden");
 
     if (result.pointsEarned && result.pointsEarned > 0) {
-      alert(`Pembayaran berhasil! Anda mendapatkan ${result.pointsEarned} poin loyalitas dari pembelian ini.`);
+      alert(`Pesanan berhasil dibuat. Anda mendapatkan ${result.pointsEarned} poin loyalitas. Selesaikan pembayaran agar invoice menjadi lunas.`);
     }
     window.location.href = `/invoice.html?id=${result.orderId}`;
   } catch (error) {

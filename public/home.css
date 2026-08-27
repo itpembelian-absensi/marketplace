@@ -2003,3 +2003,112 @@ body.landing-page {
     order: 3;
   }
 }
+
+.sjs-brands-main {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 18px 16px 48px;
+}
+
+.sjs-brands-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sjs-brand-tile {
+  position: relative;
+  display: block;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border: 1px solid #d1d5db;
+  background: #e5e7eb;
+  text-decoration: none;
+  color: #fff;
+}
+
+.sjs-brand-tile-cover,
+.sjs-brand-tile-placeholder {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sjs-brand-tile-placeholder {
+  background:
+    linear-gradient(#7dd3fc 0 42%, #86efac 42% 100%);
+}
+
+.sjs-brand-tile-placeholder::after {
+  content: "";
+  position: absolute;
+  top: 22%;
+  left: 50%;
+  width: 42%;
+  height: 18%;
+  transform: translateX(-50%);
+  background: #fff;
+  border-radius: 40% 40% 35% 35%;
+  opacity: 0.95;
+}
+
+.sjs-brand-tile-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.08) 42%, rgba(0, 0, 0, 0.12) 100%);
+  pointer-events: none;
+}
+
+.sjs-brand-tile-logo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -58%);
+  max-width: 58%;
+  max-height: 42%;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+  z-index: 1;
+}
+
+.sjs-brand-tile-name {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 10px;
+  z-index: 1;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  line-height: 1.25;
+}
+
+.sjs-brand-tile:hover {
+  outline: 2px solid #92400e;
+  outline-offset: -2px;
+}
+
+@media (max-width: 900px) {
+  .sjs-brands-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .sjs-brands-main {
+    padding: 12px 10px 32px;
+  }
+  .sjs-brands-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .sjs-brand-tile-name {
+    font-size: 0.68rem;
+  }
+}
