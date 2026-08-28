@@ -7,16 +7,22 @@
   root.id = "csChatRoot";
   root.className = "cs-chat-root";
   root.innerHTML = `
-    <button type="button" class="cs-chat-restore hidden" id="csChatRestore">Chat Sasa</button>
+    <button type="button" class="cs-chat-restore hidden" id="csChatRestore" aria-label="Chat Sasa">
+      <img class="cs-chat-toggle-avatar" src="/sasa-avatar.svg" alt="" width="40" height="40" />
+      <span>Chat Sasa</span>
+    </button>
     <button type="button" class="cs-chat-toggle" id="csChatToggle" aria-label="Chat customer service AI">
       <span class="cs-chat-toggle-bubble">Ada yang bisa Sasa bantu?</span>
-      <span class="cs-chat-toggle-avatar" aria-hidden="true">S</span>
+      <img class="cs-chat-toggle-avatar" src="/sasa-avatar.svg" alt="" width="56" height="56" />
     </button>
     <section class="cs-chat-panel hidden" id="csChatPanel" aria-label="Chat AI customer service">
       <header class="cs-chat-header">
-        <div>
-          <strong>Sasa</strong>
-          <small>AI CS sementara · data produk &amp; harga toko</small>
+        <div class="cs-chat-header-id">
+          <img class="cs-chat-header-avatar" src="/sasa-avatar.svg" alt="" width="36" height="36" />
+          <div>
+            <strong>Sasa</strong>
+            <small>AI CS sementara · data produk &amp; harga toko</small>
+          </div>
         </div>
         <div class="cs-chat-header-actions">
           <button type="button" class="cs-chat-hide" id="csChatHide">Sembunyikan</button>
@@ -122,6 +128,7 @@
           : await (await fetch("/api/settings")).then((r) => r.json());
       if (settings?.sasaChatEnabled === false) {
         root.remove();
+        window.SasaChat = { open() {} };
         return;
       }
       let number = settings?.whatsappBotNumber || settings?.companyProfile?.phone || "";
@@ -162,4 +169,8 @@
 
   applyVisibility();
   bindSettings();
+
+  window.SasaChat = {
+    open: openPanel,
+  };
 })();

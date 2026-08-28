@@ -235,6 +235,12 @@ function applyRoleRulesToUI() {
       brandsTab.disabled = true;
       brandsTab.title = "Hanya admin yang bisa mengatur merek";
     }
+
+    const articlesTab = document.querySelector('[data-tab="articlesTab"]');
+    if (articlesTab) {
+      articlesTab.disabled = true;
+      articlesTab.title = "Hanya admin yang bisa menulis artikel";
+    }
   }
 }
 
@@ -481,7 +487,7 @@ function initTabs() {
       tabs.forEach((t) => t.classList.remove("active"));
       tab.classList.add("active");
 
-      ["usersTab", "productsTab", "menuTab", "brandsTab", "brandingTab", "settingsTab", "ordersTab", "salesTab", "inventoryTab", "pointsTab", "bannerTab", "whatsappTab", "backupTab"].forEach((id) => {
+      ["usersTab", "productsTab", "menuTab", "brandsTab", "articlesTab", "brandingTab", "settingsTab", "ordersTab", "layananTab", "salesTab", "inventoryTab", "pointsTab", "bannerTab", "whatsappTab", "backupTab"].forEach((id) => {
         const el = document.getElementById(id);
         if (!el) return;
         el.classList.toggle("hidden", id !== tabId);
@@ -489,10 +495,12 @@ function initTabs() {
 
       // Load data on tab activation
       if (tabId === "ordersTab") loadOrders();
+      if (tabId === "layananTab") loadLayananRequests();
       if (tabId === "salesTab") loadSalesReport();
       if (tabId === "inventoryTab") loadInventoryReport();
       if (tabId === "bannerTab") loadHomePageSettings();
       if (tabId === "brandsTab") loadAdminBrands();
+      if (tabId === "articlesTab") loadAdminArticles();
     });
   });
 }
@@ -1271,15 +1279,15 @@ const DEFAULT_FOOTER_SECTION = {
     {
       title: "Kerja Sama & Kolaborasi",
       links: [
-        { label: "Pembelian Retail", url: "#" },
-        { label: "Kerja Sama Bisnis", url: "#" },
+          { label: "Pembelian Retail", url: "/layanan-form.html?jenis=custom" },
+          { label: "Kerja Sama Bisnis", url: "/layanan-form.html?jenis=kerjasama" },
       ],
     },
     {
       title: "Kebijakan Kami",
       links: [
         { label: "Ketentuan Pengguna", url: "#" },
-        { label: "Pengembalian Produk", url: "#" },
+          { label: "Pengembalian Produk", url: "/layanan-form.html?jenis=komplain" },
         { label: "Kebijakan Privasi", url: "#" },
         { label: "Ketentuan Pengiriman", url: "#" },
       ],
@@ -2296,6 +2304,118 @@ async function loadOrders() {
   }
 }
 
+const LAYANAN_TYPE_LABELS = {
+  kerjasama: "Kerja Sama",
+  custom: "Custom / Proyek",
+  komplain: "Komplain",
+  konsultasi: "Konsultasi",
+};
+
+const LAYANAN_STATUS_LABELS = {
+  new: "Baru",
+  in_progress: "Diproses",
+  done: "Selesai",
+};
+
+async function loadLayananRequests() {
+  const tbody = document.getElementById("layananAdminTbody");
+  const msg = document.getElementById("layananAdminMessage");
+  const detail = document.getElementById("layananAdminDetail");
+  if (!tbody) return;
+  if (msg) msg.textContent = "";
+  if (detail) {
+    detail.classList.add("hidden");
+    detail.innerHTML = "";
+  }
+  try {
+    const rows = await apiFetch("/admin/layanan");
+    if (!rows || rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="padding: 10px; text-align: center;">Belum ada permintaan.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows
+      .map((row) => {
+        const status = row.status || "new";
+        return `<tr>
+          <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; font-weight: 600;">${escapeHtml(row.ticket_code)}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${escapeHtml(LAYANAN_TYPE_LABELS[row.type] || row.type)}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${escapeHtml(row.name)}<br/><span style="font-size:0.85rem;color:#6b7280;">${escapeHtml(row.email || row.company || "-")}</span></td>
+          <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${escapeHtml(row.phone)}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${row.created_at ? new Date(row.created_at).toLocaleString("id-ID") : "-"}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
+            <select data-layanan-status="${row.id}" style="padding: 4px 8px; font-size: 0.8rem; border: 1px solid #d1d5db; border-radius: 4px;">
+              <option value="new" ${status === "new" ? "selected" : ""}>Baru</option>
+              <option value="in_progress" ${status === "in_progress" ? "selected" : ""}>Diproses</option>
+              <option value="done" ${status === "done" ? "selected" : ""}>Selesai</option>
+            </select>
+          </td>
+          <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
+            <button type="button" class="btn-secondary" data-layanan-detail='${encodeURIComponent(JSON.stringify(row))}' style="font-size: 0.8rem; padding: 4px 8px;">Detail</button>
+            ${row.hasAttachment ? `<button type="button" class="btn-secondary" data-layanan-file="${row.id}" data-layanan-filename="${escapeHtml(row.attachment_name || "lampiran")}" style="font-size: 0.8rem; padding: 4px 8px; margin-left: 4px;">Lampiran</button>` : ""}
+          </td>
+        </tr>`;
+      })
+      .join("");
+
+    tbody.querySelectorAll("[data-layanan-status]").forEach((select) => {
+      select.addEventListener("change", async () => {
+        try {
+          await apiFetch(`/admin/layanan/${select.dataset.layananStatus}`, {
+            method: "PATCH",
+            body: JSON.stringify({ status: select.value }),
+          });
+        } catch (error) {
+          if (msg) msg.textContent = error.message;
+        }
+      });
+    });
+
+    tbody.querySelectorAll("[data-layanan-file]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        try {
+          const token = getToken();
+          const response = await fetch(`/api/admin/layanan/${btn.dataset.layananFile}/file`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          if (!response.ok) throw new Error("Gagal mengunduh lampiran.");
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = btn.dataset.layananFilename || "lampiran";
+          link.click();
+          URL.revokeObjectURL(url);
+        } catch (error) {
+          if (msg) msg.textContent = error.message;
+        }
+      });
+    });
+
+    tbody.querySelectorAll("[data-layanan-detail]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        let row = {};
+        try {
+          row = JSON.parse(decodeURIComponent(btn.dataset.layananDetail || "{}"));
+        } catch {
+          row = {};
+        }
+        const payload = row.payload && typeof row.payload === "object" ? row.payload : {};
+        const lines = Object.entries(payload)
+          .map(([key, value]) => `<div><strong>${escapeHtml(key)}:</strong> ${escapeHtml(String(value || "-"))}</div>`)
+          .join("");
+        if (!detail) return;
+        detail.classList.remove("hidden");
+        detail.innerHTML = `<h3 style="margin:0 0 8px;">${escapeHtml(row.ticket_code || "")} · ${escapeHtml(LAYANAN_TYPE_LABELS[row.type] || row.type || "")}</h3>
+          <p style="margin:0 0 8px;color:#6b7280;">Status: ${escapeHtml(LAYANAN_STATUS_LABELS[row.status] || row.status || "")}</p>
+          ${lines || "<p>Tidak ada detail.</p>"}`;
+      });
+    });
+  } catch (error) {
+    if (msg) msg.textContent = error.message;
+    tbody.innerHTML = '<tr><td colspan="7" style="padding: 10px; text-align: center; color: red;">Gagal memuat permintaan.</td></tr>';
+  }
+}
+
 let lastSalesReport = null;
 
 const MONTH_NAMES = [
@@ -2811,18 +2931,13 @@ async function loadAdminBrands() {
     }
     grid.innerHTML = brands
       .map((brand) => {
-        const cover = brand.coverUrl
-          ? `<img class="cover" src="${escapeHtml(brand.coverUrl)}" alt="">`
-          : "";
         const logo = brand.logoUrl
           ? `<img class="logo" src="${escapeHtml(brand.logoUrl)}" alt="">`
-          : "";
+          : `<div class="name">${escapeHtml(brand.name)}</div>`;
         return `
           <article class="admin-brand-card">
-            <div class="admin-brand-card-tile">
-              ${cover}
+            <div class="admin-brand-card-tile${brand.logoUrl ? " has-logo" : ""}">
               ${logo}
-              <div class="name">${escapeHtml(brand.name)}</div>
             </div>
             <div class="admin-brand-card-actions">
               <button type="button" class="btn-secondary" data-action="edit-brand" data-brand="${encodeURIComponent(
@@ -2936,6 +3051,178 @@ document.getElementById("adminBrandsGrid")?.addEventListener("click", async (eve
 
 // ----------------
 
+let editingArticleId = null;
+
+function setArticlesMessage(text, isSuccess = false) {
+  const el = document.getElementById("articlesMessage");
+  if (!el) return;
+  el.classList.toggle("success", !!isSuccess);
+  el.textContent = text || "";
+}
+
+function articleDateInputValue(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+}
+
+function resetArticleForm() {
+  editingArticleId = null;
+  const form = document.getElementById("articleForm");
+  if (form) form.reset();
+  const published = document.getElementById("articlePublishedInput");
+  if (published) published.checked = true;
+  const coverUrl = document.getElementById("articleCoverUrl");
+  if (coverUrl) coverUrl.value = "";
+  renderBrandImagePreview("articleCoverPreview", "");
+  const submitBtn = document.getElementById("articleSubmitBtn");
+  const cancelBtn = document.getElementById("articleCancelEdit");
+  if (submitBtn) submitBtn.textContent = "Terbitkan Artikel";
+  if (cancelBtn) cancelBtn.classList.add("hidden");
+}
+
+function fillArticleForm(article) {
+  editingArticleId = article.id;
+  document.getElementById("articleTitleInput").value = article.title || "";
+  document.getElementById("articleCategoryInput").value = article.category || "berita";
+  document.getElementById("articleDateInput").value = articleDateInputValue(article.publishedAt);
+  document.getElementById("articlePublishedInput").checked = article.published !== false;
+  document.getElementById("articleCoverUrl").value = article.coverUrl || "";
+  document.getElementById("articleExcerptInput").value = article.excerpt || "";
+  document.getElementById("articleBodyInput").value = article.body || "";
+  renderBrandImagePreview("articleCoverPreview", article.coverUrl || "");
+  const submitBtn = document.getElementById("articleSubmitBtn");
+  const cancelBtn = document.getElementById("articleCancelEdit");
+  if (submitBtn) submitBtn.textContent = "Simpan Perubahan";
+  if (cancelBtn) cancelBtn.classList.remove("hidden");
+}
+
+async function loadAdminArticles() {
+  const list = document.getElementById("adminArticlesList");
+  if (!list) return;
+  try {
+    const rows = await apiFetch("/admin/articles");
+    if (!rows.length) {
+      list.innerHTML = '<p class="empty-state">Belum ada artikel.</p>';
+      return;
+    }
+    const labels = { berita: "Berita", tips: "Tips" };
+    list.innerHTML = `<table style="width:100%;border-collapse:collapse;text-align:left;">
+      <thead><tr style="border-bottom:1px solid var(--border);">
+        <th style="padding:8px;">Judul</th>
+        <th style="padding:8px;">Kategori</th>
+        <th style="padding:8px;">Tanggal</th>
+        <th style="padding:8px;">Status</th>
+        <th style="padding:8px;">Aksi</th>
+      </tr></thead>
+      <tbody>
+        ${rows
+          .map(
+            (row) => `<tr>
+              <td style="padding:8px;border-bottom:1px solid #f3f4f6;">${escapeHtml(row.title)}</td>
+              <td style="padding:8px;border-bottom:1px solid #f3f4f6;">${escapeHtml(labels[row.category] || row.category)}</td>
+              <td style="padding:8px;border-bottom:1px solid #f3f4f6;">${escapeHtml((row.publishedAt || "").slice(0, 10))}</td>
+              <td style="padding:8px;border-bottom:1px solid #f3f4f6;">${row.published ? "Tayang" : "Draf"}</td>
+              <td style="padding:8px;border-bottom:1px solid #f3f4f6;">
+                <button type="button" class="btn-secondary" data-action="edit-article" data-article="${encodeURIComponent(
+                  JSON.stringify(row)
+                )}" style="font-size:0.8rem;padding:4px 8px;">Edit</button>
+                <button type="button" class="btn-danger" data-action="delete-article" data-id="${row.id}" data-title="${encodeURIComponent(
+              row.title || ""
+            )}" style="font-size:0.8rem;padding:4px 8px;">Hapus</button>
+              </td>
+            </tr>`
+          )
+          .join("")}
+      </tbody>
+    </table>`;
+  } catch (error) {
+    setArticlesMessage(error.message);
+    list.innerHTML = `<p class="empty-state" style="color:#b91c1c;">${escapeHtml(error.message)}</p>`;
+  }
+}
+
+document.getElementById("articleCoverFile")?.addEventListener("change", async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  try {
+    setArticlesMessage("Mengunggah foto sampul...");
+    const url = await uploadPictureImage(file, "articles");
+    document.getElementById("articleCoverUrl").value = url;
+    renderBrandImagePreview("articleCoverPreview", url);
+    setArticlesMessage("Foto sampul berhasil diupload.", true);
+  } catch (error) {
+    setArticlesMessage(error.message);
+  }
+});
+
+document.getElementById("articleCancelEdit")?.addEventListener("click", () => {
+  resetArticleForm();
+  setArticlesMessage("");
+});
+
+document.getElementById("articleForm")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const title = document.getElementById("articleTitleInput")?.value.trim();
+  const category = document.getElementById("articleCategoryInput")?.value;
+  const excerpt = document.getElementById("articleExcerptInput")?.value.trim() || "";
+  const body = document.getElementById("articleBodyInput")?.value.trim();
+  const coverUrl = document.getElementById("articleCoverUrl")?.value.trim() || "";
+  const published = document.getElementById("articlePublishedInput")?.checked !== false;
+  const dateValue = document.getElementById("articleDateInput")?.value;
+  const publishedAt = dateValue ? new Date(`${dateValue}T00:00:00`).toISOString() : new Date().toISOString();
+  if (!title || !body) {
+    setArticlesMessage("Judul dan isi artikel wajib diisi.");
+    return;
+  }
+  try {
+    const payload = { title, category, excerpt, body, coverUrl, published, publishedAt };
+    if (editingArticleId) {
+      await apiFetch(`/admin/articles/${editingArticleId}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
+      setArticlesMessage("Artikel diperbarui.", true);
+    } else {
+      await apiFetch("/admin/articles", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      setArticlesMessage("Artikel diterbitkan.", true);
+    }
+    resetArticleForm();
+    loadAdminArticles();
+  } catch (error) {
+    setArticlesMessage(error.message);
+  }
+});
+
+document.getElementById("adminArticlesList")?.addEventListener("click", async (event) => {
+  const btn = event.target.closest("button");
+  if (!btn) return;
+  if (btn.dataset.action === "edit-article") {
+    try {
+      fillArticleForm(JSON.parse(decodeURIComponent(btn.dataset.article || "{}")));
+      setArticlesMessage("Mode edit. Ubah lalu simpan.");
+    } catch {
+      setArticlesMessage("Gagal membuka artikel.");
+    }
+    return;
+  }
+  if (btn.dataset.action === "delete-article") {
+    const title = decodeURIComponent(btn.dataset.title || "");
+    if (!confirm(`Hapus artikel "${title}"?`)) return;
+    try {
+      await apiFetch(`/admin/articles/${btn.dataset.id}`, { method: "DELETE" });
+      setArticlesMessage("Artikel dihapus.", true);
+      if (String(editingArticleId) === String(btn.dataset.id)) resetArticleForm();
+      loadAdminArticles();
+    } catch (error) {
+      setArticlesMessage(error.message);
+    }
+  }
+});
+
 renderUserArea();
 if (guardAccess()) {
   initTabs();
@@ -2946,6 +3233,7 @@ if (guardAccess()) {
   loadAdminProducts();
   loadMenu();
   loadAdminBrands();
+  loadAdminArticles();
   loadCompanyProfileSettings();
   loadShippingSettings();
   loadWaSettings();

@@ -17,6 +17,11 @@ die() {
 	exit 1
 }
 
+annotate_disk() {
+	df -h | while IFS= read -r line; do echo "::error::df ${line}" >&2; done
+	docker system df 2>/dev/null | while IFS= read -r line; do echo "::error::docker-df ${line}" >&2; done
+}
+
 compose() {
 	docker compose --env-file "$ENV_FILE" "$@"
 }
@@ -132,16 +137,18 @@ done
 
 # --- Docker ---
 log "Stop container lama"
-compose down --remove-orphans 2>/dev/null || true
+compose down --rmi local --remove-orphans 2>/dev/null || true
 
 APP_IMAGE="${COMPOSE_PROJECT_NAME:-marketplace}-app:latest"
 if [ -f "$ENV_FILE" ]; then
 	pname="$(grep -E '^COMPOSE_PROJECT_NAME=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 | tr -d '\r' | tr -d ' ' || true)"
 	[ -n "${pname:-}" ] && APP_IMAGE="${pname}-app:latest"
 fi
-log "Hapus image ${APP_IMAGE} supaya app layer di-build ulang"
+log "Hapus image ${APP_IMAGE} dan cache Docker yang tidak terpakai"
 docker rmi "$APP_IMAGE" 2>/dev/null || true
-docker image prune -f >/dev/null 2>&1 || true
+docker container prune -f >/dev/null 2>&1 || true
+docker builder prune -af >/dev/null 2>&1 || true
+docker image prune -af >/dev/null 2>&1 || true
 df -h || true
 
 BUILD_LOG="$(mktemp)"
@@ -161,8 +168,9 @@ if ! compose "${BUILD_ARGS[@]}" 2>&1 | tee "$BUILD_LOG"; then
 	tail -20 "$BUILD_LOG" | while IFS= read -r line; do
 		echo "::error::${line}" >&2
 	done
+	annotate_disk
 	df -h >&2 || true
-	die "Docker build gagal — lihat log di atas"
+	die "Docker build gagal — biasanya disk penuh (WORKDIR /app gagal)"
 fi
 
 log "Start container"

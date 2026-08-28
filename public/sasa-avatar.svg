@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Sasa">
+  <circle cx="32" cy="32" r="32" fill="#E8D5C4"/>
+  <path d="M8 58c4-12 14-18 24-18s20 6 24 18" fill="#5C4033"/>
+  <path d="M14 22c2-14 34-14 36 0 1 10-4 18-18 18S13 32 14 22z" fill="#3D281F"/>
+  <ellipse cx="32" cy="30" rx="13.5" ry="15" fill="#E2A57A"/>
+  <path d="M18 26c3-10 25-10 28 0-2-8-8-14-14-14s-12 6-14 14z" fill="#3D281F"/>
+  <path d="M20 28c2-8 8-11 12-11" fill="none" stroke="#2A1B15" stroke-width="3" stroke-linecap="round"/>
+  <ellipse cx="27" cy="29.5" rx="1.7" ry="2.1" fill="#2A1B15"/>
+  <ellipse cx="37" cy="29.5" rx="1.7" ry="2.1" fill="#2A1B15"/>
+  <path d="M29.5 36.5c1.6 1.4 3.4 1.4 5 0" fill="none" stroke="#C47A58" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M46 28c4 1 6 6 5 11" fill="none" stroke="#4A3228" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="51.5" cy="40.5" r="3.2" fill="#4A3228"/>
+  <circle cx="51.5" cy="40.5" r="1.4" fill="#C9B8A8"/>
+  <path d="M46 22h2.4c1.6 0 2.6 1.4 2.4 2.8l-.6 6.4c-.2 1.6-1.6 2.8-3.2 2.8H44" fill="none" stroke="#4A3228" stroke-width="2" stroke-linecap="round"/>
+</svg>

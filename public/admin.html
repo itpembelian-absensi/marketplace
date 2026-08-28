@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Manajemen User - PT SAHABAT JAYA SUKSES</title>
-    <link rel="stylesheet" href="/style.css?v=16" />
+    <link rel="stylesheet" href="/style.css?v=19" />
   </head>
   <body class="admin-page">
     <header class="topbar">
@@ -30,9 +30,11 @@
           <button type="button" class="tab" data-tab="productsTab">Produk</button>
           <button type="button" class="tab" data-tab="menuTab">Menu</button>
           <button type="button" class="tab" data-tab="brandsTab">Merek</button>
+          <button type="button" class="tab" data-tab="articlesTab">Artikel</button>
           <button type="button" class="tab" data-tab="brandingTab">Profil Perusahaan</button>
           <button type="button" class="tab" data-tab="bannerTab">Slideshow &amp; Beranda</button>
           <button type="button" class="tab" data-tab="ordersTab">Pesanan</button>
+          <button type="button" class="tab" data-tab="layananTab">Layanan</button>
           <button type="button" class="tab" data-tab="salesTab">Laporan Penjualan</button>
           <button type="button" class="tab" data-tab="inventoryTab">Laporan Stok</button>
           <button type="button" class="tab" data-tab="pointsTab">Poin Loyalitas</button>
@@ -129,6 +131,31 @@
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section id="layananTab" class="auth-card admin-panel hidden">
+        <h2>Permintaan Layanan</h2>
+        <p class="empty-state" style="margin-bottom: 8px">Pengajuan kerja sama, custom order, komplain, dan konsultasi dari menu Layanan.</p>
+        <p id="layananAdminMessage" class="message"></p>
+        <div style="margin-top: 12px; overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border);">
+                <th style="padding: 10px;">Tiket</th>
+                <th style="padding: 10px;">Jenis</th>
+                <th style="padding: 10px;">Nama</th>
+                <th style="padding: 10px;">WhatsApp</th>
+                <th style="padding: 10px;">Tanggal</th>
+                <th style="padding: 10px;">Status</th>
+                <th style="padding: 10px;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="layananAdminTbody">
+              <tr><td colspan="7" style="padding: 10px; text-align: center;">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="layananAdminDetail" class="hidden" style="margin-top: 16px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: #f9fafb;"></div>
       </section>
 
       <section id="salesTab" class="auth-card admin-panel hidden">
@@ -535,7 +562,8 @@
       <section id="brandsTab" class="auth-card admin-panel hidden">
         <h2>Daftar Merek</h2>
         <p class="empty-state" style="margin-bottom: 12px;">
-          Upload foto latar dan logo merek. Hasilnya tampil di menu <strong>Daftar Merek</strong> seperti kotak merek di website.
+          Logo merek tampil di menu <strong>Daftar Merek</strong> sebagai grid logo cokelat.
+          Pakai file PNG transparan agar hasilnya rapi. Foto latar opsional dan tidak ditampilkan di halaman publik.
         </p>
         <form id="brandForm" class="auth-form">
           <label for="brandNameInput">Nama merek</label>
@@ -544,21 +572,62 @@
           <label for="brandSortInput">Urutan tampil</label>
           <input id="brandSortInput" type="number" min="0" value="0" />
 
-          <label for="brandCoverFile">Foto latar (kayu/papan, dll.)</label>
-          <input id="brandCoverFile" type="file" accept="image/png,image/jpeg,image/webp" />
-          <input type="hidden" id="brandCoverUrl" />
-          <div id="brandCoverPreview" style="margin: 8px 0 12px;"></div>
-
-          <label for="brandLogoFile">Logo merek (opsional, transparan lebih bagus)</label>
+          <label for="brandLogoFile">Logo merek (PNG transparan lebih bagus)</label>
           <input id="brandLogoFile" type="file" accept="image/png,image/jpeg,image/webp" />
           <input type="hidden" id="brandLogoUrl" />
           <div id="brandLogoPreview" style="margin: 8px 0 12px;"></div>
+
+          <label for="brandCoverFile">Foto latar (opsional, tidak tampil di Daftar Merek)</label>
+          <input id="brandCoverFile" type="file" accept="image/png,image/jpeg,image/webp" />
+          <input type="hidden" id="brandCoverUrl" />
+          <div id="brandCoverPreview" style="margin: 8px 0 12px;"></div>
 
           <button type="submit" id="brandSubmitBtn" class="btn-primary">Tambah Merek</button>
           <button type="button" id="brandCancelEdit" class="btn-secondary hidden">Batal Edit</button>
         </form>
         <p id="brandsMessage" class="message"></p>
         <div id="adminBrandsGrid" class="admin-brands-grid"></div>
+      </section>
+
+      <section id="articlesTab" class="auth-card admin-panel hidden">
+        <h2>Artikel</h2>
+        <p class="empty-state" style="margin-bottom: 12px;">
+          Tulis pengumuman (Berita) atau tips pilih papan. Hanya admin yang bisa menerbitkan — tampil di menu <strong>Artikel</strong>.
+        </p>
+        <form id="articleForm" class="auth-form">
+          <label for="articleTitleInput">Judul</label>
+          <input id="articleTitleInput" type="text" placeholder="Contoh: Stok plywood baru merek HOKI" required />
+
+          <label for="articleCategoryInput">Kategori</label>
+          <select id="articleCategoryInput" required>
+            <option value="berita">Berita</option>
+            <option value="tips">Tips</option>
+          </select>
+
+          <label for="articleDateInput">Tanggal terbit</label>
+          <input id="articleDateInput" type="date" />
+
+          <label class="field-label" style="display:flex;align-items:center;gap:8px;font-weight:500;">
+            <input type="checkbox" id="articlePublishedInput" checked />
+            Tampilkan di website
+          </label>
+
+          <label for="articleCoverFile">Foto sampul (opsional)</label>
+          <input id="articleCoverFile" type="file" accept="image/png,image/jpeg,image/webp" />
+          <input type="hidden" id="articleCoverUrl" />
+          <div id="articleCoverPreview" style="margin: 8px 0 12px;"></div>
+
+          <label for="articleExcerptInput">Ringkasan singkat</label>
+          <textarea id="articleExcerptInput" rows="2" placeholder="Satu atau dua kalimat untuk kartu daftar."></textarea>
+
+          <label for="articleBodyInput">Isi artikel</label>
+          <textarea id="articleBodyInput" rows="8" placeholder="Tulis pengumuman atau tips. Paragraf dipisah baris kosong." required></textarea>
+
+          <button type="submit" id="articleSubmitBtn" class="btn-primary">Terbitkan Artikel</button>
+          <button type="button" id="articleCancelEdit" class="btn-secondary hidden">Batal Edit</button>
+        </form>
+        <p id="articlesMessage" class="message"></p>
+        <div id="adminArticlesList" style="margin-top: 16px; overflow-x: auto;"></div>
       </section>
 
       <section id="settingsTab" class="auth-card admin-panel hidden">
@@ -828,7 +897,7 @@
     </div>
 
     <script src="/common.js?v=11"></script>
-    <script src="/admin.js?v=34"></script>
+    <script src="/admin.js?v=37"></script>
     <script src="/admin-points.js?v=1"></script>
   </body>
 </html>

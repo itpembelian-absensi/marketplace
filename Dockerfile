@@ -32,6 +32,8 @@ COPY public ./public
 # Stage 2: runtime
 FROM node:22-bookworm-slim AS runtime
 
+WORKDIR /app
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         curl \
@@ -40,13 +42,7 @@ RUN apt-get update \
         libvips42 \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
-
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/server.js ./server.js
-COPY --from=builder /app/lib ./lib
-COPY --from=builder /app/public ./public
+COPY --from=builder /app /app
 
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh

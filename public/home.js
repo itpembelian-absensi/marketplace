@@ -224,15 +224,15 @@ const DEFAULT_FOOTER_SECTION = {
     {
       title: "Kerja Sama & Kolaborasi",
       links: [
-        { label: "Pembelian Retail", url: "#" },
-        { label: "Kerja Sama Bisnis", url: "#" },
+          { label: "Pembelian Retail", url: "/layanan-form.html?jenis=custom" },
+          { label: "Kerja Sama Bisnis", url: "/layanan-form.html?jenis=kerjasama" },
       ],
     },
     {
       title: "Kebijakan Kami",
       links: [
         { label: "Ketentuan Pengguna", url: "#" },
-        { label: "Pengembalian Produk", url: "#" },
+          { label: "Pengembalian Produk", url: "/layanan-form.html?jenis=komplain" },
         { label: "Kebijakan Privasi", url: "#" },
         { label: "Ketentuan Pengiriman", url: "#" },
       ],

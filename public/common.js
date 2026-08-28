@@ -947,10 +947,127 @@ function showAddToCartModal(product, callback) {
   });
 }
 
+function initLayananNav() {
+  const links = Array.from(document.querySelectorAll(".sjs-nav-item"));
+  const trigger = links.find((el) => el.textContent.trim() === "Layanan");
+  if (!trigger || trigger.closest(".sjs-layanan-wrap")) return;
+
+  const items = [
+    {
+      href: "/layanan-form.html?jenis=kerjasama",
+      title: "Kerja Sama Bisnis",
+      desc: "Kemitraan grosir, kontraktor, dan reseller",
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 12h8M8 12l-2 6h12l-2-6M9 12V8a3 3 0 016 0v4"/><circle cx="8" cy="8" r="2"/><circle cx="16" cy="8" r="2"/></svg>',
+    },
+    {
+      href: "/layanan-form.html?jenis=custom",
+      title: "Pesanan Proyek & Custom",
+      desc: "Ukuran potong, volume proyek, spek khusus",
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></svg>',
+    },
+    {
+      href: "/layanan-form.html?jenis=komplain",
+      title: "Pengembalian & Komplain",
+      desc: "Klaim rusak, salah kirim, atau kualitas",
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h12l4 5-4 5H4V7z"/><path d="M9 12h.01M13 12h.01"/></svg>',
+    },
+    {
+      href: "/layanan-form.html?jenis=konsultasi",
+      title: "Konsultasi Produk",
+      desc: "Saran jenis papan untuk kebutuhan Anda",
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 015 1c0 1.5-2.5 2-2.5 4"/><circle cx="12" cy="17" r="0.8" fill="currentColor"/></svg>',
+    },
+  ];
+
+  const wrap = document.createElement("div");
+  wrap.className = "sjs-layanan-wrap";
+  trigger.replaceWith(wrap);
+
+  trigger.href = "/layanan.html";
+  trigger.setAttribute("aria-haspopup", "true");
+  trigger.setAttribute("aria-expanded", "false");
+  trigger.insertAdjacentHTML(
+    "beforeend",
+    '<svg class="sjs-layanan-chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'
+  );
+
+  const panel = document.createElement("div");
+  panel.className = "sjs-layanan-panel";
+  panel.setAttribute("role", "menu");
+  panel.innerHTML =
+    items
+      .map(
+        (item) =>
+          `<a class="sjs-layanan-item" href="${item.href}" role="menuitem"><span class="sjs-layanan-icon">${item.icon}</span><span><strong>${item.title}</strong><span>${item.desc}</span></span></a>`
+      )
+      .join("") + '<a class="sjs-layanan-all" href="/layanan.html">Lihat semua layanan →</a>';
+
+  wrap.appendChild(trigger);
+  wrap.appendChild(panel);
+
+  if (/^\/layanan/.test(location.pathname)) {
+    trigger.classList.add("sjs-nav-active");
+  }
+
+  let closeTimer = 0;
+
+  function isMobileNav() {
+    return window.matchMedia("(max-width: 900px)").matches;
+  }
+
+  function positionPanel() {
+    if (!isMobileNav()) {
+      panel.style.top = "";
+      return;
+    }
+    const rect = wrap.getBoundingClientRect();
+    panel.style.top = `${Math.round(rect.bottom + 6)}px`;
+  }
+
+  function openMenu() {
+    wrap.classList.add("is-open");
+    trigger.setAttribute("aria-expanded", "true");
+    positionPanel();
+  }
+
+  function closeMenu() {
+    wrap.classList.remove("is-open");
+    trigger.setAttribute("aria-expanded", "false");
+  }
+
+  wrap.addEventListener("mouseenter", () => {
+    if (isMobileNav()) return;
+    clearTimeout(closeTimer);
+    openMenu();
+  });
+  wrap.addEventListener("mouseleave", () => {
+    if (isMobileNav()) return;
+    closeTimer = window.setTimeout(closeMenu, 160);
+  });
+
+  trigger.addEventListener("click", (event) => {
+    if (!isMobileNav()) return;
+    event.preventDefault();
+    if (wrap.classList.contains("is-open")) closeMenu();
+    else openMenu();
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!wrap.contains(event.target)) closeMenu();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeMenu();
+  });
+  window.addEventListener("resize", () => {
+    if (wrap.classList.contains("is-open")) positionPanel();
+  });
+}
+
 renderBrandLogo();
 renderLandingHeader();
 renderUserArea();
 initLandingAuth();
+initLayananNav();
 renderHomeWatermark();
 renderHomeCompanyProfile();
 renderHeaderCartButton();

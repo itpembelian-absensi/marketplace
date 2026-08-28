@@ -12,18 +12,13 @@ async function loadPublicBrands() {
       .map((brand) => {
         const name = escapeHtml(brand.name || "");
         const query = encodeURIComponent(brand.name || "");
-        const cover = brand.coverUrl
-          ? `<img class="sjs-brand-tile-cover" src="${escapeHtml(brand.coverUrl)}" alt="${name}">`
-          : `<span class="sjs-brand-tile-placeholder" aria-hidden="true"></span>`;
-        const logo = brand.logoUrl
-          ? `<img class="sjs-brand-tile-logo" src="${escapeHtml(brand.logoUrl)}" alt="">`
-          : "";
+        const hasLogo = Boolean(brand.logoUrl);
+        const mark = hasLogo
+          ? `<img class="sjs-brand-tile-logo" src="${escapeHtml(brand.logoUrl)}" alt="${name}">`
+          : `<span class="sjs-brand-tile-name">${name}</span>`;
         return `
-          <a class="sjs-brand-tile" href="/shop.html?q=${query}">
-            ${cover}
-            <span class="sjs-brand-tile-shade"></span>
-            ${logo}
-            <span class="sjs-brand-tile-name">${name}</span>
+          <a class="sjs-brand-tile${hasLogo ? "" : " is-text"}" href="/shop.html?q=${query}" title="${name}">
+            ${mark}
           </a>`;
       })
       .join("");

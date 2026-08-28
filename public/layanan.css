@@ -1,0 +1,359 @@
+.layanan-page {
+  background: #f4f1ed;
+  min-height: 100vh;
+}
+
+.layanan-main {
+  width: min(1080px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 36px 0 72px;
+}
+
+.layanan-hero {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.layanan-hero h1 {
+  margin: 0 0 10px;
+  font-size: clamp(1.6rem, 3vw, 2.15rem);
+  color: var(--sjs-brown-dark);
+  font-weight: 800;
+}
+
+.layanan-hero p {
+  margin: 0 auto;
+  max-width: 560px;
+  color: var(--sjs-text-muted);
+  line-height: 1.55;
+  font-size: 0.98rem;
+}
+
+.layanan-trust {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.layanan-trust span {
+  background: #fff;
+  border: 1px solid #ece8e4;
+  color: var(--sjs-brown);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.layanan-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.layanan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid #ece8e4;
+  border-radius: 12px;
+  padding: 22px 22px 18px;
+  text-decoration: none;
+  color: var(--sjs-brown-dark);
+  min-height: 180px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.layanan-card:hover {
+  border-color: #c9b8a8;
+  background: #fbf9f6;
+}
+
+.layanan-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: #f0eeeb;
+  color: var(--sjs-brown);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.layanan-card-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.layanan-card h2 {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 800;
+}
+
+.layanan-card p {
+  margin: 0;
+  color: var(--sjs-text-muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  flex: 1;
+}
+
+.layanan-card-cta {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--sjs-brown);
+}
+
+.layanan-form-shell {
+  width: min(820px, 100%);
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid #ece8e4;
+  border-radius: 14px;
+  padding: 28px 28px 32px;
+}
+
+.layanan-back {
+  display: inline-block;
+  margin-bottom: 14px;
+  color: var(--sjs-brown);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.layanan-form-shell h1 {
+  margin: 0 0 8px;
+  color: var(--sjs-brown-dark);
+  font-size: clamp(1.35rem, 2.4vw, 1.85rem);
+  font-weight: 800;
+}
+
+.layanan-form-intro {
+  margin: 0 0 22px;
+  color: var(--sjs-text-muted);
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+.layanan-note {
+  margin: 0 0 20px;
+  padding: 10px 12px;
+  background: #f7f4f1;
+  border-radius: 8px;
+  color: var(--sjs-brown);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.layanan-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 18px;
+}
+
+.layanan-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.layanan-field.is-full {
+  grid-column: 1 / -1;
+}
+
+.layanan-field label {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--sjs-brown-dark);
+}
+
+.layanan-req {
+  color: #c45c4a;
+}
+
+.layanan-field input,
+.layanan-field select,
+.layanan-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d8d0c8;
+  border-radius: 8px;
+  padding: 11px 12px;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--sjs-brown-dark);
+  background: #fff;
+}
+
+.layanan-field textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.layanan-field input:focus,
+.layanan-field select:focus,
+.layanan-field textarea:focus {
+  outline: 2px solid var(--sjs-brown);
+  outline-offset: 0;
+  border-color: var(--sjs-brown);
+}
+
+.layanan-field input::placeholder,
+.layanan-field textarea::placeholder {
+  color: #a89a8e;
+}
+
+.layanan-dropzone {
+  border: 1px dashed #c9b8a8;
+  border-radius: 10px;
+  padding: 18px 14px;
+  text-align: center;
+  background: #fbf9f6;
+  cursor: pointer;
+  color: var(--sjs-brown-dark);
+}
+
+.layanan-dropzone.is-drag {
+  border-color: var(--sjs-brown);
+  background: #f3eee8;
+}
+
+.layanan-dropzone strong {
+  display: block;
+  font-size: 0.92rem;
+  margin-bottom: 4px;
+}
+
+.layanan-dropzone small {
+  color: var(--sjs-text-muted);
+  font-size: 0.8rem;
+}
+
+.layanan-file-name {
+  margin-top: 8px;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.layanan-file-clear {
+  margin-left: 8px;
+  border: none;
+  background: none;
+  color: #c45c4a;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.layanan-actions {
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.layanan-submit {
+  width: 100%;
+  border: none;
+  border-radius: 8px;
+  background: var(--sjs-brown);
+  color: #fff;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 13px 16px;
+  cursor: pointer;
+}
+
+.layanan-submit:hover {
+  background: var(--sjs-brown-dark);
+}
+
+.layanan-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.layanan-secondary {
+  width: 100%;
+  border: 1px solid #d8d0c8;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--sjs-brown-dark);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 12px 16px;
+  cursor: pointer;
+}
+
+.layanan-secondary:hover {
+  background: #f7f4f1;
+}
+
+.layanan-message {
+  margin: 12px 0 0;
+  font-size: 0.88rem;
+}
+
+.layanan-message.is-error {
+  color: #b42318;
+}
+
+.layanan-success {
+  text-align: center;
+  padding: 28px 8px 8px;
+}
+
+.layanan-success h2 {
+  margin: 0 0 10px;
+  color: var(--sjs-brown-dark);
+}
+
+.layanan-success p {
+  margin: 0 0 10px;
+  color: var(--sjs-text-muted);
+  line-height: 1.5;
+}
+
+.layanan-ticket {
+  display: inline-block;
+  margin: 8px 0 16px;
+  padding: 8px 14px;
+  background: #f7f4f1;
+  border-radius: 8px;
+  font-weight: 800;
+  color: var(--sjs-brown-dark);
+  letter-spacing: 0.04em;
+}
+
+.layanan-unknown {
+  text-align: center;
+  padding: 40px 16px;
+}
+
+@media (max-width: 720px) {
+  .layanan-main {
+    width: min(1080px, calc(100% - 20px));
+    padding: 22px 0 48px;
+  }
+
+  .layanan-grid,
+  .layanan-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .layanan-form-shell {
+    padding: 20px 16px 24px;
+  }
+
+  .layanan-card {
+    min-height: 0;
+  }
+}

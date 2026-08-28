@@ -41,6 +41,7 @@ const productUploadDir = path.join(__dirname, "public", "product");
 const bannerUploadDir = path.join(__dirname, "public", "banner");
 const profileUploadDir = path.join(__dirname, "public", "profile_pictures");
 const qrisUploadDir = path.join(__dirname, "public", "qris");
+const layananUploadDir = path.join(__dirname, "data", "layanan_uploads");
 const DEFAULT_LOGO_URL = "/logo-sjs.png";
 const DEFAULT_COMPANY_PROFILE = {
   name: "PT SAHABAT JAYA SUKSES",
@@ -104,15 +105,15 @@ const DEFAULT_HOME_PAGE = {
       {
         title: "Kerja Sama & Kolaborasi",
         links: [
-          { label: "Pembelian Retail", url: "#" },
-          { label: "Kerja Sama Bisnis", url: "#" },
+          { label: "Pembelian Retail", url: "/layanan-form.html?jenis=custom" },
+          { label: "Kerja Sama Bisnis", url: "/layanan-form.html?jenis=kerjasama" },
         ],
       },
       {
         title: "Kebijakan Kami",
         links: [
           { label: "Ketentuan Pengguna", url: "#" },
-          { label: "Pengembalian Produk", url: "#" },
+          { label: "Pengembalian Produk", url: "/layanan-form.html?jenis=komplain" },
           { label: "Kebijakan Privasi", url: "#" },
           { label: "Ketentuan Pengiriman", url: "#" },
         ],
@@ -152,6 +153,17 @@ function normalizeAboutSection(raw) {
 }
 
 const FOOTER_COLUMN_LINK_COUNTS = [2, 2, 4];
+const FOOTER_LINK_FALLBACKS = {
+  "Pembelian Retail": "/layanan-form.html?jenis=custom",
+  "Kerja Sama Bisnis": "/layanan-form.html?jenis=kerjasama",
+  "Pengembalian Produk": "/layanan-form.html?jenis=komplain",
+};
+
+function resolveFooterLinkUrl(label, url) {
+  const trimmed = String(url || "#").trim() || "#";
+  if (trimmed !== "#") return trimmed;
+  return FOOTER_LINK_FALLBACKS[String(label || "").trim()] || trimmed;
+}
 
 function normalizeFooterSection(raw) {
   const defaults = DEFAULT_HOME_PAGE.footerSection;
@@ -178,11 +190,14 @@ function normalizeFooterSection(raw) {
     const defCol = colDefaults[colIndex] || { title: "", links: [] };
     const linkCount = FOOTER_COLUMN_LINK_COUNTS[colIndex] || 2;
     const linksRaw = Array.isArray(col?.links) && col.links.length ? col.links : defCol.links;
-    const links = linksRaw.slice(0, linkCount).map((link, linkIndex) => ({
-      ...(defCol.links[linkIndex] || { label: "", url: "#" }),
-      label: String(link?.label || "").trim(),
-      url: String(link?.url || "#").trim() || "#",
-    }));
+    const links = linksRaw.slice(0, linkCount).map((link, linkIndex) => {
+      const label = String(link?.label || "").trim();
+      return {
+        ...(defCol.links[linkIndex] || { label: "", url: "#" }),
+        label,
+        url: resolveFooterLinkUrl(label, link?.url),
+      };
+    });
     while (links.length < linkCount) {
       links.push({ ...(defCol.links[links.length] || { label: "", url: "#" }) });
     }
@@ -254,6 +269,7 @@ fs.mkdirSync(productUploadDir, { recursive: true });
 fs.mkdirSync(bannerUploadDir, { recursive: true });
 fs.mkdirSync(profileUploadDir, { recursive: true });
 fs.mkdirSync(qrisUploadDir, { recursive: true });
+fs.mkdirSync(layananUploadDir, { recursive: true });
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
@@ -261,6 +277,14 @@ app.get("/", (req, res) => {
 
 app.get("/shop", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "shop.html"));
+});
+
+app.get("/layanan", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "layanan.html"));
+});
+
+app.get("/artikel", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "artikel.html"));
 });
 
 const pictureMemoryUpload = multer({
@@ -377,6 +401,50 @@ const qrisImageUpload = multer({
     cb(null, true);
   },
 });
+
+const LAYANAN_FILE_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+]);
+const LAYANAN_FILE_EXTS = new Set([".png", ".jpg", ".jpeg", ".webp", ".pdf", ".doc", ".docx", ".xls", ".xlsx"]);
+
+const layananUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, layananUploadDir),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname || "").toLowerCase();
+      cb(null, `ly-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext || ""}`);
+    },
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname || "").toLowerCase();
+    if (LAYANAN_FILE_TYPES.has(file.mimetype) || LAYANAN_FILE_EXTS.has(ext)) {
+      cb(null, true);
+      return;
+    }
+    cb(new Error("Berkas harus berupa gambar, PDF, Word, atau Excel."));
+  },
+});
+
+function layananUploadMiddleware(req, res, next) {
+  layananUpload.single("file")(req, res, (err) => {
+    if (!err) {
+      next();
+      return;
+    }
+    const tooLarge = err.code === "LIMIT_FILE_SIZE";
+    res.status(400).json({
+      message: tooLarge ? "Ukuran berkas maksimal 10 MB." : err.message || "Gagal mengunggah berkas.",
+    });
+  });
+}
 
 const backupZipUpload = multer({
   storage: multer.diskStorage({
@@ -767,6 +835,21 @@ async function setupDatabase() {
   `);
 
   await runQuery(`
+    CREATE TABLE IF NOT EXISTS articles (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      slug TEXT NOT NULL UNIQUE,
+      category TEXT NOT NULL,
+      excerpt TEXT NOT NULL DEFAULT '',
+      body TEXT NOT NULL,
+      cover_url TEXT NOT NULL DEFAULT '',
+      published INTEGER NOT NULL DEFAULT 1,
+      published_at TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await runQuery(`
     CREATE TABLE IF NOT EXISTS point_rewards (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -850,6 +933,24 @@ async function setupDatabase() {
     CREATE TABLE IF NOT EXISTS newsletter_subscribers (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       email TEXT NOT NULL UNIQUE,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await runQuery(`
+    CREATE TABLE IF NOT EXISTS layanan_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ticket_code TEXT NOT NULL UNIQUE,
+      type TEXT NOT NULL,
+      user_id INTEGER,
+      name TEXT NOT NULL,
+      email TEXT,
+      phone TEXT NOT NULL,
+      company TEXT,
+      payload TEXT NOT NULL,
+      attachment_path TEXT,
+      attachment_name TEXT,
+      status TEXT NOT NULL DEFAULT 'new',
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -1045,6 +1146,21 @@ function authMiddleware(req, res, next) {
   } catch (error) {
     res.status(401).json({ message: "Token tidak valid atau kadaluarsa." });
   }
+}
+
+function optionalAuth(req, res, next) {
+  const authHeader = req.headers.authorization || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+  if (!token) {
+    next();
+    return;
+  }
+  try {
+    req.user = jwt.verify(token, JWT_SECRET);
+  } catch {
+    /* guest */
+  }
+  next();
 }
 
 function requireRole(allowedRoles) {
@@ -1654,6 +1770,197 @@ app.post("/api/newsletter/subscribe", async (req, res) => {
   }
 });
 
+const LAYANAN_TYPE_RULES = {
+  kerjasama: { required: ["name", "phone", "email", "partnershipType", "city", "message"] },
+  custom: {
+    required: ["name", "phone", "email", "orderKind", "boardType", "thickness", "size", "qty", "city", "message"],
+  },
+  komplain: { required: ["name", "phone", "orderNumber", "claimType", "message", "expectation"], fileRequired: true },
+  konsultasi: { required: ["name", "phone", "goal", "application", "message"] },
+};
+const LAYANAN_TYPE_PREFIX = {
+  kerjasama: "KS",
+  custom: "CT",
+  komplain: "KP",
+  konsultasi: "KN",
+};
+const layananRate = new Map();
+
+function layananRateLimited(ip) {
+  const now = Date.now();
+  const bucket = layananRate.get(ip) || { count: 0, start: now };
+  if (now - bucket.start > 60 * 60 * 1000) {
+    bucket.count = 0;
+    bucket.start = now;
+  }
+  bucket.count += 1;
+  layananRate.set(ip, bucket);
+  return bucket.count > 8;
+}
+
+function makeLayananTicket(type) {
+  const prefix = LAYANAN_TYPE_PREFIX[type] || "LY";
+  const day = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `SJS-${prefix}-${day}-${rand}`;
+}
+
+app.post("/api/layanan", optionalAuth, layananUploadMiddleware, async (req, res) => {
+  const type = String(req.body?.type || "").trim();
+  const rules = LAYANAN_TYPE_RULES[type];
+  if (!rules) {
+    if (req.file?.path) fs.unlink(req.file.path, () => {});
+    res.status(400).json({ message: "Jenis layanan tidak valid." });
+    return;
+  }
+
+  const ip = String(req.ip || req.headers["x-forwarded-for"] || "local").split(",")[0].trim();
+  if (layananRateLimited(ip)) {
+    if (req.file?.path) fs.unlink(req.file.path, () => {});
+    res.status(429).json({ message: "Terlalu banyak pengiriman. Coba lagi nanti." });
+    return;
+  }
+
+  const payload = {};
+  for (const [key, value] of Object.entries(req.body || {})) {
+    if (key === "type") continue;
+    payload[key] = String(value || "").trim();
+  }
+
+  const missing = rules.required.find((field) => !payload[field]);
+  if (missing) {
+    if (req.file?.path) fs.unlink(req.file.path, () => {});
+    res.status(400).json({ message: "Lengkapi data yang wajib diisi." });
+    return;
+  }
+
+  const phoneDigits = String(payload.phone || "").replace(/\D/g, "");
+  if (phoneDigits.length < 8) {
+    if (req.file?.path) fs.unlink(req.file.path, () => {});
+    res.status(400).json({ message: "Nomor WhatsApp tidak valid." });
+    return;
+  }
+
+  if (payload.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+    if (req.file?.path) fs.unlink(req.file.path, () => {});
+    res.status(400).json({ message: "Alamat e-mail tidak valid." });
+    return;
+  }
+
+  if (rules.fileRequired && !req.file) {
+    res.status(400).json({ message: "Foto atau lampiran wajib diunggah." });
+    return;
+  }
+
+  if (type === "komplain" && req.file) {
+    const isImage = String(req.file.mimetype || "").startsWith("image/");
+    const ext = path.extname(req.file.originalname || req.file.filename || "").toLowerCase();
+    if (!isImage && ![".png", ".jpg", ".jpeg", ".webp"].includes(ext)) {
+      fs.unlink(req.file.path, () => {});
+      res.status(400).json({ message: "Klaim wajib memakai foto JPG atau PNG." });
+      return;
+    }
+  }
+
+  try {
+    let ticketCode = makeLayananTicket(type);
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const exists = await getQuery("SELECT id FROM layanan_requests WHERE ticket_code = ?", [ticketCode]);
+      if (!exists) break;
+      ticketCode = makeLayananTicket(type);
+    }
+
+    await runQuery(
+      `INSERT INTO layanan_requests
+        (ticket_code, type, user_id, name, email, phone, company, payload, attachment_path, attachment_name, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')`,
+      [
+        ticketCode,
+        type,
+        req.user?.id || null,
+        payload.name,
+        payload.email || null,
+        payload.phone,
+        payload.company || null,
+        JSON.stringify(payload),
+        req.file ? req.file.filename : null,
+        req.file ? req.file.originalname : null,
+      ]
+    );
+    res.json({
+      message: "Permintaan terkirim. Tim SJS akan menghubungi via WhatsApp dalam 1 hari kerja.",
+      ticketCode,
+    });
+  } catch (error) {
+    if (req.file?.path) fs.unlink(req.file.path, () => {});
+    res.status(500).json({ message: "Gagal mengirim permintaan. Coba lagi nanti." });
+  }
+});
+
+app.get("/api/admin/layanan", authMiddleware, requireRole(["admin", "manager"]), async (req, res) => {
+  try {
+    const rows = await allQuery(
+      `SELECT id, ticket_code, type, user_id, name, email, phone, company, payload, attachment_name, status, created_at
+       FROM layanan_requests ORDER BY id DESC LIMIT 200`
+    );
+    res.json(
+      rows.map((row) => {
+        let details = {};
+        try {
+          details = JSON.parse(row.payload || "{}");
+        } catch {
+          details = {};
+        }
+        return { ...row, payload: details, hasAttachment: Boolean(row.attachment_name) };
+      })
+    );
+  } catch (error) {
+    res.status(500).json({ message: "Gagal memuat permintaan layanan." });
+  }
+});
+
+app.patch("/api/admin/layanan/:id", authMiddleware, requireRole(["admin", "manager"]), async (req, res) => {
+  const id = Number(req.params.id);
+  const status = String(req.body?.status || "").trim();
+  if (!id || !["new", "in_progress", "done"].includes(status)) {
+    res.status(400).json({ message: "Status tidak valid." });
+    return;
+  }
+  try {
+    const result = await runQuery("UPDATE layanan_requests SET status = ? WHERE id = ?", [status, id]);
+    if (!result.changes) {
+      res.status(404).json({ message: "Permintaan tidak ditemukan." });
+      return;
+    }
+    res.json({ message: "Status diperbarui.", status });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal memperbarui status." });
+  }
+});
+
+app.get("/api/admin/layanan/:id/file", authMiddleware, requireRole(["admin", "manager"]), async (req, res) => {
+  const id = Number(req.params.id);
+  if (!id) {
+    res.status(400).json({ message: "ID tidak valid." });
+    return;
+  }
+  try {
+    const row = await getQuery("SELECT attachment_path, attachment_name FROM layanan_requests WHERE id = ?", [id]);
+    if (!row?.attachment_path) {
+      res.status(404).json({ message: "Tidak ada lampiran." });
+      return;
+    }
+    const abs = path.join(layananUploadDir, path.basename(row.attachment_path));
+    if (!fs.existsSync(abs)) {
+      res.status(404).json({ message: "Berkas tidak ditemukan." });
+      return;
+    }
+    res.download(abs, row.attachment_name || "lampiran");
+  } catch (error) {
+    res.status(500).json({ message: "Gagal mengunduh lampiran." });
+  }
+});
+
 app.post(
   "/api/admin/settings/qris-upload",
   authMiddleware,
@@ -2158,6 +2465,179 @@ app.delete("/api/admin/brands/:id", authMiddleware, requireRole(["admin"]), asyn
     res.json({ message: "Merek dihapus." });
   } catch (error) {
     res.status(500).json({ message: "Gagal menghapus merek." });
+  }
+});
+
+function slugifyArticle(text) {
+  const slug = String(text || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  return slug || "artikel";
+}
+
+function mapArticleRow(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    slug: row.slug,
+    category: row.category,
+    excerpt: row.excerpt || "",
+    body: row.body || "",
+    coverUrl: row.cover_url || "",
+    published: Number(row.published) === 1,
+    publishedAt: row.published_at || row.created_at,
+    createdAt: row.created_at,
+  };
+}
+
+async function uniqueArticleSlug(base, excludeId) {
+  let slug = slugifyArticle(base);
+  for (let i = 0; i < 20; i += 1) {
+    const candidate = i === 0 ? slug : `${slug}-${i + 1}`;
+    const existing = await getQuery(
+      excludeId
+        ? "SELECT id FROM articles WHERE slug = ? AND id != ?"
+        : "SELECT id FROM articles WHERE slug = ?",
+      excludeId ? [candidate, excludeId] : [candidate]
+    );
+    if (!existing) return candidate;
+  }
+  return `${slug}-${Date.now()}`;
+}
+
+function parseArticlePayload(body) {
+  const title = String(body?.title || "").trim();
+  const category = String(body?.category || "").trim();
+  const excerpt = String(body?.excerpt || "").trim();
+  const content = String(body?.body || "").trim();
+  const coverUrl = String(body?.coverUrl || "").trim();
+  const published = body?.published === false || body?.published === 0 || body?.published === "0" ? 0 : 1;
+  const publishedAt = String(body?.publishedAt || "").trim() || new Date().toISOString();
+  return { title, category, excerpt, content, coverUrl, published, publishedAt };
+}
+
+app.get("/api/articles", async (req, res) => {
+  const category = String(req.query?.category || "").trim();
+  try {
+    const params = [];
+    let sql =
+      "SELECT id, title, slug, category, excerpt, cover_url, published, published_at, created_at FROM articles WHERE published = 1";
+    if (category === "berita" || category === "tips") {
+      sql += " AND category = ?";
+      params.push(category);
+    }
+    sql += " ORDER BY datetime(published_at) DESC, id DESC";
+    const rows = await allQuery(sql, params);
+    res.json(rows.map(mapArticleRow));
+  } catch (error) {
+    res.status(500).json({ message: "Gagal memuat artikel." });
+  }
+});
+
+app.get("/api/articles/:slug", async (req, res) => {
+  const slug = String(req.params.slug || "").trim();
+  if (!slug) {
+    res.status(400).json({ message: "Artikel tidak valid." });
+    return;
+  }
+  try {
+    const row = await getQuery("SELECT * FROM articles WHERE slug = ? AND published = 1", [slug]);
+    if (!row) {
+      res.status(404).json({ message: "Artikel tidak ditemukan." });
+      return;
+    }
+    res.json(mapArticleRow(row));
+  } catch (error) {
+    res.status(500).json({ message: "Gagal memuat artikel." });
+  }
+});
+
+app.get("/api/admin/articles", authMiddleware, requireRole(["admin"]), async (req, res) => {
+  try {
+    const rows = await allQuery("SELECT * FROM articles ORDER BY datetime(published_at) DESC, id DESC");
+    res.json(rows.map(mapArticleRow));
+  } catch (error) {
+    res.status(500).json({ message: "Gagal memuat artikel." });
+  }
+});
+
+app.post("/api/admin/articles", authMiddleware, requireRole(["admin"]), async (req, res) => {
+  const data = parseArticlePayload(req.body);
+  if (!data.title || !data.content) {
+    res.status(400).json({ message: "Judul dan isi artikel wajib diisi." });
+    return;
+  }
+  if (data.category !== "berita" && data.category !== "tips") {
+    res.status(400).json({ message: "Kategori harus Berita atau Tips." });
+    return;
+  }
+  try {
+    const slug = await uniqueArticleSlug(data.title);
+    const result = await runQuery(
+      `INSERT INTO articles (title, slug, category, excerpt, body, cover_url, published, published_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [data.title, slug, data.category, data.excerpt, data.content, data.coverUrl, data.published, data.publishedAt]
+    );
+    const row = await getQuery("SELECT * FROM articles WHERE id = ?", [result.lastID]);
+    res.status(201).json({ message: "Artikel disimpan.", article: mapArticleRow(row) });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal menyimpan artikel." });
+  }
+});
+
+app.put("/api/admin/articles/:id", authMiddleware, requireRole(["admin"]), async (req, res) => {
+  const id = Number(req.params.id);
+  const data = parseArticlePayload(req.body);
+  if (!id) {
+    res.status(400).json({ message: "ID artikel tidak valid." });
+    return;
+  }
+  if (!data.title || !data.content) {
+    res.status(400).json({ message: "Judul dan isi artikel wajib diisi." });
+    return;
+  }
+  if (data.category !== "berita" && data.category !== "tips") {
+    res.status(400).json({ message: "Kategori harus Berita atau Tips." });
+    return;
+  }
+  try {
+    const existing = await getQuery("SELECT id, slug FROM articles WHERE id = ?", [id]);
+    if (!existing) {
+      res.status(404).json({ message: "Artikel tidak ditemukan." });
+      return;
+    }
+    const slug = await uniqueArticleSlug(req.body?.slug || data.title, id);
+    await runQuery(
+      `UPDATE articles SET title = ?, slug = ?, category = ?, excerpt = ?, body = ?, cover_url = ?, published = ?, published_at = ? WHERE id = ?`,
+      [data.title, slug, data.category, data.excerpt, data.content, data.coverUrl, data.published, data.publishedAt, id]
+    );
+    const row = await getQuery("SELECT * FROM articles WHERE id = ?", [id]);
+    res.json({ message: "Artikel diperbarui.", article: mapArticleRow(row) });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal memperbarui artikel." });
+  }
+});
+
+app.delete("/api/admin/articles/:id", authMiddleware, requireRole(["admin"]), async (req, res) => {
+  const id = Number(req.params.id);
+  if (!id) {
+    res.status(400).json({ message: "ID artikel tidak valid." });
+    return;
+  }
+  try {
+    const existing = await getQuery("SELECT id FROM articles WHERE id = ?", [id]);
+    if (!existing) {
+      res.status(404).json({ message: "Artikel tidak ditemukan." });
+      return;
+    }
+    await runQuery("DELETE FROM articles WHERE id = ?", [id]);
+    res.json({ message: "Artikel dihapus." });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal menghapus artikel." });
   }
 });
 

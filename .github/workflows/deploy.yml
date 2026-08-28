@@ -50,11 +50,12 @@ jobs:
       - name: Surface deploy log on failure
         if: failure()
         run: |
-          df -h || true
+          df -h | while IFS= read -r line; do echo "::error::df ${line}"; done
+          docker system df | while IFS= read -r line; do echo "::error::docker-df ${line}"; done
           docker images || true
           if [ -f /tmp/marketplace-deploy.log ]; then
-            tail -n 30 /tmp/marketplace-deploy.log | while IFS= read -r line; do
-              echo "::error::${line}"
+            tail -n 15 /tmp/marketplace-deploy.log | while IFS= read -r line; do
+              echo "::error::log ${line}"
             done
           fi
           docker compose --env-file .env.production ps || true
