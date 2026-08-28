@@ -88,6 +88,14 @@ else
 	warn "Skip git sync (bukan repo git / belum ada remote)"
 fi
 
+# --- Sync package-lock.json (supaya npm ci di Docker tidak gagal) ---
+if command -v npm >/dev/null 2>&1; then
+	log "Sync package-lock.json → npm install --package-lock-only"
+	npm install --package-lock-only 2>&1 || warn "npm install --package-lock-only gagal (lanjut)"
+else
+	warn "npm tidak ditemukan di host — skip lock file sync"
+fi
+
 # --- node_modules host = sumber crash glibc ---
 if [ -d node_modules ]; then
 	log "Hapus node_modules di host (deps hanya di-build di dalam Docker)"
