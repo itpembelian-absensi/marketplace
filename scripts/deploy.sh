@@ -11,7 +11,11 @@ FORCE_REBUILD="${FORCE_REBUILD:-1}"
 
 log() { echo "==> $*"; }
 warn() { echo "!!  $*" >&2; }
-die() { echo "ERROR: $*" >&2; exit 1; }
+die() {
+	echo "::error::$*" >&2
+	echo "ERROR: $*" >&2
+	exit 1
+}
 
 compose() {
 	docker compose --env-file "$ENV_FILE" "$@"
@@ -121,7 +125,16 @@ done
 # --- Docker ---
 log "Stop container lama"
 compose down --remove-orphans 2>/dev/null || true
+
+APP_IMAGE="${COMPOSE_PROJECT_NAME:-marketplace}-app:latest"
+if [ -f "$ENV_FILE" ]; then
+	pname="$(grep -E '^COMPOSE_PROJECT_NAME=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 | tr -d '\r' | tr -d ' ' || true)"
+	[ -n "${pname:-}" ] && APP_IMAGE="${pname}-app:latest"
+fi
+log "Hapus image ${APP_IMAGE} supaya app layer di-build ulang"
+docker rmi "$APP_IMAGE" 2>/dev/null || true
 docker image prune -f >/dev/null 2>&1 || true
+df -h || true
 
 BUILD_LOG="$(mktemp)"
 trap 'rm -f "$BUILD_LOG"' EXIT
@@ -137,11 +150,20 @@ fi
 if ! compose "${BUILD_ARGS[@]}" 2>&1 | tee "$BUILD_LOG"; then
 	warn "Build gagal. Log terakhir:"
 	tail -50 "$BUILD_LOG" >&2
+	tail -20 "$BUILD_LOG" | while IFS= read -r line; do
+		echo "::error::${line}" >&2
+	done
+	df -h >&2 || true
 	die "Docker build gagal — lihat log di atas"
 fi
 
 log "Start container"
-compose up -d --remove-orphans
+if ! compose up -d --remove-orphans; then
+	compose logs --tail 80 app >&2 || true
+	compose ps >&2 || true
+	df -h >&2 || true
+	die "docker compose up gagal"
+fi
 
 APP_PORT="$(grep -E '^APP_PORT=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 | tr -d '\r' | tr -d ' ' || true)"
 APP_PORT="${APP_PORT:-5057}"

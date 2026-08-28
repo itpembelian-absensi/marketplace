@@ -43,4 +43,19 @@ jobs:
           BRANCH: ${{ github.ref_name }}
           GIT_SHA: ${{ github.sha }}
           FORCE_REBUILD: "0"
-        run: bash ./scripts/deploy.sh
+        run: |
+          set -o pipefail
+          bash ./scripts/deploy.sh 2>&1 | tee /tmp/marketplace-deploy.log
+
+      - name: Surface deploy log on failure
+        if: failure()
+        run: |
+          df -h || true
+          docker images || true
+          if [ -f /tmp/marketplace-deploy.log ]; then
+            tail -n 30 /tmp/marketplace-deploy.log | while IFS= read -r line; do
+              echo "::error::${line}"
+            done
+          fi
+          docker compose --env-file .env.production ps || true
+          docker compose --env-file .env.production logs --tail 40 app || true
