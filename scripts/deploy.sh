@@ -32,9 +32,13 @@ for i in 1 2 3 4 5; do
 		docker_ok=1
 		break
 	fi
+	warn "docker info gagal (percobaan ${i}/5)"
 	sleep 2
 done
 if [ "$docker_ok" != "1" ]; then
+	docker info >&2 || true
+	id >&2 || true
+	ls -l /var/run/docker.sock >&2 || true
 	die "Docker tidak accessible — jalankan: sudo usermod -aG docker \$USER && newgrp docker"
 fi
 
@@ -58,8 +62,9 @@ chmod +x scripts/*.sh 2>/dev/null || true
 [ -f docker/entrypoint.sh ] && chmod +x docker/entrypoint.sh
 
 # --- Git: hard reset (tanpa konflik pull) ---
-if [ -n "${GIT_SHA:-}" ] && [ "$(git rev-parse HEAD 2>/dev/null || true)" = "$GIT_SHA" ]; then
-	log "Skip git sync (sudah di ${GIT_SHA:0:7})"
+# CI sudah git reset --hard sebelum menjalankan script ini.
+if [ -n "${GIT_SHA:-}" ]; then
+	log "Skip git sync (workflow sudah di $(git rev-parse --short HEAD 2>/dev/null || echo unknown))"
 elif [ -d .git ] && git remote get-url origin >/dev/null 2>&1; then
 	log "Sync code → origin/${BRANCH}"
 	rm -f .git/index.lock .git/HEAD.lock
@@ -82,7 +87,7 @@ fi
 # --- node_modules host = sumber crash glibc ---
 if [ -d node_modules ]; then
 	log "Hapus node_modules di host (deps hanya di-build di dalam Docker)"
-	rm -rf node_modules
+	rm -rf node_modules || warn "Gagal hapus node_modules (lanjut)"
 fi
 
 # --- Storage ---
@@ -121,12 +126,12 @@ docker image prune -f >/dev/null 2>&1 || true
 BUILD_LOG="$(mktemp)"
 trap 'rm -f "$BUILD_LOG"' EXIT
 
-BUILD_ARGS=(build --pull --progress=plain)
+BUILD_ARGS=(build --progress=plain)
 if [ "$FORCE_REBUILD" = "1" ]; then
-	log "Build image --no-cache (npm ci di Docker bookworm, tunggu 2-5 menit)"
-	BUILD_ARGS+=(--no-cache)
+	log "Build image --no-cache --pull (npm ci di Docker bookworm, tunggu 2-5 menit)"
+	BUILD_ARGS+=(--no-cache --pull)
 else
-	log "Build image (pakai cache Docker)"
+	log "Build image (pakai cache Docker, tanpa pull base image)"
 fi
 
 if ! compose "${BUILD_ARGS[@]}" 2>&1 | tee "$BUILD_LOG"; then

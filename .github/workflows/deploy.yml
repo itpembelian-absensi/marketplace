@@ -13,6 +13,7 @@ jobs:
 
     defaults:
       run:
+        shell: bash
         working-directory: /srv/docker/marketplace
 
     steps:
@@ -20,9 +21,12 @@ jobs:
         run: |
           df -h || true
           docker system df || true
-          docker builder prune -f || true
+          docker builder prune -af || true
           docker image prune -f || true
           df -h || true
+
+      - name: Check Docker daemon
+        run: docker info
 
       - name: Sync code
         env:
@@ -39,4 +43,4 @@ jobs:
           BRANCH: ${{ github.ref_name }}
           GIT_SHA: ${{ github.sha }}
           FORCE_REBUILD: "0"
-        run: ./deploy.sh
+        run: bash ./scripts/deploy.sh
