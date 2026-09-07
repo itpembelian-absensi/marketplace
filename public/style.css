@@ -1782,6 +1782,10 @@ body.lightbox-open {
   padding: 0;
 }
 
+.cs-chat-toggle.hidden {
+  display: none;
+}
+
 .cs-chat-toggle-bubble {
   background: #fff;
   color: #4a3228;
@@ -1836,6 +1840,10 @@ body.lightbox-open {
   overflow: hidden;
 }
 
+.cs-chat-panel.hidden {
+  display: none;
+}
+
 .cs-chat-header {
   display: flex;
   justify-content: space-between;
@@ -1869,6 +1877,19 @@ body.lightbox-open {
   cursor: pointer;
 }
 
+.cs-chat-close {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: #fff;
+  color: #1f2937;
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
 .cs-chat-restore {
   display: flex;
   align-items: center;
@@ -1882,6 +1903,10 @@ body.lightbox-open {
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+}
+
+.cs-chat-restore.hidden {
+  display: none;
 }
 
 .cs-chat-restore .cs-chat-toggle-avatar {
@@ -1924,6 +1949,15 @@ body.lightbox-open {
   background: #25d366;
   color: #fff;
   align-self: flex-end;
+}
+
+.cs-chat-msg.is-system {
+  align-self: center;
+  max-width: 94%;
+  background: #efe8e2;
+  color: #5b463c;
+  font-size: 0.78rem;
+  text-align: center;
 }
 
 .cs-chat-form {

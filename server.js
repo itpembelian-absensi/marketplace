@@ -1607,12 +1607,15 @@ app.get("/api/settings", async (req, res) => {
 
     let whatsappBotNumber = process.env.WHATSAPP_BOT_NUMBER || "";
     let sasaChatEnabled = true;
+    let sasaChatIdleMinutes = 5;
     try {
       const waRow = await getQuery("SELECT value FROM app_settings WHERE key = 'whatsapp_settings'");
       if (waRow?.value) {
         const waSettings = JSON.parse(waRow.value);
         if (waSettings.botNumber) whatsappBotNumber = waSettings.botNumber;
         if (waSettings.webChatEnabled === false) sasaChatEnabled = false;
+        const idle = Number(waSettings.webChatIdleMinutes);
+        if (Number.isFinite(idle)) sasaChatIdleMinutes = Math.max(0, Math.min(180, Math.round(idle)));
       }
     } catch (_) {}
 
@@ -1624,6 +1627,7 @@ app.get("/api/settings", async (req, res) => {
       qrisImageUrl: qrisRow?.value || "",
       whatsappBotNumber,
       sasaChatEnabled,
+      sasaChatIdleMinutes,
     });
   } catch (error) {
     res.status(500).json({ message: "Gagal mengambil settings." });
@@ -3774,12 +3778,19 @@ app.put("/api/admin/settings/whatsapp", authMiddleware, requireRole(["admin", "m
         current = {};
       }
     }
+    const idleRaw = Number(req.body?.webChatIdleMinutes);
+    const webChatIdleMinutes = Number.isFinite(idleRaw)
+      ? Math.max(0, Math.min(180, Math.round(idleRaw)))
+      : Number.isFinite(Number(current.webChatIdleMinutes))
+        ? Math.max(0, Math.min(180, Math.round(Number(current.webChatIdleMinutes))))
+        : 5;
     const settings = {
       ...current,
       enabled: Boolean(req.body?.enabled),
       botNumber: String(req.body?.botNumber || "").trim(),
       fallbackMessage: String(req.body?.fallbackMessage || "").trim(),
       webChatEnabled: req.body?.webChatEnabled !== false,
+      webChatIdleMinutes,
     };
     await runQuery(
       "INSERT INTO app_settings (key, value) VALUES ('whatsapp_settings', ?) ON CONFLICT(key) DO UPDATE SET value = ?",

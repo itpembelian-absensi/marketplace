@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Manajemen User - PT SAHABAT JAYA SUKSES</title>
-    <link rel="stylesheet" href="/style.css?v=19" />
+    <link rel="stylesheet" href="/style.css?v=21" />
   </head>
   <body class="admin-page">
     <header class="topbar">
@@ -860,6 +860,13 @@
           <p class="empty-state" style="margin: -4px 0 12px;">
             Jika dicentang, pengunjung bisa membuka/menutup chat Sasa. Jika tidak, widget Sasa disembunyikan di semua halaman.
           </p>
+          <div style="margin-bottom: 12px;">
+            <label class="field-label" for="sasaWebChatIdleMinutes">Tutup percakapan jika tidak aktif (menit)</label>
+            <input type="number" id="sasaWebChatIdleMinutes" min="0" max="180" step="1" value="5" />
+            <p class="empty-state" style="margin: 6px 0 0;">
+              Setelah waktu ini tanpa pesan, Sasa memberi tahu lalu menutup percakapan. Isi 0 untuk menonaktifkan. Maksimal 180 menit.
+            </p>
+          </div>
 
           <div style="margin-bottom: 12px;">
             <label class="field-label" for="waBotNumber">Nomor WhatsApp Bot</label>
@@ -897,7 +904,7 @@
     </div>
 
     <script src="/common.js?v=11"></script>
-    <script src="/admin.js?v=37"></script>
+    <script src="/admin.js?v=38"></script>
     <script src="/admin-points.js?v=1"></script>
   </body>
 </html>

@@ -2,6 +2,7 @@
   if (document.getElementById("csChatRoot")) return;
 
   const HIDE_KEY = "sjs_sasa_hidden";
+  const CLOSE_NOTICE_MS = 2500;
 
   const root = document.createElement("div");
   root.id = "csChatRoot";
@@ -51,6 +52,11 @@
   const waLink = document.getElementById("csChatWhatsapp");
   const history = [];
 
+  let idleMinutes = 5;
+  let idleTimer = null;
+  let closingTimer = null;
+  let isClosing = false;
+
   function isVisitorHidden() {
     try {
       return localStorage.getItem(HIDE_KEY) === "1";
@@ -68,30 +74,93 @@
     }
   }
 
-  function applyVisibility() {
-    const hidden = isVisitorHidden();
-    root.classList.toggle("is-minimized", hidden);
-    toggle.classList.toggle("hidden", hidden);
-    restore.classList.toggle("hidden", !hidden);
-    if (hidden) {
-      panel.classList.add("hidden");
-      toggle.classList.remove("is-open");
+  function isPanelOpen() {
+    return !panel.classList.contains("hidden") && !root.classList.contains("is-minimized");
+  }
+
+  function clearIdleTimers() {
+    if (idleTimer) {
+      clearTimeout(idleTimer);
+      idleTimer = null;
     }
+    if (closingTimer) {
+      clearTimeout(closingTimer);
+      closingTimer = null;
+    }
+  }
+
+  function resetIdleTimer() {
+    if (idleTimer) {
+      clearTimeout(idleTimer);
+      idleTimer = null;
+    }
+    if (isClosing || !isPanelOpen() || idleMinutes <= 0) return;
+    idleTimer = setTimeout(beginIdleClose, idleMinutes * 60 * 1000);
+  }
+
+  function beginIdleClose() {
+    if (!isPanelOpen() || isClosing) return;
+    isClosing = true;
+    appendMessage(
+      "system",
+      "Percakapan akan ditutup karena tidak ada aktivitas. Silakan buka chat lagi jika masih butuh bantuan."
+    );
+    sendBtn.disabled = true;
+    input.disabled = true;
+    closingTimer = setTimeout(() => {
+      endConversation();
+      closePanel();
+    }, CLOSE_NOTICE_MS);
+  }
+
+  function cancelIdleClose() {
+    if (!isClosing) return;
+    isClosing = false;
+    if (closingTimer) {
+      clearTimeout(closingTimer);
+      closingTimer = null;
+    }
+    sendBtn.disabled = false;
+    input.disabled = false;
+  }
+
+  function endConversation() {
+    clearIdleTimers();
+    isClosing = false;
+    history.length = 0;
+    messages.innerHTML = "";
+    sendBtn.disabled = false;
+    input.disabled = false;
+    input.value = "";
+  }
+
+  function applyVisibility() {
+    const minimized = isVisitorHidden();
+    root.classList.toggle("is-minimized", minimized);
+    if (minimized) {
+      panel.classList.add("hidden");
+      clearIdleTimers();
+    }
+    const open = !panel.classList.contains("hidden") && !minimized;
+    restore.classList.toggle("hidden", !minimized);
+    toggle.classList.toggle("hidden", minimized || open);
+    toggle.classList.toggle("is-open", open);
   }
 
   function appendMessage(role, text) {
     const row = document.createElement("div");
-    row.className = `cs-chat-msg ${role === "user" ? "is-user" : "is-bot"}`;
+    const kind = role === "user" ? "is-user" : role === "system" ? "is-system" : "is-bot";
+    row.className = `cs-chat-msg ${kind}`;
     row.textContent = text;
     messages.appendChild(row);
     messages.scrollTop = messages.scrollHeight;
   }
 
   function openPanel() {
+    cancelIdleClose();
     setVisitorHidden(false);
-    applyVisibility();
     panel.classList.remove("hidden");
-    toggle.classList.add("is-open");
+    applyVisibility();
     if (!messages.childElementCount) {
       appendMessage(
         "bot",
@@ -99,11 +168,16 @@
       );
     }
     input.focus();
+    resetIdleTimer();
   }
 
   function closePanel() {
     panel.classList.add("hidden");
-    toggle.classList.remove("is-open");
+    applyVisibility();
+    clearIdleTimers();
+    isClosing = false;
+    sendBtn.disabled = false;
+    input.disabled = false;
   }
 
   function hideWidget() {
@@ -116,9 +190,21 @@
     if (panel.classList.contains("hidden")) openPanel();
     else closePanel();
   });
-  closeBtn.addEventListener("click", closePanel);
-  hideBtn.addEventListener("click", hideWidget);
+  closeBtn.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closePanel();
+  });
+  hideBtn.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    hideWidget();
+  });
   restore.addEventListener("click", openPanel);
+  input.addEventListener("input", () => {
+    if (isClosing) cancelIdleClose();
+    resetIdleTimer();
+  });
 
   async function bindSettings() {
     try {
@@ -127,10 +213,13 @@
           ? await loadSettings()
           : await (await fetch("/api/settings")).then((r) => r.json());
       if (settings?.sasaChatEnabled === false) {
+        clearIdleTimers();
         root.remove();
         window.SasaChat = { open() {} };
         return;
       }
+      const idle = Number(settings?.sasaChatIdleMinutes);
+      idleMinutes = Number.isFinite(idle) ? Math.max(0, Math.min(180, Math.round(idle))) : 5;
       let number = settings?.whatsappBotNumber || settings?.companyProfile?.phone || "";
       number = String(number).replace(/\D/g, "");
       if (number && waLink) {
@@ -141,15 +230,18 @@
       /* optional */
     }
     applyVisibility();
+    if (isPanelOpen()) resetIdleTimer();
   }
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (isClosing) cancelIdleClose();
     const text = input.value.trim();
     if (!text) return;
     input.value = "";
     appendMessage("user", text);
     history.push({ role: "user", content: text });
+    resetIdleTimer();
     sendBtn.disabled = true;
     try {
       const data = await apiFetch("/chat", {
@@ -159,8 +251,10 @@
       const reply = data.reply || "Maaf, Sasa belum bisa menjawab.";
       appendMessage("bot", reply);
       history.push({ role: "model", content: reply });
+      resetIdleTimer();
     } catch (error) {
       appendMessage("bot", error.message || "Sasa sedang sibuk. Silakan lanjut ke WhatsApp CS.");
+      resetIdleTimer();
     } finally {
       sendBtn.disabled = false;
       input.focus();
@@ -172,5 +266,6 @@
 
   window.SasaChat = {
     open: openPanel,
+    close: closePanel,
   };
 })();

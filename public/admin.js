@@ -2701,6 +2701,7 @@ document.getElementById("ordersTbody")?.addEventListener("change", async (event)
 const waSettingsForm = document.getElementById("waSettingsForm");
 const waBotEnabled = document.getElementById("waBotEnabled");
 const sasaWebChatEnabled = document.getElementById("sasaWebChatEnabled");
+const sasaWebChatIdleMinutes = document.getElementById("sasaWebChatIdleMinutes");
 const waBotNumber = document.getElementById("waBotNumber");
 const waBotFallback = document.getElementById("waBotFallback");
 const waSettingsMessage = document.getElementById("waSettingsMessage");
@@ -2717,6 +2718,10 @@ async function loadWaSettings() {
     const data = await apiFetch("/admin/settings/whatsapp");
     if (waBotEnabled) waBotEnabled.checked = !!data.enabled;
     if (sasaWebChatEnabled) sasaWebChatEnabled.checked = data.webChatEnabled !== false;
+    if (sasaWebChatIdleMinutes) {
+      const idle = Number(data.webChatIdleMinutes);
+      sasaWebChatIdleMinutes.value = Number.isFinite(idle) ? String(Math.max(0, Math.min(180, Math.round(idle)))) : "5";
+    }
     if (waBotNumber) waBotNumber.value = data.botNumber || "";
     if (waBotFallback) waBotFallback.value = data.fallbackMessage || "";
   } catch (err) {
@@ -2763,6 +2768,7 @@ if (waSettingsForm) {
       const payload = {
         enabled: waBotEnabled.checked,
         webChatEnabled: sasaWebChatEnabled ? sasaWebChatEnabled.checked : true,
+        webChatIdleMinutes: sasaWebChatIdleMinutes ? Number(sasaWebChatIdleMinutes.value) : 5,
         botNumber: waBotNumber ? waBotNumber.value.trim() : "",
         fallbackMessage: waBotFallback.value.trim()
       };
