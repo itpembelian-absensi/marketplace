@@ -21,9 +21,21 @@ const {
   resolveLocationFromText,
 } = require("./lib/shipping");
 const { ensurePictureDirs, isValidFolder, processUpload } = require("./lib/media");
-const { handleWebhook } = require("./lib/whatsapp-bot");
+const { handleWebhook, sendFonnteMessage } = require("./lib/whatsapp-bot");
 const { answerCustomerQuestion } = require("./lib/cs-ai");
 const { applyIncomingDatabase, streamBackup, restoreFromZip } = require("./lib/backup");
+const { normalizeTaxSettings, computeTax } = require("./lib/tax");
+const {
+  normalizePaymentTimeout,
+  formatDurationId,
+  computePaymentDueAt,
+  shouldAutoCancelPayment,
+} = require("./lib/payment-timeout");
+const {
+  normalizeShipmentStatus,
+  mapShipmentFields,
+  phonesMatch,
+} = require("./lib/shipment");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -42,6 +54,7 @@ const bannerUploadDir = path.join(__dirname, "public", "banner");
 const profileUploadDir = path.join(__dirname, "public", "profile_pictures");
 const qrisUploadDir = path.join(__dirname, "public", "qris");
 const layananUploadDir = path.join(__dirname, "data", "layanan_uploads");
+const paymentProofUploadDir = path.join(__dirname, "data", "payment_proofs");
 const DEFAULT_LOGO_URL = "/logo-sjs.png";
 const DEFAULT_COMPANY_PROFILE = {
   name: "PT SAHABAT JAYA SUKSES",
@@ -270,6 +283,7 @@ fs.mkdirSync(bannerUploadDir, { recursive: true });
 fs.mkdirSync(profileUploadDir, { recursive: true });
 fs.mkdirSync(qrisUploadDir, { recursive: true });
 fs.mkdirSync(layananUploadDir, { recursive: true });
+fs.mkdirSync(paymentProofUploadDir, { recursive: true });
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
@@ -277,6 +291,14 @@ app.get("/", (req, res) => {
 
 app.get("/shop", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "shop.html"));
+});
+
+app.get("/orders", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "orders.html"));
+});
+
+app.get("/lacak", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "lacak.html"));
 });
 
 app.get("/layanan", (req, res) => {
@@ -442,6 +464,41 @@ function layananUploadMiddleware(req, res, next) {
     const tooLarge = err.code === "LIMIT_FILE_SIZE";
     res.status(400).json({
       message: tooLarge ? "Ukuran berkas maksimal 10 MB." : err.message || "Gagal mengunggah berkas.",
+    });
+  });
+}
+
+const PAYMENT_PROOF_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "application/pdf"]);
+const PAYMENT_PROOF_EXTS = new Set([".png", ".jpg", ".jpeg", ".webp", ".pdf"]);
+
+const paymentProofUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, paymentProofUploadDir),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname || "").toLowerCase();
+      cb(null, `pay-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext || ".jpg"}`);
+    },
+  }),
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname || "").toLowerCase();
+    if (PAYMENT_PROOF_TYPES.has(file.mimetype) || PAYMENT_PROOF_EXTS.has(ext)) {
+      cb(null, true);
+      return;
+    }
+    cb(new Error("Bukti bayar harus berupa gambar (JPG/PNG/WEBP) atau PDF."));
+  },
+});
+
+function paymentProofUploadMiddleware(req, res, next) {
+  paymentProofUpload.single("proof")(req, res, (err) => {
+    if (!err) {
+      next();
+      return;
+    }
+    const tooLarge = err.code === "LIMIT_FILE_SIZE";
+    res.status(400).json({
+      message: tooLarge ? "Ukuran bukti bayar maksimal 8 MB." : err.message || "Gagal mengunggah bukti bayar.",
     });
   });
 }
@@ -710,6 +767,76 @@ async function applyStockDeduction(productId, productRow, qty, sizeName = "") {
   return { deductSjs: deducted.deductSjs, deductSjl: deducted.deductSjl, totalStock: totals.stock };
 }
 
+async function applyStockRestore(productId, productRow, qty, sizeName = "") {
+  const addQty = Math.max(0, Number(qty) || 0);
+  if (!addQty) return;
+  const parsedSizes = parseProductSizes(productRow);
+  const trimmedSize = String(sizeName || "").trim();
+
+  if (parsedSizes.length > 0) {
+    const matchedSize = parsedSizes.find((item) => item.size === trimmedSize);
+    if (!matchedSize) return;
+    matchedSize.stock_sjs = (Number(matchedSize.stock_sjs) || 0) + addQty;
+    const totals = sumSizesStock(parsedSizes);
+    await runQuery(
+      `UPDATE products SET sizes = ?, stock = ?, stock_sjs = ?, stock_sjl = ? WHERE id = ?`,
+      [JSON.stringify(parsedSizes), totals.stock, totals.stockSjs, totals.stockSjl, productId]
+    );
+    return;
+  }
+
+  const stockSjs = (Number(productRow.stock_sjs) || 0) + addQty;
+  const stockSjl = Number(productRow.stock_sjl) || 0;
+  await runQuery(
+    `UPDATE products SET stock = ?, stock_sjs = ?, stock_sjl = ? WHERE id = ?`,
+    [stockSjs + stockSjl, stockSjs, stockSjl, productId]
+  );
+}
+
+async function reverseOrderEffects(order, options = {}) {
+  if (!order || String(order.status).toLowerCase() === "void") return;
+  const orderId = order.id;
+  const items = await allQuery(
+    "SELECT product_id, product_name, qty, size FROM order_items WHERE order_id = ?",
+    [orderId]
+  );
+  for (const item of items) {
+    const productRow = await getQuery(
+      "SELECT id, name, stock, stock_sjs, stock_sjl, sizes FROM products WHERE id = ?",
+      [item.product_id]
+    );
+    if (productRow) {
+      await applyStockRestore(productRow.id, productRow, item.qty, item.size || "");
+      const sizeLabel = item.size ? ` (${item.size})` : "";
+      const reasonText =
+        options.reason === "timeout"
+          ? `Auto batal batas waktu bayar${sizeLabel} - Order #${orderId}`
+          : `Void/hapus invoice${sizeLabel} - Order #${orderId}`;
+      await runQuery(
+        `INSERT INTO inventory_ledger (product_id, type, quantity, description) VALUES (?, ?, ?, ?)`,
+        [item.product_id, "IN", item.qty, reasonText]
+      );
+    }
+  }
+  if (order.user_id) {
+    const earn = await getQuery(
+      "SELECT COALESCE(SUM(points), 0) AS pts FROM user_point_history WHERE order_id = ? AND type = 'earn'",
+      [orderId]
+    );
+    const pts = Number(earn?.pts) || 0;
+    if (pts > 0) {
+      await runQuery(
+        "UPDATE user_points SET total_points = MAX(0, total_points - ?) WHERE user_id = ?",
+        [pts, order.user_id]
+      );
+      await runQuery(
+        "INSERT INTO user_point_history (user_id, type, points, description, order_id) VALUES (?, 'adjust', ?, ?, ?)",
+        [order.user_id, -pts, options.reason === "timeout" ? `Auto batal batas waktu bayar Order #${orderId}` : `Void/hapus invoice Order #${orderId}`, orderId]
+      );
+    }
+  }
+}
+
 async function withTransaction(callback) {
   await runQuery("BEGIN IMMEDIATE");
   try {
@@ -913,6 +1040,18 @@ async function setupDatabase() {
   `);
 
   await runQuery(`
+    CREATE TABLE IF NOT EXISTS bank_accounts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      bank_name TEXT NOT NULL,
+      account_number TEXT NOT NULL,
+      account_name TEXT NOT NULL DEFAULT '',
+      is_active INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await runQuery(`
     CREATE TABLE IF NOT EXISTS app_settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
@@ -1005,6 +1144,57 @@ async function setupDatabase() {
   if (!orderColNames.includes("shipping_meta")) {
     await runQuery("ALTER TABLE orders ADD COLUMN shipping_meta TEXT DEFAULT ''");
   }
+  if (!orderColNames.includes("tax_mode")) {
+    await runQuery("ALTER TABLE orders ADD COLUMN tax_mode TEXT DEFAULT 'none'");
+  }
+  if (!orderColNames.includes("tax_percent")) {
+    await runQuery("ALTER TABLE orders ADD COLUMN tax_percent REAL NOT NULL DEFAULT 0");
+  }
+  if (!orderColNames.includes("tax_amount")) {
+    await runQuery("ALTER TABLE orders ADD COLUMN tax_amount INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!orderColNames.includes("payment_proof_path")) {
+    await runQuery("ALTER TABLE orders ADD COLUMN payment_proof_path TEXT DEFAULT ''");
+  }
+  if (!orderColNames.includes("payment_proof_name")) {
+    await runQuery("ALTER TABLE orders ADD COLUMN payment_proof_name TEXT DEFAULT ''");
+  }
+  if (!orderColNames.includes("payment_proof_at")) {
+    await runQuery("ALTER TABLE orders ADD COLUMN payment_proof_at TEXT DEFAULT ''");
+  }
+  if (!orderColNames.includes("payment_due_at")) {
+    await runQuery("ALTER TABLE orders ADD COLUMN payment_due_at TEXT DEFAULT ''");
+  }
+  if (!orderColNames.includes("void_reason")) {
+    await runQuery("ALTER TABLE orders ADD COLUMN void_reason TEXT DEFAULT ''");
+  }
+  if (!orderColNames.includes("shipment_status")) {
+    await runQuery("ALTER TABLE orders ADD COLUMN shipment_status TEXT DEFAULT 'pending'");
+  }
+  if (!orderColNames.includes("tracking_number")) {
+    await runQuery("ALTER TABLE orders ADD COLUMN tracking_number TEXT DEFAULT ''");
+  }
+  if (!orderColNames.includes("tracking_url")) {
+    await runQuery("ALTER TABLE orders ADD COLUMN tracking_url TEXT DEFAULT ''");
+  }
+  if (!orderColNames.includes("shipment_note")) {
+    await runQuery("ALTER TABLE orders ADD COLUMN shipment_note TEXT DEFAULT ''");
+  }
+  if (!orderColNames.includes("shipment_updated_at")) {
+    await runQuery("ALTER TABLE orders ADD COLUMN shipment_updated_at TEXT DEFAULT ''");
+  }
+
+  await runQuery(`
+    CREATE TABLE IF NOT EXISTS admin_notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL DEFAULT 'payment_proof',
+      title TEXT NOT NULL,
+      message TEXT NOT NULL,
+      order_id INTEGER,
+      is_read INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 
   await runQuery(`
     CREATE TABLE IF NOT EXISTS order_items (
@@ -1619,6 +1809,15 @@ app.get("/api/settings", async (req, res) => {
       }
     } catch (_) {}
 
+    let bankRows = [];
+    try {
+      bankRows = await allQuery(
+        "SELECT id, bank_name, account_number, account_name, is_active, sort_order FROM bank_accounts WHERE is_active = 1 ORDER BY sort_order ASC, id ASC"
+      );
+    } catch (_error) {
+      bankRows = [];
+    }
+
     res.json({
       logoUrl: logoRow?.value || DEFAULT_LOGO_URL,
       companyProfile,
@@ -1628,6 +1827,9 @@ app.get("/api/settings", async (req, res) => {
       whatsappBotNumber,
       sasaChatEnabled,
       sasaChatIdleMinutes,
+      tax: await getTaxSettingsFromDb(),
+      paymentTimeout: await getPaymentTimeoutFromDb(),
+      banks: bankRows.map(mapBankAccountRow),
     });
   } catch (error) {
     res.status(500).json({ message: "Gagal mengambil settings." });
@@ -1999,6 +2201,294 @@ app.put(
   }
 );
 
+function mapBankAccountRow(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    bankName: row.bank_name,
+    accountNumber: row.account_number,
+    accountName: row.account_name || "",
+    isActive: Number(row.is_active) !== 0,
+    sortOrder: Number(row.sort_order) || 0,
+  };
+}
+
+const ORDER_SELECT_FIELDS =
+  "orders.id, orders.user_id, orders.customer_name, orders.customer_phone, orders.customer_address, orders.payment_method, orders.total, orders.status, orders.fulfillment_entity, orders.shipping_method, orders.shipping_fee, orders.products_subtotal, orders.shipping_meta, orders.tax_mode, orders.tax_percent, orders.tax_amount, orders.payment_proof_name, orders.payment_proof_at, orders.payment_due_at, orders.void_reason, orders.shipment_status, orders.tracking_number, orders.tracking_url, orders.shipment_note, orders.shipment_updated_at, orders.created_at, users.email AS customer_email";
+
+function mapOrderRow(row) {
+  if (!row) return null;
+  const { payment_proof_path, ...rest } = row;
+  return {
+    ...rest,
+    hasPaymentProof: Boolean(row.payment_proof_name || payment_proof_path),
+    paymentProofName: row.payment_proof_name || "",
+    paymentProofAt: row.payment_proof_at || "",
+    paymentDueAt: row.payment_due_at || "",
+    voidReason: row.void_reason || "",
+    ...mapShipmentFields(row),
+  };
+}
+
+async function decorateOrderPaymentTimeout(mapped) {
+  if (!mapped) return mapped;
+  const settings = await getPaymentTimeoutFromDb();
+  const method = String(mapped.payment_method || "").toLowerCase();
+  const applies = Boolean(settings.enabled && method !== "cod");
+  const due = applies
+    ? computePaymentDueAt(mapped.created_at, mapped.paymentDueAt || mapped.payment_due_at, settings.totalMinutes)
+    : null;
+  return {
+    ...mapped,
+    paymentTimeoutEnabled: applies,
+    paymentTimeoutLabel: formatDurationId(settings.totalMinutes),
+    paymentDueAt: due ? due.toISOString() : "",
+  };
+}
+
+function unlinkPaymentProofFile(storedPath) {
+  const name = path.basename(String(storedPath || ""));
+  if (!name) return;
+  const abs = path.join(paymentProofUploadDir, name);
+  fs.unlink(abs, () => {});
+}
+
+function formatIdr(amount) {
+  return `Rp ${Number(amount || 0).toLocaleString("id-ID")}`;
+}
+
+async function notifyAdminsPaymentProof(order) {
+  const title = `Bukti bayar order #${order.id}`;
+  const message = `${order.customer_name} mengunggah bukti pembayaran ${formatIdr(order.total)}. Metode: ${order.payment_method || "-"}.`;
+  await runQuery(
+    "INSERT INTO admin_notifications (type, title, message, order_id) VALUES (?, ?, ?, ?)",
+    ["payment_proof", title, message, order.id]
+  );
+
+  let notifyPhone = "";
+  try {
+    const waRow = await getQuery("SELECT value FROM app_settings WHERE key = 'whatsapp_settings'");
+    if (waRow?.value) {
+      const waSettings = JSON.parse(waRow.value);
+      notifyPhone = String(waSettings.notifyPhone || "").trim();
+    }
+  } catch (_error) {}
+  if (!notifyPhone) {
+    try {
+      const profileRow = await getQuery("SELECT value FROM app_settings WHERE key = ?", ["company_profile"]);
+      if (profileRow?.value) {
+        const profile = JSON.parse(profileRow.value);
+        notifyPhone = String(profile.phone || "").trim();
+      }
+    } catch (_error) {}
+  }
+  if (!notifyPhone) return;
+
+  const waText = [
+    "SJS — Bukti bayar baru",
+    `Order #${order.id}`,
+    `Nama: ${order.customer_name}`,
+    `Telepon: ${order.customer_phone || "-"}`,
+    `Total: ${formatIdr(order.total)}`,
+    `Metode: ${order.payment_method || "-"}`,
+    "Cek Panel Admin → Pesanan untuk melihat bukti.",
+  ].join("\n");
+
+  try {
+    await sendFonnteMessage(notifyPhone, waText);
+  } catch (error) {
+    console.error("Gagal kirim notifikasi WA bukti bayar:", error);
+  }
+}
+
+async function getTaxSettingsFromDb() {
+  const row = await getQuery("SELECT value FROM app_settings WHERE key = ?", ["tax_settings"]);
+  if (!row?.value) return normalizeTaxSettings({ mode: "none", percent: 11 });
+  try {
+    return normalizeTaxSettings(JSON.parse(row.value));
+  } catch {
+    return normalizeTaxSettings({ mode: "none", percent: 11 });
+  }
+}
+
+app.get("/api/admin/settings/tax", authMiddleware, requireRole(["admin"]), async (req, res) => {
+  try {
+    res.json({ settings: await getTaxSettingsFromDb() });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal memuat pengaturan pajak." });
+  }
+});
+
+app.put("/api/admin/settings/tax", authMiddleware, requireRole(["admin"]), async (req, res) => {
+  try {
+    const settings = normalizeTaxSettings(req.body?.settings || req.body || {});
+    await runQuery(
+      "INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+      ["tax_settings", JSON.stringify(settings)]
+    );
+    res.json({ message: "Pengaturan pajak berhasil disimpan.", settings });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal menyimpan pengaturan pajak." });
+  }
+});
+
+async function getPaymentTimeoutFromDb() {
+  const row = await getQuery("SELECT value FROM app_settings WHERE key = ?", ["payment_timeout"]);
+  if (!row?.value) return normalizePaymentTimeout({ enabled: true, hours: 24, minutes: 0 });
+  try {
+    return normalizePaymentTimeout(JSON.parse(row.value));
+  } catch {
+    return normalizePaymentTimeout({ enabled: true, hours: 24, minutes: 0 });
+  }
+}
+
+let paymentExpireRunning = false;
+async function expireUnpaidOrders() {
+  if (paymentExpireRunning) return;
+  paymentExpireRunning = true;
+  try {
+    const settings = await getPaymentTimeoutFromDb();
+    if (!settings.enabled) return;
+    const orders = await allQuery(
+      "SELECT * FROM orders WHERE LOWER(status) = 'unpaid' AND LOWER(COALESCE(payment_method, '')) != 'cod'"
+    );
+    for (const order of orders) {
+      if (!shouldAutoCancelPayment(order, settings)) continue;
+      try {
+        await withTransaction(async () => {
+          const fresh = await getQuery("SELECT * FROM orders WHERE id = ?", [order.id]);
+          if (!shouldAutoCancelPayment(fresh, settings)) return;
+          await reverseOrderEffects(fresh, { reason: "timeout" });
+          await runQuery("UPDATE orders SET status = ?, void_reason = ?, shipment_status = ? WHERE id = ?", [
+            "void",
+            "timeout",
+            "cancelled",
+            order.id,
+          ]);
+        });
+        console.log(`Order #${order.id} dibatalkan otomatis (batas waktu bayar).`);
+      } catch (error) {
+        console.error(`Gagal auto-batal order #${order.id}:`, error);
+      }
+    }
+  } catch (error) {
+    console.error("Gagal memproses batas waktu pembayaran:", error);
+  } finally {
+    paymentExpireRunning = false;
+  }
+}
+
+app.get("/api/admin/settings/payment-timeout", authMiddleware, requireRole(["admin"]), async (_req, res) => {
+  try {
+    res.json({ settings: await getPaymentTimeoutFromDb() });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal memuat batas waktu pembayaran." });
+  }
+});
+
+app.put("/api/admin/settings/payment-timeout", authMiddleware, requireRole(["admin"]), async (req, res) => {
+  try {
+    const settings = normalizePaymentTimeout(req.body?.settings || req.body || {});
+    await runQuery(
+      "INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+      ["payment_timeout", JSON.stringify(settings)]
+    );
+    res.json({ message: "Batas waktu pembayaran berhasil disimpan.", settings });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal menyimpan batas waktu pembayaran." });
+  }
+});
+
+app.get("/api/admin/banks", authMiddleware, requireRole(["admin"]), async (_req, res) => {
+  try {
+    const rows = await allQuery(
+      "SELECT id, bank_name, account_number, account_name, is_active, sort_order FROM bank_accounts ORDER BY sort_order ASC, id ASC"
+    );
+    res.json(rows.map(mapBankAccountRow));
+  } catch (error) {
+    res.status(500).json({ message: "Gagal memuat master bank." });
+  }
+});
+
+app.post("/api/admin/banks", authMiddleware, requireRole(["admin"]), async (req, res) => {
+  const bankName = String(req.body?.bankName || "").trim();
+  const accountNumber = String(req.body?.accountNumber || "").trim();
+  const accountName = String(req.body?.accountName || "").trim();
+  const isActive = req.body?.isActive !== false;
+  const sortOrder = Number(req.body?.sortOrder) || 0;
+  if (!bankName || !accountNumber) {
+    res.status(400).json({ message: "Nama bank dan nomor rekening wajib diisi." });
+    return;
+  }
+  try {
+    const result = await runQuery(
+      "INSERT INTO bank_accounts (bank_name, account_number, account_name, is_active, sort_order) VALUES (?, ?, ?, ?, ?)",
+      [bankName, accountNumber, accountName, isActive ? 1 : 0, sortOrder]
+    );
+    const row = await getQuery(
+      "SELECT id, bank_name, account_number, account_name, is_active, sort_order FROM bank_accounts WHERE id = ?",
+      [result.lastID]
+    );
+    res.status(201).json({ message: "Rekening bank ditambahkan.", bank: mapBankAccountRow(row) });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal menambah rekening bank." });
+  }
+});
+
+app.put("/api/admin/banks/:id", authMiddleware, requireRole(["admin"]), async (req, res) => {
+  const id = Number(req.params.id);
+  if (!id) {
+    res.status(400).json({ message: "ID bank tidak valid." });
+    return;
+  }
+  const bankName = String(req.body?.bankName || "").trim();
+  const accountNumber = String(req.body?.accountNumber || "").trim();
+  const accountName = String(req.body?.accountName || "").trim();
+  const isActive = req.body?.isActive !== false;
+  const sortOrder = Number(req.body?.sortOrder) || 0;
+  if (!bankName || !accountNumber) {
+    res.status(400).json({ message: "Nama bank dan nomor rekening wajib diisi." });
+    return;
+  }
+  try {
+    const existing = await getQuery("SELECT id FROM bank_accounts WHERE id = ?", [id]);
+    if (!existing) {
+      res.status(404).json({ message: "Rekening bank tidak ditemukan." });
+      return;
+    }
+    await runQuery(
+      "UPDATE bank_accounts SET bank_name = ?, account_number = ?, account_name = ?, is_active = ?, sort_order = ? WHERE id = ?",
+      [bankName, accountNumber, accountName, isActive ? 1 : 0, sortOrder, id]
+    );
+    const row = await getQuery(
+      "SELECT id, bank_name, account_number, account_name, is_active, sort_order FROM bank_accounts WHERE id = ?",
+      [id]
+    );
+    res.json({ message: "Rekening bank diperbarui.", bank: mapBankAccountRow(row) });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal memperbarui rekening bank." });
+  }
+});
+
+app.delete("/api/admin/banks/:id", authMiddleware, requireRole(["admin"]), async (req, res) => {
+  const id = Number(req.params.id);
+  if (!id) {
+    res.status(400).json({ message: "ID bank tidak valid." });
+    return;
+  }
+  try {
+    const existing = await getQuery("SELECT id FROM bank_accounts WHERE id = ?", [id]);
+    if (!existing) {
+      res.status(404).json({ message: "Rekening bank tidak ditemukan." });
+      return;
+    }
+    await runQuery("DELETE FROM bank_accounts WHERE id = ?", [id]);
+    res.json({ message: "Rekening bank dihapus." });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal menghapus rekening bank." });
+  }
+});
+
 async function getShippingSettingsFromDb() {
   const row = await getQuery("SELECT value FROM app_settings WHERE key = ?", ["shipping_settings"]);
   if (!row?.value) return mergeShippingSettings(DEFAULT_SHIPPING_SETTINGS);
@@ -2050,8 +2540,21 @@ app.post("/api/shipping/quote", authMiddleware, async (req, res) => {
   try {
     const settings = await getShippingSettingsFromDb();
     const methodKey = String(method).trim();
-    const storeNeedsDestination = methodKey === "store" && Number(settings.storeDelivery?.perKmRate) > 0;
-    if (!address && !(destLat && destLng) && (methodKey !== "store" || storeNeedsDestination)) {
+    const customCfg = (settings.customMethods || []).find((m) => m.id === methodKey);
+    const storeNeedsDestination =
+      methodKey === "store" &&
+      settings.storeDelivery?.requireGpsQuote !== false &&
+      Number(settings.storeDelivery?.perKmRate) > 0;
+    const customNeedsDestination =
+      Boolean(customCfg) &&
+      customCfg.requireGpsQuote !== false &&
+      Number(customCfg.perKmRate) > 0;
+    const needsDestination =
+      methodKey === "lalamove" ||
+      methodKey === "gosend" ||
+      storeNeedsDestination ||
+      customNeedsDestination;
+    if (!address && !(destLat && destLng) && needsDestination) {
       res.status(400).json({ message: "Isi alamat pengiriman terlebih dahulu." });
       return;
     }
@@ -3185,7 +3688,8 @@ app.post("/api/checkout", authMiddleware, async (req, res) => {
       return;
     }
 
-    const grandTotal = productsSubtotal + shippingQuote.fee;
+    const tax = computeTax(productsSubtotal, await getTaxSettingsFromDb());
+    const grandTotal = productsSubtotal + shippingQuote.fee + tax.addedToTotal;
     const shippingMeta = JSON.stringify({
       label: shippingQuote.label,
       source: shippingQuote.source,
@@ -3194,11 +3698,16 @@ app.post("/api/checkout", authMiddleware, async (req, res) => {
       distanceKm: shippingQuote.distanceKm,
       quotationId: shippingQuote.quotationId || "",
     });
+    const paymentTimeout = await getPaymentTimeoutFromDb();
+    const skipTimeout = String(paymentMethod).trim().toLowerCase() === "cod" || !paymentTimeout.enabled;
+    const paymentDueAt = skipTimeout
+      ? ""
+      : new Date(Date.now() + paymentTimeout.totalMinutes * 60 * 1000).toISOString();
 
     const checkoutResult = await withTransaction(async () => {
       const orderResult = await runQuery(
-        `INSERT INTO orders (user_id, customer_name, customer_phone, customer_address, payment_method, total, status, shipping_method, shipping_fee, products_subtotal, shipping_meta)
-         VALUES (?, ?, ?, ?, ?, ?, 'unpaid', ?, ?, ?, ?)`,
+        `INSERT INTO orders (user_id, customer_name, customer_phone, customer_address, payment_method, total, status, shipping_method, shipping_fee, products_subtotal, shipping_meta, tax_mode, tax_percent, tax_amount, payment_due_at)
+         VALUES (?, ?, ?, ?, ?, ?, 'unpaid', ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           req.user.id,
           String(customerName).trim(),
@@ -3210,6 +3719,10 @@ app.post("/api/checkout", authMiddleware, async (req, res) => {
           shippingQuote.fee,
           productsSubtotal,
           shippingMeta,
+          tax.mode,
+          tax.percent,
+          tax.amount,
+          paymentDueAt,
         ]
       );
 
@@ -3309,6 +3822,8 @@ app.get("/api/admin/sales/report", authMiddleware, requireRole(["admin", "manage
   if (statusFilter && statusFilter !== "all") {
     statusClause = " AND o.status = ? ";
     orderParams.push(statusFilter);
+  } else {
+    statusClause = " AND o.status != 'void' ";
   }
 
   try {
@@ -3458,11 +3973,51 @@ app.get("/api/admin/inventory/report", authMiddleware, requireRole(["admin", "ma
 app.get("/api/admin/orders", authMiddleware, requireRole(["admin", "manager"]), async (req, res) => {
   try {
     const orders = await allQuery(
-      "SELECT orders.id, orders.user_id, orders.customer_name, orders.customer_phone, orders.customer_address, orders.payment_method, orders.total, orders.status, orders.fulfillment_entity, orders.shipping_method, orders.shipping_fee, orders.products_subtotal, orders.shipping_meta, orders.created_at, users.email AS customer_email FROM orders LEFT JOIN users ON orders.user_id = users.id ORDER BY orders.id DESC"
+      `SELECT ${ORDER_SELECT_FIELDS} FROM orders LEFT JOIN users ON orders.user_id = users.id ORDER BY orders.id DESC`
     );
-    res.json(orders);
+    res.json(orders.map(mapOrderRow));
   } catch (error) {
     res.status(500).json({ message: "Gagal mengambil daftar pesanan." });
+  }
+});
+
+app.get("/api/orders/my", authMiddleware, async (req, res) => {
+  try {
+    await expireUnpaidOrders();
+    const orders = await allQuery(
+      `SELECT ${ORDER_SELECT_FIELDS} FROM orders LEFT JOIN users ON orders.user_id = users.id WHERE orders.user_id = ? ORDER BY orders.id DESC`,
+      [req.user.id]
+    );
+    const ids = orders.map((row) => row.id);
+    let items = [];
+    if (ids.length) {
+      const placeholders = ids.map(() => "?").join(",");
+      items = await allQuery(
+        `SELECT order_id, product_name, qty, size, subtotal FROM order_items WHERE order_id IN (${placeholders}) ORDER BY id ASC`,
+        ids
+      );
+    }
+    const itemsByOrder = new Map();
+    for (const item of items) {
+      const list = itemsByOrder.get(item.order_id) || [];
+      list.push({
+        productName: item.product_name,
+        qty: item.qty,
+        size: item.size || "",
+        subtotal: item.subtotal,
+      });
+      itemsByOrder.set(item.order_id, list);
+    }
+    res.json(
+      await Promise.all(
+        orders.map(async (row) => ({
+          ...(await decorateOrderPaymentTimeout(mapOrderRow(row))),
+          items: itemsByOrder.get(row.id) || [],
+        }))
+      )
+    );
+  } catch (error) {
+    res.status(500).json({ message: "Gagal mengambil pesanan Anda." });
   }
 });
 
@@ -3474,8 +4029,9 @@ app.get("/api/orders/:id", authMiddleware, async (req, res) => {
   }
 
   try {
+    await expireUnpaidOrders();
     const order = await getQuery(
-      "SELECT orders.id, orders.user_id, orders.customer_name, orders.customer_phone, orders.customer_address, orders.payment_method, orders.total, orders.status, orders.fulfillment_entity, orders.shipping_method, orders.shipping_fee, orders.products_subtotal, orders.shipping_meta, orders.created_at, users.email AS customer_email FROM orders LEFT JOIN users ON orders.user_id = users.id WHERE orders.id = ?",
+      `SELECT ${ORDER_SELECT_FIELDS}, orders.payment_proof_path FROM orders LEFT JOIN users ON orders.user_id = users.id WHERE orders.id = ?`,
       [orderId]
     );
     if (!order) {
@@ -3494,9 +4050,179 @@ app.get("/api/orders/:id", authMiddleware, async (req, res) => {
       [orderId]
     );
 
-    res.json({ ...order, items });
+    res.json({ ...(await decorateOrderPaymentTimeout(mapOrderRow(order))), items });
   } catch (error) {
     res.status(500).json({ message: "Gagal mengambil detail pesanan." });
+  }
+});
+
+function canAccessOrder(req, order) {
+  if (!order) return false;
+  if (req.user.role === "admin" || req.user.role === "manager") return true;
+  return order.user_id === req.user.id;
+}
+
+app.post(
+  "/api/orders/:id/payment-proof",
+  authMiddleware,
+  paymentProofUploadMiddleware,
+  async (req, res) => {
+    const orderId = Number(req.params.id);
+    if (!orderId) {
+      res.status(400).json({ message: "ID pesanan tidak valid." });
+      return;
+    }
+    if (!req.file) {
+      res.status(400).json({ message: "File bukti bayar wajib diunggah." });
+      return;
+    }
+    try {
+      const order = await getQuery("SELECT * FROM orders WHERE id = ?", [orderId]);
+      if (!order) {
+        unlinkPaymentProofFile(req.file.filename);
+        res.status(404).json({ message: "Pesanan tidak ditemukan." });
+        return;
+      }
+      if (!canAccessOrder(req, order)) {
+        unlinkPaymentProofFile(req.file.filename);
+        res.status(403).json({ message: "Akses ditolak." });
+        return;
+      }
+      const status = String(order.status || "").toLowerCase();
+      if (status === "void") {
+        unlinkPaymentProofFile(req.file.filename);
+        res.status(400).json({ message: "Invoice yang sudah di-void tidak bisa diunggah bukti bayar." });
+        return;
+      }
+      if (status === "paid") {
+        unlinkPaymentProofFile(req.file.filename);
+        res.status(400).json({ message: "Pesanan sudah lunas. Bukti bayar tidak perlu diunggah lagi." });
+        return;
+      }
+
+      if (order.payment_proof_path) {
+        unlinkPaymentProofFile(order.payment_proof_path);
+      }
+
+      const originalName = String(req.file.originalname || req.file.filename).slice(0, 180);
+      await runQuery(
+        "UPDATE orders SET payment_proof_path = ?, payment_proof_name = ?, payment_proof_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [req.file.filename, originalName, orderId]
+      );
+
+      const updated = { ...order, payment_proof_name: originalName };
+      notifyAdminsPaymentProof(updated).catch((error) => {
+        console.error("Gagal membuat notifikasi bukti bayar:", error);
+      });
+
+      res.json({
+        message: "Bukti bayar berhasil diunggah. Admin akan menerima notifikasi.",
+        hasPaymentProof: true,
+        paymentProofName: originalName,
+      });
+    } catch (error) {
+      if (req.file?.filename) unlinkPaymentProofFile(req.file.filename);
+      res.status(500).json({ message: "Gagal mengunggah bukti bayar." });
+    }
+  }
+);
+
+app.get("/api/orders/:id/payment-proof", authMiddleware, async (req, res) => {
+  const orderId = Number(req.params.id);
+  if (!orderId) {
+    res.status(400).json({ message: "ID pesanan tidak valid." });
+    return;
+  }
+  try {
+    const order = await getQuery(
+      "SELECT id, user_id, payment_proof_path, payment_proof_name FROM orders WHERE id = ?",
+      [orderId]
+    );
+    if (!order) {
+      res.status(404).json({ message: "Pesanan tidak ditemukan." });
+      return;
+    }
+    if (!canAccessOrder(req, order)) {
+      res.status(403).json({ message: "Akses ditolak." });
+      return;
+    }
+    const filename = path.basename(String(order.payment_proof_path || ""));
+    if (!filename) {
+      res.status(404).json({ message: "Bukti bayar belum diunggah." });
+      return;
+    }
+    const abs = path.join(paymentProofUploadDir, filename);
+    if (!fs.existsSync(abs)) {
+      res.status(404).json({ message: "File bukti bayar tidak ditemukan." });
+      return;
+    }
+    res.download(abs, order.payment_proof_name || filename);
+  } catch (error) {
+    res.status(500).json({ message: "Gagal membuka bukti bayar." });
+  }
+});
+
+app.get("/api/admin/notifications", authMiddleware, requireRole(["admin", "manager"]), async (_req, res) => {
+  try {
+    const items = await allQuery(
+      `SELECT n.id, n.type, n.title, n.message, n.order_id, n.is_read, n.created_at, orders.status AS order_status
+       FROM admin_notifications n
+       LEFT JOIN orders ON orders.id = n.order_id
+       ORDER BY n.id DESC LIMIT 50`
+    );
+    const unread = await getQuery(
+      "SELECT COUNT(*) AS count FROM admin_notifications WHERE is_read = 0"
+    );
+    res.json({
+      items: items.map((row) => {
+        const orderStatus = String(row.order_status || "").toLowerCase();
+        let paymentStatus = "unpaid";
+        let paymentStatusLabel = "Belum lunas";
+        if (orderStatus === "paid") {
+          paymentStatus = "paid";
+          paymentStatusLabel = "Lunas";
+        } else if (orderStatus === "void") {
+          paymentStatus = "void";
+          paymentStatusLabel = "Dibatalkan";
+        } else if (!row.order_id) {
+          paymentStatus = "unknown";
+          paymentStatusLabel = "Tidak diketahui";
+        }
+        return {
+          ...row,
+          isRead: Number(row.is_read) !== 0,
+          orderStatus,
+          paymentStatus,
+          paymentStatusLabel,
+        };
+      }),
+      unreadCount: Number(unread?.count) || 0,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal memuat notifikasi." });
+  }
+});
+
+app.post("/api/admin/notifications/read-all", authMiddleware, requireRole(["admin", "manager"]), async (_req, res) => {
+  try {
+    await runQuery("UPDATE admin_notifications SET is_read = 1 WHERE is_read = 0");
+    res.json({ message: "Semua notifikasi ditandai sudah dibaca." });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal memperbarui notifikasi." });
+  }
+});
+
+app.post("/api/admin/notifications/:id/read", authMiddleware, requireRole(["admin", "manager"]), async (req, res) => {
+  const id = Number(req.params.id);
+  if (!id) {
+    res.status(400).json({ message: "ID notifikasi tidak valid." });
+    return;
+  }
+  try {
+    await runQuery("UPDATE admin_notifications SET is_read = 1 WHERE id = ?", [id]);
+    res.json({ message: "Notifikasi ditandai sudah dibaca." });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal memperbarui notifikasi." });
   }
 });
 
@@ -3513,9 +4239,13 @@ app.put("/api/admin/orders/:id/status", authMiddleware, requireRole(["admin", "m
   }
 
   try {
-    const existing = await getQuery("SELECT id FROM orders WHERE id = ?", [orderId]);
+    const existing = await getQuery("SELECT id, status FROM orders WHERE id = ?", [orderId]);
     if (!existing) {
       res.status(404).json({ message: "Pesanan tidak ditemukan." });
+      return;
+    }
+    if (String(existing.status).toLowerCase() === "void") {
+      res.status(400).json({ message: "Invoice yang sudah di-void tidak bisa diubah statusnya." });
       return;
     }
 
@@ -3548,6 +4278,158 @@ app.put("/api/admin/orders/:id/entity", authMiddleware, requireRole(["admin", "m
     res.json({ message: "Entitas pesanan berhasil diperbarui." });
   } catch (error) {
     res.status(500).json({ message: "Gagal memperbarui entitas pesanan." });
+  }
+});
+
+app.put("/api/admin/orders/:id/shipment", authMiddleware, requireRole(["admin", "manager"]), async (req, res) => {
+  const orderId = Number(req.params.id);
+  if (!orderId) {
+    res.status(400).json({ message: "ID pesanan tidak valid." });
+    return;
+  }
+  try {
+    const existing = await getQuery("SELECT * FROM orders WHERE id = ?", [orderId]);
+    if (!existing) {
+      res.status(404).json({ message: "Pesanan tidak ditemukan." });
+      return;
+    }
+    if (String(existing.status).toLowerCase() === "void") {
+      res.status(400).json({ message: "Invoice void tidak bisa diubah status pengirimannya." });
+      return;
+    }
+    const shipmentStatus = normalizeShipmentStatus(req.body?.shipmentStatus || req.body?.status);
+    if (shipmentStatus === "cancelled") {
+      res.status(400).json({ message: "Untuk membatalkan pesanan, gunakan Void." });
+      return;
+    }
+    const trackingNumber = String(req.body?.trackingNumber || "").trim().slice(0, 80);
+    const trackingUrl = String(req.body?.trackingUrl || "").trim().slice(0, 300);
+    const shipmentNote = String(req.body?.shipmentNote || "").trim().slice(0, 300);
+    await runQuery(
+      `UPDATE orders SET shipment_status = ?, tracking_number = ?, tracking_url = ?, shipment_note = ?, shipment_updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      [shipmentStatus, trackingNumber, trackingUrl, shipmentNote, orderId]
+    );
+    const updated = await getQuery(
+      `SELECT ${ORDER_SELECT_FIELDS} FROM orders LEFT JOIN users ON orders.user_id = users.id WHERE orders.id = ?`,
+      [orderId]
+    );
+    res.json({
+      message: "Status pengiriman disimpan.",
+      order: mapOrderRow(updated),
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal menyimpan pengiriman." });
+  }
+});
+
+app.post("/api/orders/track", async (req, res) => {
+  const orderId = Number(String(req.body?.orderId || req.body?.id || "").replace(/[^\d]/g, ""));
+  const phone = String(req.body?.phone || "").trim();
+  if (!orderId || !phone) {
+    res.status(400).json({ message: "Nomor invoice dan telepon wajib diisi." });
+    return;
+  }
+  try {
+    await expireUnpaidOrders();
+    const order = await getQuery(
+      `SELECT ${ORDER_SELECT_FIELDS} FROM orders LEFT JOIN users ON orders.user_id = users.id WHERE orders.id = ?`,
+      [orderId]
+    );
+    if (!order || !phonesMatch(order.customer_phone, phone)) {
+      res.status(404).json({ message: "Pesanan tidak ditemukan. Cek nomor invoice dan telepon." });
+      return;
+    }
+    let shippingMeta = {};
+    try {
+      shippingMeta = order.shipping_meta ? JSON.parse(order.shipping_meta) : {};
+    } catch {
+      shippingMeta = {};
+    }
+    const mapped = await decorateOrderPaymentTimeout(mapOrderRow(order));
+    const items = await allQuery(
+      "SELECT product_name, qty, size, subtotal FROM order_items WHERE order_id = ? ORDER BY id ASC",
+      [orderId]
+    );
+    res.json({
+      orderId: mapped.id,
+      createdAt: mapped.created_at,
+      customerName: mapped.customer_name,
+      paymentStatus: mapped.status,
+      shippingMethod: mapped.shipping_method,
+      shippingLabel: shippingMeta.label || mapped.shipping_method || "-",
+      shipmentStatus: mapped.shipmentStatus,
+      shipmentStatusLabel: mapped.shipmentStatusLabel,
+      trackingNumber: mapped.trackingNumber,
+      trackingUrl: mapped.trackingUrl,
+      shipmentNote: mapped.shipmentNote,
+      shipmentSteps: mapped.shipmentSteps,
+      shipmentUpdatedAt: mapped.shipmentUpdatedAt,
+      items: items.map((item) => ({
+        productName: item.product_name,
+        qty: item.qty,
+        size: item.size || "",
+      })),
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal melacak pengiriman." });
+  }
+});
+
+app.post("/api/admin/orders/:id/void", authMiddleware, requireRole(["admin"]), async (req, res) => {
+  const orderId = Number(req.params.id);
+  if (!orderId) {
+    res.status(400).json({ message: "ID pesanan tidak valid." });
+    return;
+  }
+  try {
+    const order = await getQuery("SELECT * FROM orders WHERE id = ?", [orderId]);
+    if (!order) {
+      res.status(404).json({ message: "Pesanan tidak ditemukan." });
+      return;
+    }
+    if (String(order.status).toLowerCase() === "void") {
+      res.json({ message: "Invoice ini sudah di-void." });
+      return;
+    }
+    await withTransaction(async () => {
+      await reverseOrderEffects(order);
+      await runQuery("UPDATE orders SET status = ?, void_reason = ?, shipment_status = ? WHERE id = ?", [
+        "void",
+        "admin",
+        "cancelled",
+        orderId,
+      ]);
+    });
+    res.json({ message: `Invoice #${orderId} di-void. Stok dikembalikan.`, status: "void" });
+  } catch (error) {
+    console.error("Void order error:", error);
+    res.status(500).json({ message: error.message || "Gagal void invoice." });
+  }
+});
+
+app.delete("/api/admin/orders/:id", authMiddleware, requireRole(["admin"]), async (req, res) => {
+  const orderId = Number(req.params.id);
+  if (!orderId) {
+    res.status(400).json({ message: "ID pesanan tidak valid." });
+    return;
+  }
+  try {
+    const order = await getQuery("SELECT * FROM orders WHERE id = ?", [orderId]);
+    if (!order) {
+      res.status(404).json({ message: "Pesanan tidak ditemukan." });
+      return;
+    }
+    await withTransaction(async () => {
+      await reverseOrderEffects(order);
+      await runQuery("DELETE FROM order_items WHERE order_id = ?", [orderId]);
+      await runQuery("DELETE FROM admin_notifications WHERE order_id = ?", [orderId]);
+      await runQuery("DELETE FROM orders WHERE id = ?", [orderId]);
+    });
+    unlinkPaymentProofFile(order.payment_proof_path);
+    res.json({ message: `Invoice #${orderId} dihapus permanen.` });
+  } catch (error) {
+    console.error("Delete order error:", error);
+    res.status(500).json({ message: error.message || "Gagal menghapus invoice." });
   }
 });
 
@@ -3788,6 +4670,7 @@ app.put("/api/admin/settings/whatsapp", authMiddleware, requireRole(["admin", "m
       ...current,
       enabled: Boolean(req.body?.enabled),
       botNumber: String(req.body?.botNumber || "").trim(),
+      notifyPhone: String(req.body?.notifyPhone ?? current.notifyPhone ?? "").trim(),
       fallbackMessage: String(req.body?.fallbackMessage || "").trim(),
       webChatEnabled: req.body?.webChatEnabled !== false,
       webChatIdleMinutes,
@@ -3942,6 +4825,10 @@ setupDatabase()
   .then(() => {
     const server = app.listen(PORT, HOST, () => {
       console.log(`Marketplace app running at http://${HOST}:${PORT}`);
+      expireUnpaidOrders().catch(() => {});
+      setInterval(() => {
+        expireUnpaidOrders().catch(() => {});
+      }, 60 * 1000);
     });
 
     server.on("error", (error) => {

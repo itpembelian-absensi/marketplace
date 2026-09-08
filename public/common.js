@@ -247,17 +247,20 @@ async function apiFetch(path, options = {}) {
   return data;
 }
 
-async function loadSettings() {
-  try {
-    const cachedRaw = localStorage.getItem(SETTINGS_CACHE_KEY);
-    if (cachedRaw) {
-      const cached = JSON.parse(cachedRaw);
-      if (cached?.ts && Date.now() - cached.ts < SETTINGS_CACHE_TTL_MS) {
-        return cached.data || {};
+async function loadSettings(options = {}) {
+  const fresh = Boolean(options.fresh);
+  if (!fresh) {
+    try {
+      const cachedRaw = localStorage.getItem(SETTINGS_CACHE_KEY);
+      if (cachedRaw) {
+        const cached = JSON.parse(cachedRaw);
+        if (cached?.ts && Date.now() - cached.ts < SETTINGS_CACHE_TTL_MS && cached.data?.tax) {
+          return cached.data || {};
+        }
       }
+    } catch (error) {
+      // ignore cache errors
     }
-  } catch (error) {
-    // ignore cache errors
   }
 
   const data = await apiFetch("/settings");
@@ -450,9 +453,20 @@ function renderUserArea() {
       profileDropdownName.textContent = auth.user.name;
     }
     if (profileAdminLink) {
-      profileAdminLink.classList.toggle("hidden", role !== "admin" && role !== "manager");
+      const isAdmin = String(role || "").trim().toLowerCase() === "admin";
+      profileAdminLink.classList.toggle("hidden", !isAdmin);
+      profileAdminLink.hidden = !isAdmin;
+      profileAdminLink.style.display = isAdmin ? "" : "none";
+      if (isAdmin) {
+        profileAdminLink.setAttribute("href", "/admin.html");
+        profileAdminLink.removeAttribute("aria-hidden");
+      } else {
+        profileAdminLink.removeAttribute("href");
+        profileAdminLink.setAttribute("aria-hidden", "true");
+      }
     }
     if (userArea) userArea.innerHTML = "";
+    initHeaderAdminNotifications();
     return;
   }
 
@@ -509,6 +523,146 @@ function toggleProfileDropdown() {
   const dropdown = document.getElementById("profileDropdown");
   if (!dropdown) return;
   dropdown.classList.toggle("hidden");
+  if (!dropdown.classList.contains("hidden")) {
+    refreshHeaderAdminNotifications();
+  }
+}
+
+function isStaffRole(role) {
+  const value = String(role || getAuth()?.user?.role || "").trim().toLowerCase();
+  return value === "admin" || value === "manager";
+}
+
+function ensureHeaderNotifyUi() {
+  const wrap = document.getElementById("profileWrap");
+  const dropdown = document.getElementById("profileDropdown");
+  if (!wrap || !dropdown) return null;
+
+  let badge = document.getElementById("headerNotifyBadge");
+  if (!badge) {
+    badge = document.createElement("span");
+    badge.id = "headerNotifyBadge";
+    badge.className = "sjs-notify-badge hidden";
+    badge.textContent = "0";
+    wrap.insertBefore(badge, dropdown);
+  }
+
+  let block = document.getElementById("headerNotifyBlock");
+  if (!block) {
+    block = document.createElement("div");
+    block.id = "headerNotifyBlock";
+    block.className = "sjs-notify-block hidden";
+    block.innerHTML = `
+      <div class="sjs-notify-head">
+        <strong>Notifikasi bukti bayar</strong>
+        <button type="button" id="headerNotifyReadAll">Tandai dibaca</button>
+      </div>
+      <div id="headerNotifyList" class="sjs-notify-list"></div>
+      <a href="/admin.html#ordersTab" class="sjs-notify-admin-link">Kelola di Panel Admin</a>
+    `;
+    const nameEl = document.getElementById("profileDropdownName");
+    if (nameEl && nameEl.nextSibling) {
+      dropdown.insertBefore(block, nameEl.nextSibling);
+    } else if (nameEl) {
+      nameEl.insertAdjacentElement("afterend", block);
+    } else {
+      dropdown.insertBefore(block, dropdown.firstChild);
+    }
+  }
+  return {
+    badge,
+    block,
+    list: document.getElementById("headerNotifyList"),
+    readAllBtn: document.getElementById("headerNotifyReadAll"),
+  };
+}
+
+function renderHeaderNotifyData(data) {
+  const ui = ensureHeaderNotifyUi();
+  if (!ui) return;
+  const unread = Number(data?.unreadCount) || 0;
+  ui.badge.textContent = unread > 99 ? "99+" : String(unread);
+  ui.badge.classList.toggle("hidden", unread <= 0);
+  const items = Array.isArray(data?.items) ? data.items : [];
+  if (!ui.list) return;
+  if (!items.length) {
+    ui.list.innerHTML = `<p class="empty-state" style="margin: 0; padding: 4px 22px 8px; font-size: 0.85rem;">Belum ada notifikasi bukti bayar.</p>`;
+    return;
+  }
+  ui.list.innerHTML = items
+    .slice(0, 12)
+    .map((item) => {
+      const when = item.created_at ? new Date(item.created_at).toLocaleString("id-ID") : "";
+      const statusKey = item.paymentStatus || "unpaid";
+      const statusLabel = item.paymentStatusLabel || "Belum lunas";
+      return `<button type="button" class="sjs-notify-item ${item.isRead ? "" : "unread"}" data-notify-id="${item.id}" data-order-id="${item.order_id || ""}">
+        ${escapeHtml(item.title || "Bukti bayar")}
+        <span>${escapeHtml(item.message || "")}</span>
+        <span class="sjs-notify-status ${escapeHtml(statusKey)}">${escapeHtml(statusLabel)}</span>
+        <span>${escapeHtml(when)}</span>
+      </button>`;
+    })
+    .join("");
+}
+
+async function refreshHeaderAdminNotifications() {
+  if (!isStaffRole()) {
+    const badge = document.getElementById("headerNotifyBadge");
+    const block = document.getElementById("headerNotifyBlock");
+    if (badge) badge.classList.add("hidden");
+    if (block) block.classList.add("hidden");
+    return;
+  }
+  const ui = ensureHeaderNotifyUi();
+  if (!ui) return;
+  ui.block.classList.remove("hidden");
+  try {
+    const data = await apiFetch("/admin/notifications");
+    renderHeaderNotifyData(data);
+  } catch (_error) {}
+}
+
+function initHeaderAdminNotifications() {
+  if (!isStaffRole()) {
+    document.getElementById("headerNotifyBadge")?.classList.add("hidden");
+    document.getElementById("headerNotifyBlock")?.classList.add("hidden");
+    return;
+  }
+  const ui = ensureHeaderNotifyUi();
+  if (!ui || ui.block.dataset.bound === "1") {
+    refreshHeaderAdminNotifications();
+    return;
+  }
+  ui.block.dataset.bound = "1";
+  ui.readAllBtn?.addEventListener("click", async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    try {
+      await apiFetch("/admin/notifications/read-all", { method: "POST" });
+      await refreshHeaderAdminNotifications();
+    } catch (_error) {}
+  });
+  ui.list?.addEventListener("click", async (event) => {
+    const itemBtn = event.target.closest("[data-notify-id]");
+    if (!itemBtn) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const id = itemBtn.dataset.notifyId;
+    const orderId = itemBtn.dataset.orderId;
+    try {
+      await apiFetch(`/admin/notifications/${id}/read`, { method: "POST" });
+    } catch (_error) {}
+    if (orderId) {
+      window.open(`/invoice.html?id=${orderId}`, "_blank");
+    } else {
+      window.location.href = "/admin.html#ordersTab";
+    }
+    refreshHeaderAdminNotifications();
+  });
+  refreshHeaderAdminNotifications();
+  if (!window.__sjsHeaderNotifyTimer) {
+    window.__sjsHeaderNotifyTimer = setInterval(refreshHeaderAdminNotifications, 20000);
+  }
 }
 
 function initLandingAuth() {
@@ -1067,6 +1221,7 @@ renderBrandLogo();
 renderLandingHeader();
 renderUserArea();
 initLandingAuth();
+initHeaderAdminNotifications();
 initLayananNav();
 renderHomeWatermark();
 renderHomeCompanyProfile();

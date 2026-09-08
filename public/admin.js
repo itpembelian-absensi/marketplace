@@ -218,6 +218,12 @@ function applyRoleRulesToUI() {
       settingsTab.title = "Hanya admin yang bisa mengatur profil perusahaan";
     }
 
+    const banksTab = document.querySelector('[data-tab="banksTab"]');
+    if (banksTab) {
+      banksTab.disabled = true;
+      banksTab.title = "Hanya admin yang bisa mengatur master bank";
+    }
+
     const productsTab = document.querySelector('[data-tab="productsTab"]');
     if (productsTab) {
       productsTab.disabled = true;
@@ -487,7 +493,7 @@ function initTabs() {
       tabs.forEach((t) => t.classList.remove("active"));
       tab.classList.add("active");
 
-      ["usersTab", "productsTab", "menuTab", "brandsTab", "articlesTab", "brandingTab", "settingsTab", "ordersTab", "layananTab", "salesTab", "inventoryTab", "pointsTab", "bannerTab", "whatsappTab", "backupTab"].forEach((id) => {
+      ["usersTab", "productsTab", "menuTab", "brandsTab", "articlesTab", "brandingTab", "settingsTab", "banksTab", "ordersTab", "layananTab", "salesTab", "inventoryTab", "pointsTab", "bannerTab", "whatsappTab", "backupTab"].forEach((id) => {
         const el = document.getElementById(id);
         if (!el) return;
         el.classList.toggle("hidden", id !== tabId);
@@ -501,6 +507,7 @@ function initTabs() {
       if (tabId === "bannerTab") loadHomePageSettings();
       if (tabId === "brandsTab") loadAdminBrands();
       if (tabId === "articlesTab") loadAdminArticles();
+      if (tabId === "banksTab") loadBanks();
     });
   });
 }
@@ -1220,6 +1227,165 @@ if (qrisForm) {
   });
 }
 
+let editingBankId = null;
+const bankForm = document.getElementById("bankForm");
+const banksList = document.getElementById("banksList");
+const banksMessage = document.getElementById("banksMessage");
+const bankNameInput = document.getElementById("bankNameInput");
+const bankAccountNumberInput = document.getElementById("bankAccountNumberInput");
+const bankAccountNameInput = document.getElementById("bankAccountNameInput");
+const bankSortOrderInput = document.getElementById("bankSortOrderInput");
+const bankActiveInput = document.getElementById("bankActiveInput");
+const bankSubmitBtn = document.getElementById("bankSubmitBtn");
+const bankCancelEdit = document.getElementById("bankCancelEdit");
+
+function setBanksMessage(text, isSuccess = false) {
+  if (!banksMessage) return;
+  banksMessage.classList.toggle("success", isSuccess);
+  banksMessage.textContent = text || "";
+}
+
+function resetBankForm() {
+  editingBankId = null;
+  if (bankForm) bankForm.reset();
+  if (bankActiveInput) bankActiveInput.checked = true;
+  if (bankSortOrderInput) bankSortOrderInput.value = "0";
+  if (bankSubmitBtn) bankSubmitBtn.textContent = "Tambah Rekening";
+  if (bankCancelEdit) bankCancelEdit.classList.add("hidden");
+}
+
+function fillBankForm(bank) {
+  editingBankId = bank.id;
+  if (bankNameInput) bankNameInput.value = bank.bankName || "";
+  if (bankAccountNumberInput) bankAccountNumberInput.value = bank.accountNumber || "";
+  if (bankAccountNameInput) bankAccountNameInput.value = bank.accountName || "";
+  if (bankSortOrderInput) bankSortOrderInput.value = String(bank.sortOrder || 0);
+  if (bankActiveInput) bankActiveInput.checked = bank.isActive !== false;
+  if (bankSubmitBtn) bankSubmitBtn.textContent = "Simpan Perubahan";
+  if (bankCancelEdit) bankCancelEdit.classList.remove("hidden");
+}
+
+function renderBanksList(banks) {
+  if (!banksList) return;
+  if (!banks.length) {
+    banksList.innerHTML = `<p class="empty-state">Belum ada rekening. Tambah rekening agar tampil di invoice Transfer Bank.</p>`;
+    return;
+  }
+  banksList.innerHTML = `
+    <table style="width:100%; border-collapse:collapse; min-width: 640px;">
+      <thead>
+        <tr>
+          <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Bank</th>
+          <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">No. Rekening</th>
+          <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Atas Nama</th>
+          <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Urutan</th>
+          <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Status</th>
+          <th style="padding:8px; border-bottom:1px solid #e5e7eb;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${banks
+          .map(
+            (bank) => `
+          <tr>
+            <td style="padding:8px; border-bottom:1px solid #f3f4f6;">${escapeHtml(bank.bankName)}</td>
+            <td style="padding:8px; border-bottom:1px solid #f3f4f6;">${escapeHtml(bank.accountNumber)}</td>
+            <td style="padding:8px; border-bottom:1px solid #f3f4f6;">${escapeHtml(bank.accountName || "-")}</td>
+            <td style="padding:8px; border-bottom:1px solid #f3f4f6;">${Number(bank.sortOrder) || 0}</td>
+            <td style="padding:8px; border-bottom:1px solid #f3f4f6;">${bank.isActive ? "Aktif" : "Nonaktif"}</td>
+            <td style="padding:8px; border-bottom:1px solid #f3f4f6; white-space:nowrap;">
+              <button type="button" class="btn-secondary" data-action="edit-bank" data-bank="${encodeURIComponent(JSON.stringify(bank))}">Edit</button>
+              <button type="button" class="btn-secondary" data-action="delete-bank" data-id="${bank.id}" data-name="${encodeURIComponent(bank.bankName || "")}">Hapus</button>
+            </td>
+          </tr>`
+          )
+          .join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+async function loadBanks() {
+  if (!banksList) return;
+  if ((getAuth()?.user?.role || "") !== "admin") return;
+  try {
+    const banks = await apiFetch("/admin/banks");
+    renderBanksList(Array.isArray(banks) ? banks : []);
+  } catch (error) {
+    setBanksMessage(error.message);
+  }
+}
+
+if (bankForm) {
+  bankForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const payload = {
+      bankName: bankNameInput?.value.trim() || "",
+      accountNumber: bankAccountNumberInput?.value.trim() || "",
+      accountName: bankAccountNameInput?.value.trim() || "",
+      sortOrder: Number(bankSortOrderInput?.value || 0),
+      isActive: Boolean(bankActiveInput?.checked),
+    };
+    try {
+      if (editingBankId) {
+        await apiFetch(`/admin/banks/${editingBankId}`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        });
+        setBanksMessage("Rekening bank diperbarui.", true);
+      } else {
+        await apiFetch("/admin/banks", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        setBanksMessage("Rekening bank ditambahkan.", true);
+      }
+      localStorage.removeItem("marketplace_settings_cache");
+      resetBankForm();
+      loadBanks();
+    } catch (error) {
+      setBanksMessage(error.message);
+    }
+  });
+}
+
+if (bankCancelEdit) {
+  bankCancelEdit.addEventListener("click", () => {
+    resetBankForm();
+    setBanksMessage("");
+  });
+}
+
+if (banksList) {
+  banksList.addEventListener("click", async (event) => {
+    const btn = event.target.closest("button[data-action]");
+    if (!btn) return;
+    if (btn.dataset.action === "edit-bank") {
+      try {
+        const bank = JSON.parse(decodeURIComponent(btn.dataset.bank || ""));
+        fillBankForm(bank);
+        setBanksMessage("Mode edit rekening aktif.", true);
+      } catch (_error) {
+        setBanksMessage("Gagal membuka data rekening.");
+      }
+      return;
+    }
+    if (btn.dataset.action === "delete-bank") {
+      const name = decodeURIComponent(btn.dataset.name || "");
+      if (!confirm(`Hapus rekening ${name || "ini"}?`)) return;
+      try {
+        await apiFetch(`/admin/banks/${btn.dataset.id}`, { method: "DELETE" });
+        localStorage.removeItem("marketplace_settings_cache");
+        setBanksMessage("Rekening bank dihapus.", true);
+        if (String(editingBankId) === String(btn.dataset.id)) resetBankForm();
+        loadBanks();
+      } catch (error) {
+        setBanksMessage(error.message);
+      }
+    }
+  });
+}
+
 let currentHomePage = {
   tagline: "",
   sectionTitle: "",
@@ -1895,12 +2061,113 @@ if (homePageForm) {
   });
 }
 
-function shippingMethodLabel(method) {
+function shippingMethodLabel(method, shippingMetaRaw) {
+  try {
+    const meta =
+      typeof shippingMetaRaw === "string" ? JSON.parse(shippingMetaRaw) : shippingMetaRaw;
+    if (meta?.label) return meta.label;
+  } catch {
+    /* ignore */
+  }
+  if (method === "pickup") return "Ambil sendiri";
   if (method === "store") return "Mobil toko";
   if (method === "lalamove") return "Lalamove";
   if (method === "gosend") return "GoSend";
   return method || "-";
 }
+
+let customShippingMethods = [];
+
+function formatShippingFeeHint(method) {
+  const perKm = Number(method.perKmRate) || 0;
+  const flat = Number(method.flatFee) || 0;
+  if (perKm > 0) {
+    return `${formatRupiah(perKm)}/km${flat ? ` (min ${formatRupiah(flat)})` : ""}`;
+  }
+  return formatRupiah(flat);
+}
+
+function renderCustomShippingMethods() {
+  const list = document.getElementById("shipCustomMethodsList");
+  if (!list) return;
+  if (!customShippingMethods.length) {
+    list.innerHTML = '<p class="empty-state" style="margin: 8px 0 0;">Belum ada jasa kirim tambahan.</p>';
+    return;
+  }
+  list.innerHTML = customShippingMethods
+    .map(
+      (method, index) => `
+      <div class="custom-shipping-row" data-index="${index}">
+        <label class="custom-shipping-enable">
+          <input type="checkbox" data-custom-enable="${index}" ${method.enabled !== false ? "checked" : ""} />
+          Aktif
+        </label>
+        <div class="custom-shipping-row-body">
+          <strong>${escapeHtml(method.label)}</strong>
+          <span>${formatShippingFeeHint(method)}${method.note ? ` · ${escapeHtml(method.note)}` : ""}</span>
+          <label class="custom-shipping-enable" style="margin-top: 4px;">
+            <input type="checkbox" data-custom-gps="${index}" ${method.requireGpsQuote !== false ? "checked" : ""} />
+            GPS &amp; hitung ongkir
+          </label>
+        </div>
+        <button type="button" class="btn-danger" data-custom-remove="${index}">Hapus</button>
+      </div>`
+    )
+    .join("");
+}
+
+function addCustomShippingMethod() {
+  const labelEl = document.getElementById("shipCustomLabel");
+  const label = String(labelEl?.value || "").trim();
+  if (!label) {
+    alert("Isi nama jasa kirim dulu (contoh: JNE Regular).");
+    return;
+  }
+  customShippingMethods.push({
+    id: `custom_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+    label,
+    enabled: true,
+    flatFee: Number(document.getElementById("shipCustomFlatFee")?.value || 0),
+    perKmRate: Number(document.getElementById("shipCustomPerKm")?.value || 0),
+    freeAboveSubtotal: Number(document.getElementById("shipCustomFreeAbove")?.value || 0),
+    requireGpsQuote: document.getElementById("shipCustomRequireGpsQuote")?.checked !== false,
+    note: String(document.getElementById("shipCustomNote")?.value || "").trim(),
+  });
+  if (labelEl) labelEl.value = "";
+  const noteEl = document.getElementById("shipCustomNote");
+  if (noteEl) noteEl.value = "";
+  renderCustomShippingMethods();
+}
+
+document.getElementById("shipCustomAddBtn")?.addEventListener("click", addCustomShippingMethod);
+document.getElementById("shipCustomLabel")?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    addCustomShippingMethod();
+  }
+});
+document.getElementById("shipCustomMethodsList")?.addEventListener("click", (event) => {
+  const removeBtn = event.target.closest("[data-custom-remove]");
+  if (!removeBtn) return;
+  const index = Number(removeBtn.getAttribute("data-custom-remove"));
+  if (!Number.isInteger(index)) return;
+  customShippingMethods.splice(index, 1);
+  renderCustomShippingMethods();
+});
+document.getElementById("shipCustomMethodsList")?.addEventListener("change", (event) => {
+  const enableBox = event.target.closest("[data-custom-enable]");
+  if (enableBox) {
+    const index = Number(enableBox.getAttribute("data-custom-enable"));
+    if (!Number.isInteger(index) || !customShippingMethods[index]) return;
+    customShippingMethods[index].enabled = enableBox.checked;
+    return;
+  }
+  const gpsBox = event.target.closest("[data-custom-gps]");
+  if (!gpsBox) return;
+  const index = Number(gpsBox.getAttribute("data-custom-gps"));
+  if (!Number.isInteger(index) || !customShippingMethods[index]) return;
+  customShippingMethods[index].requireGpsQuote = gpsBox.checked;
+});
 
 function parseCoordInput(value) {
   const normalized = String(value || "").trim().replace(",", ".");
@@ -2110,6 +2377,8 @@ async function loadShippingSettings() {
     setVal("shipOriginLng", s.originLng ?? 106.8456);
     setVal("shipOriginAddress", s.originAddress || "");
     setCheck("shipStoreEnabled", s.storeDelivery?.enabled !== false);
+    setCheck("shipStoreRequireGpsQuote", s.storeDelivery?.requireGpsQuote !== false);
+    setCheck("shipPickupEnabled", s.pickup?.enabled !== false);
     setVal("shipStoreFlatFee", s.storeDelivery?.flatFee ?? 50000);
     setVal("shipStorePerKm", s.storeDelivery?.perKmRate ?? 0);
     setVal("shipStoreFreeAbove", s.storeDelivery?.freeAboveSubtotal ?? 0);
@@ -2119,6 +2388,8 @@ async function loadShippingSettings() {
     setVal("shipGosendMethod", s.gosend?.shipmentMethod || "Instant");
     setVal("shipFallbackPerKm", s.fallback?.perKmRate ?? 3500);
     setVal("shipFallbackMinFee", s.fallback?.minFee ?? 15000);
+    customShippingMethods = Array.isArray(s.customMethods) ? s.customMethods.map((m) => ({ ...m })) : [];
+    renderCustomShippingMethods();
     updateWarehouseOriginPreview();
     if (shippingApiStatus) {
       const p = data.providers || {};
@@ -2187,11 +2458,17 @@ if (shippingSettingsForm) {
       originLat,
       originLng,
       originAddress: document.getElementById("shipOriginAddress")?.value?.trim() || "",
+      pickup: {
+        enabled: document.getElementById("shipPickupEnabled")?.checked !== false,
+        label: "Ambil sendiri",
+        note: "Ambil di gudang / toko, tanpa ongkir",
+      },
       storeDelivery: {
         enabled: document.getElementById("shipStoreEnabled")?.checked,
         flatFee: Number(document.getElementById("shipStoreFlatFee")?.value || 0),
         perKmRate: Number(document.getElementById("shipStorePerKm")?.value || 0),
         freeAboveSubtotal: Number(document.getElementById("shipStoreFreeAbove")?.value || 0),
+        requireGpsQuote: document.getElementById("shipStoreRequireGpsQuote")?.checked !== false,
         label: "Kirim mobil toko",
       },
       lalamove: {
@@ -2206,6 +2483,7 @@ if (shippingSettingsForm) {
         perKmRate: Number(document.getElementById("shipFallbackPerKm")?.value || 3500),
         minFee: Number(document.getElementById("shipFallbackMinFee")?.value || 15000),
       },
+      customMethods: customShippingMethods,
     };
     saveButtons.forEach((btn) => {
       btn.disabled = true;
@@ -2260,6 +2538,131 @@ async function testShippingApi(provider) {
 document.getElementById("shipTestLalamoveBtn")?.addEventListener("click", () => testShippingApi("lalamove"));
 document.getElementById("shipTestGosendBtn")?.addEventListener("click", () => testShippingApi("gosend"));
 
+async function loadTaxSettings() {
+  const form = document.getElementById("taxSettingsForm");
+  if (!form) return;
+  const msg = document.getElementById("taxSettingsMessage");
+  try {
+    const data = await apiFetch("/admin/settings/tax");
+    const s = data.settings || {};
+    const modeEl = document.getElementById("taxModeSelect");
+    const percentEl = document.getElementById("taxPercentInput");
+    if (modeEl) modeEl.value = s.mode || "none";
+    if (percentEl) percentEl.value = s.percent ?? 11;
+    syncTaxPercentEnabled();
+  } catch (error) {
+    if (msg) {
+      msg.classList.remove("success");
+      msg.textContent = error.message;
+    }
+  }
+}
+
+function syncTaxPercentEnabled() {
+  const mode = document.getElementById("taxModeSelect")?.value || "none";
+  const percentEl = document.getElementById("taxPercentInput");
+  if (percentEl) percentEl.disabled = mode === "none";
+}
+
+document.getElementById("taxModeSelect")?.addEventListener("change", syncTaxPercentEnabled);
+
+document.getElementById("taxSettingsForm")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById("taxSettingsMessage");
+  const setMsg = (ok, text) => {
+    if (!msg) return;
+    msg.classList.toggle("success", Boolean(ok));
+    msg.textContent = text;
+  };
+  setMsg(false, "Menyimpan pengaturan pajak...");
+  try {
+    const result = await apiFetch("/admin/settings/tax", {
+      method: "PUT",
+      body: JSON.stringify({
+        settings: {
+          mode: document.getElementById("taxModeSelect")?.value || "none",
+          percent: Number(document.getElementById("taxPercentInput")?.value || 0),
+        },
+      }),
+    });
+    setMsg(true, result.message || "Pengaturan pajak tersimpan.");
+    const modeEl = document.getElementById("taxModeSelect");
+    const percentEl = document.getElementById("taxPercentInput");
+    if (result.settings) {
+      if (modeEl) modeEl.value = result.settings.mode;
+      if (percentEl) percentEl.value = result.settings.percent;
+    }
+    syncTaxPercentEnabled();
+    try {
+      localStorage.removeItem("marketplace_settings_cache");
+    } catch {
+      /* ignore */
+    }
+  } catch (error) {
+    setMsg(false, error.message || "Gagal menyimpan pajak.");
+  }
+});
+
+async function loadPaymentTimeoutSettings() {
+  const form = document.getElementById("paymentTimeoutForm");
+  if (!form) return;
+  const msg = document.getElementById("paymentTimeoutMessage");
+  try {
+    const data = await apiFetch("/admin/settings/payment-timeout");
+    const s = data.settings || {};
+    const enabledEl = document.getElementById("paymentTimeoutEnabled");
+    const hoursEl = document.getElementById("paymentTimeoutHours");
+    const minutesEl = document.getElementById("paymentTimeoutMinutes");
+    if (enabledEl) enabledEl.checked = s.enabled !== false;
+    if (hoursEl) hoursEl.value = s.hours ?? 24;
+    if (minutesEl) minutesEl.value = s.minutes ?? 0;
+  } catch (error) {
+    if (msg) {
+      msg.classList.remove("success");
+      msg.textContent = error.message;
+    }
+  }
+}
+
+document.getElementById("paymentTimeoutForm")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById("paymentTimeoutMessage");
+  const setMsg = (ok, text) => {
+    if (!msg) return;
+    msg.classList.toggle("success", Boolean(ok));
+    msg.textContent = text;
+  };
+  setMsg(false, "Menyimpan batas waktu...");
+  try {
+    const result = await apiFetch("/admin/settings/payment-timeout", {
+      method: "PUT",
+      body: JSON.stringify({
+        settings: {
+          enabled: Boolean(document.getElementById("paymentTimeoutEnabled")?.checked),
+          hours: Number(document.getElementById("paymentTimeoutHours")?.value || 0),
+          minutes: Number(document.getElementById("paymentTimeoutMinutes")?.value || 0),
+        },
+      }),
+    });
+    setMsg(true, result.message || "Batas waktu tersimpan.");
+    if (result.settings) {
+      const enabledEl = document.getElementById("paymentTimeoutEnabled");
+      const hoursEl = document.getElementById("paymentTimeoutHours");
+      const minutesEl = document.getElementById("paymentTimeoutMinutes");
+      if (enabledEl) enabledEl.checked = result.settings.enabled !== false;
+      if (hoursEl) hoursEl.value = result.settings.hours ?? 24;
+      if (minutesEl) minutesEl.value = result.settings.minutes ?? 0;
+    }
+    try {
+      localStorage.removeItem("marketplace_settings_cache");
+    } catch {
+      /* ignore */
+    }
+  } catch (error) {
+    setMsg(false, error.message || "Gagal menyimpan batas waktu.");
+  }
+});
+
 async function loadOrders() {
   const tbody = document.getElementById("ordersTbody");
   const msg = document.getElementById("ordersMessage");
@@ -2267,10 +2670,42 @@ async function loadOrders() {
   try {
     const orders = await apiFetch("/admin/orders");
     if (!orders || orders.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="padding: 10px; text-align: center;">Belum ada pesanan.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="padding: 10px; text-align: center;">Belum ada pesanan.</td></tr>';
       return;
     }
-    tbody.innerHTML = orders.map((order) => `
+    const isSuperAdmin = (getAuth()?.user?.role || "") === "admin";
+    tbody.innerHTML = orders.map((order) => {
+      const st = String(order.status || "").toLowerCase();
+      const statusCell =
+        st === "void"
+          ? `<span style="background:#f3f4f6; color:#4b5563; padding:4px 8px; border-radius:4px; font-size:0.8rem; font-weight:600;">Void</span>`
+          : `<select data-action="change-status" data-order-id="${order.id}" style="padding: 4px 8px; font-size: 0.8rem; border: 1px solid #d1d5db; border-radius: 4px; font-weight: 600; color: ${st === "paid" ? "#047857" : "#c2410c"};">
+            <option value="unpaid" ${st !== "paid" ? "selected" : ""}>Belum dibayar</option>
+            <option value="paid" ${st === "paid" ? "selected" : ""}>Lunas</option>
+          </select>`;
+      const proofCell = order.hasPaymentProof
+        ? `<button type="button" class="btn-secondary" data-action="view-proof" data-order-id="${order.id}" style="font-size: 0.8rem; padding: 4px 8px;">Lihat bukti</button>
+           <div style="font-size: 0.75rem; color: #047857; margin-top: 4px;">Ada bukti</div>`
+        : `<span style="font-size: 0.8rem; color: #9ca3af;">Belum ada</span>`;
+      const shipStatus = order.shipmentStatus || "pending";
+      const shipDisabled = st === "void" ? "disabled" : "";
+      const shipOptions = [
+        ["pending", "Menunggu proses"],
+        ["packed", "Dikemas"],
+        ["ready_pickup", "Siap diambil"],
+        ["shipped", "Dalam pengiriman"],
+        ["delivered", "Selesai"],
+      ]
+        .map(
+          ([value, label]) =>
+            `<option value="${value}" ${shipStatus === value ? "selected" : ""}>${label}</option>`
+        )
+        .join("");
+      const adminActions = isSuperAdmin
+        ? `<button type="button" class="btn-secondary" data-action="void-order" data-order-id="${order.id}" style="font-size: 0.8rem; padding: 4px 8px;" ${st === "void" ? "disabled" : ""}>Void</button>
+          <button type="button" class="btn-danger" data-action="delete-order" data-order-id="${order.id}" style="font-size: 0.8rem; padding: 4px 8px;">Hapus</button>`
+        : "";
+      return `
       <tr>
         <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">#${order.id}</td>
         <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
@@ -2280,14 +2715,12 @@ async function loadOrders() {
         <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${new Date(order.created_at).toLocaleString('id-ID')}</td>
         <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
           ${formatRupiah(order.total)}<br/>
-          <span style="font-size: 0.78rem; color: #6b7280;">${shippingMethodLabel(order.shipping_method)}${order.shipping_fee ? ` · ongkir ${formatRupiah(order.shipping_fee)}` : ""}</span>
+          <span style="font-size: 0.78rem; color: #6b7280;">${shippingMethodLabel(order.shipping_method, order.shipping_meta)}${order.shipping_fee ? ` · ongkir ${formatRupiah(order.shipping_fee)}` : ""}</span>
         </td>
         <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
-          <select data-action="change-status" data-order-id="${order.id}" style="padding: 4px 8px; font-size: 0.8rem; border: 1px solid #d1d5db; border-radius: 4px; font-weight: 600; color: ${String(order.status).toLowerCase() === "paid" ? "#047857" : "#c2410c"};">
-            <option value="unpaid" ${String(order.status).toLowerCase() !== "paid" ? "selected" : ""}>Belum dibayar</option>
-            <option value="paid" ${String(order.status).toLowerCase() === "paid" ? "selected" : ""}>Lunas</option>
-          </select>
+          ${statusCell}
         </td>
+        <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${proofCell}</td>
         <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
           <select data-action="change-entity" data-order-id="${order.id}" style="padding: 4px; font-size: 0.8rem; margin-right: 4px; border: 1px solid #d1d5db; border-radius: 4px;">
             <option value="" ${!order.fulfillment_entity ? 'selected' : ''}>PT Sahabat Jaya Sukses (Default)</option>
@@ -2295,12 +2728,28 @@ async function loadOrders() {
             <option value="SJL" ${order.fulfillment_entity === 'SJL' ? 'selected' : ''}>PT Sukses Jaya Lestari</option>
           </select>
           <a href="/invoice.html?id=${order.id}" target="_blank" class="btn-secondary" style="font-size: 0.8rem; padding: 4px 8px; display: inline-block;">Lihat Invoice</a>
+          ${adminActions}
         </td>
       </tr>
-    `).join("");
+      <tr>
+        <td colspan="7" style="padding: 8px 10px 14px; border-bottom: 1px solid #e5e7eb; background: #fafafa;">
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+            <strong style="font-size:0.8rem;">Pengiriman</strong>
+            <select data-ship-status="${order.id}" ${shipDisabled} style="padding: 4px 8px; font-size: 0.8rem; border: 1px solid #d1d5db; border-radius: 4px;">
+              ${st === "void" ? `<option value="cancelled" selected>Dibatalkan</option>` : shipOptions}
+            </select>
+            <input type="text" data-ship-resi="${order.id}" value="${escapeHtml(order.trackingNumber || "")}" placeholder="No. resi" ${shipDisabled} style="padding: 4px 8px; font-size: 0.8rem; min-width: 140px; border: 1px solid #d1d5db; border-radius: 4px;" />
+            <input type="url" data-ship-url="${order.id}" value="${escapeHtml(order.trackingUrl && !String(order.trackingUrl).includes("cekresi.com") ? order.trackingUrl : "")}" placeholder="Link lacak (opsional)" ${shipDisabled} style="padding: 4px 8px; font-size: 0.8rem; min-width: 180px; border: 1px solid #d1d5db; border-radius: 4px;" />
+            <input type="text" data-ship-note="${order.id}" value="${escapeHtml(order.shipmentNote || "")}" placeholder="Catatan sopir / gudang" ${shipDisabled} style="padding: 4px 8px; font-size: 0.8rem; min-width: 180px; border: 1px solid #d1d5db; border-radius: 4px;" />
+            <button type="button" class="btn-primary" data-action="save-shipment" data-order-id="${order.id}" ${shipDisabled} style="font-size: 0.8rem; padding: 4px 10px;">Simpan kirim</button>
+          </div>
+        </td>
+      </tr>
+    `;
+    }).join("");
   } catch (error) {
     if (msg) msg.textContent = error.message;
-    tbody.innerHTML = '<tr><td colspan="6" style="padding: 10px; text-align: center; color: red;">Gagal memuat pesanan.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="padding: 10px; text-align: center; color: red;">Gagal memuat pesanan.</td></tr>';
   }
 }
 
@@ -2666,6 +3115,73 @@ document.getElementById("inventoryFilterBtn")?.addEventListener("click", loadInv
 initSalesReportFilters();
 initInventoryReportFilters();
 
+document.getElementById("ordersTbody")?.addEventListener("click", async (event) => {
+  const btn = event.target.closest("[data-action]");
+  if (!btn) return;
+  const action = btn.dataset.action;
+  const orderId = btn.dataset.orderId;
+  if (action === "void-order") {
+    if (!confirm(`Void invoice #${orderId}?\nInvoice tetap ada dengan status Void. Stok dikembalikan.`)) return;
+    try {
+      const result = await apiFetch(`/admin/orders/${orderId}/void`, { method: "POST" });
+      alert(result.message || "Invoice di-void.");
+      loadOrders();
+    } catch (error) {
+      alert(error.message || "Gagal void invoice.");
+    }
+    return;
+  }
+  if (action === "delete-order") {
+    if (!confirm(`Hapus permanen invoice #${orderId}?\nData pesanan hilang. Stok dikembalikan.`)) return;
+    try {
+      const result = await apiFetch(`/admin/orders/${orderId}`, { method: "DELETE" });
+      alert(result.message || "Invoice dihapus.");
+      loadOrders();
+    } catch (error) {
+      alert(error.message || "Gagal menghapus invoice.");
+    }
+    return;
+  }
+  if (action === "view-proof") {
+    try {
+      const token = getToken();
+      const response = await fetch(`/api/orders/${orderId}/payment-proof`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || "Gagal membuka bukti bayar.");
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+    } catch (error) {
+      alert(error.message || "Gagal membuka bukti bayar.");
+    }
+    return;
+  }
+  if (action === "save-shipment") {
+    const statusEl = document.querySelector(`[data-ship-status="${orderId}"]`);
+    const resiEl = document.querySelector(`[data-ship-resi="${orderId}"]`);
+    const urlEl = document.querySelector(`[data-ship-url="${orderId}"]`);
+    const noteEl = document.querySelector(`[data-ship-note="${orderId}"]`);
+    try {
+      const result = await apiFetch(`/admin/orders/${orderId}/shipment`, {
+        method: "PUT",
+        body: JSON.stringify({
+          shipmentStatus: statusEl?.value || "pending",
+          trackingNumber: resiEl?.value || "",
+          trackingUrl: urlEl?.value || "",
+          shipmentNote: noteEl?.value || "",
+        }),
+      });
+      alert(result.message || "Pengiriman disimpan.");
+    } catch (error) {
+      alert(error.message || "Gagal menyimpan pengiriman.");
+    }
+  }
+});
+
 document.getElementById("ordersTbody")?.addEventListener("change", async (event) => {
   const target = event.target;
   if (target?.dataset?.action === "change-entity") {
@@ -2703,6 +3219,7 @@ const waBotEnabled = document.getElementById("waBotEnabled");
 const sasaWebChatEnabled = document.getElementById("sasaWebChatEnabled");
 const sasaWebChatIdleMinutes = document.getElementById("sasaWebChatIdleMinutes");
 const waBotNumber = document.getElementById("waBotNumber");
+const waNotifyPhone = document.getElementById("waNotifyPhone");
 const waBotFallback = document.getElementById("waBotFallback");
 const waSettingsMessage = document.getElementById("waSettingsMessage");
 const waSessionsTbody = document.getElementById("waSessionsTbody");
@@ -2723,6 +3240,7 @@ async function loadWaSettings() {
       sasaWebChatIdleMinutes.value = Number.isFinite(idle) ? String(Math.max(0, Math.min(180, Math.round(idle)))) : "5";
     }
     if (waBotNumber) waBotNumber.value = data.botNumber || "";
+    if (waNotifyPhone) waNotifyPhone.value = data.notifyPhone || "";
     if (waBotFallback) waBotFallback.value = data.fallbackMessage || "";
   } catch (err) {
     console.error("Gagal memuat pengaturan WA Bot", err);
@@ -2770,6 +3288,7 @@ if (waSettingsForm) {
         webChatEnabled: sasaWebChatEnabled ? sasaWebChatEnabled.checked : true,
         webChatIdleMinutes: sasaWebChatIdleMinutes ? Number(sasaWebChatIdleMinutes.value) : 5,
         botNumber: waBotNumber ? waBotNumber.value.trim() : "",
+        notifyPhone: waNotifyPhone ? waNotifyPhone.value.trim() : "",
         fallbackMessage: waBotFallback.value.trim()
       };
       const res = await apiFetch("/admin/settings/whatsapp", {
@@ -3229,9 +3748,91 @@ document.getElementById("adminArticlesList")?.addEventListener("click", async (e
   }
 });
 
+function initAdminNotifications() {
+  const wrap = document.getElementById("adminNotifyWrap");
+  const btn = document.getElementById("adminNotifyBtn");
+  const panel = document.getElementById("adminNotifyPanel");
+  const list = document.getElementById("adminNotifyList");
+  const badge = document.getElementById("adminNotifyBadge");
+  const readAllBtn = document.getElementById("adminNotifyReadAll");
+  if (!wrap || !btn || !panel || !list) return;
+
+  const render = (data) => {
+    const unread = Number(data?.unreadCount) || 0;
+    if (badge) {
+      badge.textContent = String(unread);
+      badge.classList.toggle("hidden", unread <= 0);
+    }
+    const items = Array.isArray(data?.items) ? data.items : [];
+    if (!items.length) {
+      list.innerHTML = `<p class="empty-state" style="margin: 12px;">Belum ada notifikasi.</p>`;
+      return;
+    }
+    list.innerHTML = items
+      .map((item) => {
+        const when = item.created_at ? new Date(item.created_at).toLocaleString("id-ID") : "";
+        const statusKey = item.paymentStatus || "unpaid";
+        const statusLabel = item.paymentStatusLabel || "Belum lunas";
+        return `<button type="button" class="admin-notify-item ${item.isRead ? "" : "unread"}" data-notify-id="${item.id}" data-order-id="${item.order_id || ""}">
+          <strong>${escapeHtml(item.title || "Notifikasi")}</strong>
+          <span>${escapeHtml(item.message || "")}</span>
+          <span class="admin-notify-status ${escapeHtml(statusKey)}">${escapeHtml(statusLabel)}</span>
+          <span>${escapeHtml(when)}</span>
+        </button>`;
+      })
+      .join("");
+  };
+
+  const load = async () => {
+    try {
+      const data = await apiFetch("/admin/notifications");
+      render(data);
+    } catch (_error) {}
+  };
+
+  btn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    panel.classList.toggle("hidden");
+    if (!panel.classList.contains("hidden")) load();
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!wrap.contains(event.target)) panel.classList.add("hidden");
+  });
+
+  list.addEventListener("click", async (event) => {
+    const itemBtn = event.target.closest("[data-notify-id]");
+    if (!itemBtn) return;
+    const id = itemBtn.dataset.notifyId;
+    const orderId = itemBtn.dataset.orderId;
+    try {
+      await apiFetch(`/admin/notifications/${id}/read`, { method: "POST" });
+    } catch (_error) {}
+    if (orderId) window.open(`/invoice.html?id=${orderId}`, "_blank");
+    const ordersTabBtn = document.querySelector('[data-tab="ordersTab"]');
+    if (ordersTabBtn && !ordersTabBtn.disabled) ordersTabBtn.click();
+    load();
+  });
+
+  readAllBtn?.addEventListener("click", async (event) => {
+    event.stopPropagation();
+    try {
+      await apiFetch("/admin/notifications/read-all", { method: "POST" });
+      await load();
+    } catch (_error) {}
+  });
+
+  load();
+  setInterval(load, 20000);
+}
+
 renderUserArea();
 if (guardAccess()) {
   initTabs();
+  const tabFromHash = String(window.location.hash || "").replace(/^#/, "");
+  if (tabFromHash) {
+    document.querySelector(`.admin-sidebar .tab[data-tab="${tabFromHash}"]`)?.click();
+  }
   initSalesReportFilters();
   initInventoryReportFilters();
   applyRoleRulesToUI();
@@ -3242,7 +3843,11 @@ if (guardAccess()) {
   loadAdminArticles();
   loadCompanyProfileSettings();
   loadShippingSettings();
+  loadTaxSettings();
+  loadPaymentTimeoutSettings();
+  loadBanks();
   loadWaSettings();
   loadWaSessions();
+  initAdminNotifications();
 }
 

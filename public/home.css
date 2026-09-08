@@ -48,14 +48,14 @@ body.landing-page {
 
 .sjs-header {
   position: relative;
-  z-index: 10;
+  z-index: 40;
   background: #fff;
   border-bottom: none;
 }
 
 .sjs-header-inner {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   width: 100%;
   max-width: none;
   margin: 0;
@@ -195,8 +195,8 @@ body.landing-page {
 }
 
 .sjs-profile-icon {
-  width: 38px;
-  height: 38px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   background: var(--sjs-search-bg);
   color: var(--sjs-brown);
@@ -212,13 +212,13 @@ body.landing-page {
 }
 
 .sjs-profile-icon svg {
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
 }
 
 .sjs-profile-initial {
   font-weight: 700;
-  font-size: 1.15rem;
+  font-size: 1.35rem;
   color: var(--sjs-brown);
 }
 
@@ -282,25 +282,142 @@ body.landing-page {
 
 .sjs-profile-wrap {
   position: relative;
+  z-index: 50;
+}
+
+.sjs-notify-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  z-index: 61;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.sjs-notify-badge.hidden {
+  display: none !important;
+}
+
+.sjs-notify-block {
+  border-bottom: 1px solid #f0eeeb;
+  padding: 8px 0 10px;
+}
+
+.sjs-notify-block.hidden {
+  display: none !important;
+}
+
+.sjs-notify-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 22px 8px;
+}
+
+.sjs-notify-head strong {
+  font-size: 0.95rem;
+  color: var(--sjs-brown-dark);
+}
+
+.sjs-profile-dropdown .sjs-notify-head button {
+  width: auto;
+  padding: 4px 8px;
+  margin: 0;
+  border: 0;
+  border-top: none;
+  color: var(--sjs-brown);
+  font-size: 0.75rem;
+}
+
+.sjs-notify-list {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.sjs-profile-dropdown .sjs-notify-item {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-top: none;
+  padding: 10px 22px;
+  font-size: 0.88rem;
+  color: var(--sjs-brown-dark);
+  line-height: 1.35;
+}
+
+.sjs-profile-dropdown .sjs-notify-item.unread {
+  background: #fff7ed;
+}
+
+.sjs-profile-dropdown .sjs-notify-item span {
+  display: block;
+  font-size: 0.75rem;
+  color: #8a7a72;
+  font-weight: 400;
+}
+
+.sjs-notify-status {
+  display: inline-block !important;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  width: auto;
+  color: inherit;
+}
+
+.sjs-notify-status.paid {
+  background: #ecfdf5;
+  color: #047857 !important;
+}
+
+.sjs-notify-status.unpaid {
+  background: #fff7ed;
+  color: #c2410c !important;
+}
+
+.sjs-notify-status.void,
+.sjs-notify-status.unknown {
+  background: #f3f4f6;
+  color: #4b5563 !important;
+}
+
+.sjs-profile-dropdown .sjs-notify-admin-link {
+  font-size: 0.88rem;
+  padding: 8px 22px 4px;
+  color: var(--sjs-brown);
 }
 
 .sjs-profile-dropdown {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  min-width: 200px;
+  min-width: 280px;
   background: #fff;
   border: 1px solid #ece8e4;
-  border-radius: 12px;
+  border-radius: 14px;
   box-shadow: 0 8px 24px rgba(74, 50, 40, 0.15);
-  padding: 8px 0;
-  z-index: 300;
+  padding: 10px 0;
+  z-index: 60;
 }
 
 .sjs-profile-dropdown .sjs-profile-name {
   margin: 0;
-  padding: 10px 18px 12px;
-  font-size: 1rem;
+  padding: 14px 22px 16px;
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--sjs-brown-dark);
   border-bottom: 1px solid #f0eeeb;
@@ -311,8 +428,8 @@ body.landing-page {
   display: block;
   width: 100%;
   text-align: left;
-  padding: 12px 18px;
-  font-size: 0.98rem;
+  padding: 16px 22px;
+  font-size: 1.15rem;
   color: var(--sjs-brown-dark);
   background: none;
   border: none;
@@ -324,6 +441,10 @@ body.landing-page {
 .sjs-profile-dropdown a:hover,
 .sjs-profile-dropdown button:hover {
   background: #f7f4f1;
+}
+
+.sjs-profile-dropdown a.hidden {
+  display: none !important;
 }
 
 .sjs-profile-dropdown button {
@@ -1169,8 +1290,8 @@ body.landing-page {
   }
 
   .sjs-profile-icon {
-    width: 38px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
   }
 
   .sjs-cart-btn svg {

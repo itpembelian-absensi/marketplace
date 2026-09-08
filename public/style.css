@@ -609,6 +609,11 @@ a {
   gap: 8px;
 }
 
+.shipping-actions.hidden,
+.shipping-actions[hidden] {
+  display: none !important;
+}
+
 .shipping-actions .btn-secondary {
   flex: 1;
   min-width: 120px;
@@ -706,6 +711,59 @@ a {
   padding: 0;
   border: none;
   background: transparent;
+}
+
+.custom-shipping-add {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.custom-shipping-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.custom-shipping-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.custom-shipping-enable {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.custom-shipping-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.custom-shipping-row-body span {
+  font-size: 0.82rem;
+  color: #6b7280;
+}
+
+@media (max-width: 640px) {
+  .custom-shipping-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .field-label {
@@ -2053,4 +2111,311 @@ body.lightbox-open {
   display: flex;
   gap: 6px;
   padding: 8px;
+}
+
+.admin-notify {
+  position: relative;
+}
+
+.admin-notify-btn {
+  position: relative;
+}
+
+.admin-notify-badge {
+  display: inline-flex;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-notify-badge.hidden {
+  display: none !important;
+}
+
+.admin-notify-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: min(360px, calc(100vw - 32px));
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+  z-index: 80;
+  overflow: hidden;
+}
+
+.admin-notify-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-notify-list {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.admin-notify-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: #fff;
+  border: 0;
+  border-bottom: 1px solid #f3f4f6;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.admin-notify-item.unread {
+  background: #eff6ff;
+}
+
+.admin-notify-item:hover {
+  background: #f8fafc;
+}
+
+.admin-notify-item strong {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 2px;
+}
+
+.admin-notify-item span {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.admin-notify-status {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.admin-notify-status.paid {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.admin-notify-status.unpaid {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.admin-notify-status.void,
+.admin-notify-status.unknown {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.my-orders-page .shop-main {
+  padding-top: 24px;
+  padding-bottom: 48px;
+}
+
+.my-orders-wrap {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.my-orders-head h2 {
+  margin: 0 0 6px;
+  color: #4a3228;
+}
+
+.my-orders-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0 12px;
+}
+
+.my-orders-filters button {
+  border: 1px solid #e5ddd6;
+  background: #fff;
+  color: #4a3228;
+  border-radius: 999px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.my-orders-filters button.active {
+  background: #4a3228;
+  color: #fff;
+  border-color: #4a3228;
+}
+
+.my-orders-search {
+  width: 100%;
+  max-width: 420px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.my-order-card {
+  background: #fff;
+  border: 1px solid #ece8e4;
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+}
+
+.my-order-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.my-order-meta {
+  margin: 4px 0 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.my-order-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.my-order-badge.unpaid {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.my-order-badge.paid {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.my-order-badge.void {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.my-order-items {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.92rem;
+  color: #374151;
+}
+
+.my-order-items li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  border-top: 1px solid #f3f4f6;
+}
+
+.my-order-total {
+  margin: 10px 0 0;
+  font-weight: 700;
+  color: #4a3228;
+}
+
+.my-order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.my-order-upload {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.my-order-upload input[type="file"] {
+  display: block;
+  margin: 8px 0;
+}
+
+.track-form {
+  display: grid;
+  gap: 10px;
+  max-width: 420px;
+  margin: 16px 0 24px;
+}
+
+.track-steps {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+
+.track-steps li {
+  position: relative;
+  padding: 0 0 16px 28px;
+  color: #9ca3af;
+  font-size: 0.95rem;
+}
+
+.track-steps li::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #d1d5db;
+}
+
+.track-steps li::after {
+  content: "";
+  position: absolute;
+  left: 11px;
+  top: 20px;
+  width: 2px;
+  bottom: 0;
+  background: #e5e7eb;
+}
+
+.track-steps li:last-child::after {
+  display: none;
+}
+
+.track-steps li.done,
+.track-steps li.current {
+  color: #4a3228;
+  font-weight: 600;
+}
+
+.track-steps li.done::before,
+.track-steps li.current::before {
+  background: #4a3228;
+}
+
+.track-steps li.current {
+  color: #c2410c;
+}
+
+.track-steps li.current::before {
+  background: #c2410c;
 }

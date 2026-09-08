@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Manajemen User - PT SAHABAT JAYA SUKSES</title>
-    <link rel="stylesheet" href="/style.css?v=21" />
+    <link rel="stylesheet" href="/style.css?v=25" />
   </head>
   <body class="admin-page">
     <header class="topbar">
@@ -17,6 +17,21 @@
       </a>
       <div class="top-actions">
         <img id="topLogo" class="top-logo hidden" alt="Logo" />
+        <div class="admin-notify" id="adminNotifyWrap">
+          <button type="button" class="btn-secondary admin-notify-btn" id="adminNotifyBtn" aria-label="Notifikasi">
+            Notifikasi
+            <span class="admin-notify-badge hidden" id="adminNotifyBadge">0</span>
+          </button>
+          <div class="admin-notify-panel hidden" id="adminNotifyPanel">
+            <div class="admin-notify-head">
+              <strong>Notifikasi</strong>
+              <button type="button" class="btn-secondary" id="adminNotifyReadAll" style="font-size: 0.75rem; padding: 4px 8px;">Tandai dibaca</button>
+            </div>
+            <div id="adminNotifyList" class="admin-notify-list">
+              <p class="empty-state" style="margin: 8px 0;">Belum ada notifikasi.</p>
+            </div>
+          </div>
+        </div>
         <div id="userArea"></div>
         <a href="/" class="btn-secondary">Kembali</a>
       </div>
@@ -38,7 +53,8 @@
           <button type="button" class="tab" data-tab="salesTab">Laporan Penjualan</button>
           <button type="button" class="tab" data-tab="inventoryTab">Laporan Stok</button>
           <button type="button" class="tab" data-tab="pointsTab">Poin Loyalitas</button>
-          <button type="button" class="tab" data-tab="settingsTab">Lainnya</button>
+          <button type="button" class="tab" data-tab="settingsTab">Jasa kirim dan pembayaran</button>
+          <button type="button" class="tab" data-tab="banksTab">Master Bank</button>
           <button type="button" class="tab" data-tab="backupTab">Backup</button>
           <button type="button" class="tab" data-tab="whatsappTab">WhatsApp Bot</button>
         </nav>
@@ -113,6 +129,7 @@
 
       <section id="ordersTab" class="auth-card admin-panel hidden">
         <h2>Daftar Pesanan</h2>
+        <p class="empty-state" style="margin-bottom: 8px;">Admin bisa void (batalkan, data tetap ada) atau hapus invoice. Stok dikembalikan.</p>
         <p id="ordersMessage" class="message"></p>
         <div id="ordersTable" style="margin-top: 12px; overflow-x: auto;">
           <table style="width: 100%; border-collapse: collapse; text-align: left;">
@@ -123,11 +140,12 @@
                 <th style="padding: 10px;">Tanggal</th>
                 <th style="padding: 10px;">Total</th>
                 <th style="padding: 10px;">Status</th>
+                <th style="padding: 10px;">Bukti</th>
                 <th style="padding: 10px;">Aksi</th>
               </tr>
             </thead>
             <tbody id="ordersTbody">
-              <tr><td colspan="6" style="padding: 10px; text-align: center;">Memuat data...</td></tr>
+              <tr><td colspan="7" style="padding: 10px; text-align: center;">Memuat data...</td></tr>
             </tbody>
           </table>
         </div>
@@ -634,7 +652,7 @@
 
         <h2>Pengaturan Jasa Kirim</h2>
         <p class="empty-state" style="margin-bottom: 12px;">
-          Atur lokasi gudang asal pengiriman, tarif mobil toko, dan opsi Lalamove/GoSend. Tarif resmi mitra membutuhkan kredensial API di file <code>.env</code>.
+          Atur lokasi gudang, tarif mobil toko, jasa kirim tambahan (JNE, J&amp;T, dll.), dan opsi Lalamove/GoSend. Tarif resmi mitra membutuhkan kredensial API di file <code>.env</code>.
         </p>
         <form id="shippingSettingsForm" class="auth-form">
           <div class="warehouse-origin-card">
@@ -680,10 +698,24 @@
             <p id="shippingSaveMessage" class="message" role="status" aria-live="polite"></p>
           </div>
           <hr style="border: none; border-top: 1px solid var(--border); margin: 8px 0;" />
+          <h3 style="margin: 0; font-size: 1rem;">Ambil sendiri</h3>
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem;">
+            <input type="checkbox" id="shipPickupEnabled" checked /> Tampilkan di checkout (ongkir Rp 0)
+          </label>
+          <p class="empty-state" style="margin: 0;">
+            Pelanggan datang ke gudang/toko. Tidak perlu hitung jarak.
+          </p>
+          <hr style="border: none; border-top: 1px solid var(--border); margin: 8px 0;" />
           <h3 style="margin: 0; font-size: 1rem;">Kirim mobil toko</h3>
           <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem;">
             <input type="checkbox" id="shipStoreEnabled" checked /> Aktif
           </label>
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem;">
+            <input type="checkbox" id="shipStoreRequireGpsQuote" checked /> Tampilkan GPS dan hitung ongkir di checkout
+          </label>
+          <p class="empty-state" style="margin: 0;">
+            Matikan jika ongkir tidak dihitung di checkout. Isi tarif flat 0 jika harga produk sudah termasuk ongkir. Nyalakan jika kurir harus pakai GPS/jarak.
+          </p>
           <div class="warehouse-coords-grid">
             <div>
               <label class="field-label" for="shipStoreFlatFee">Tarif flat / minimum (Rp)</label>
@@ -702,7 +734,43 @@
             <input type="number" id="shipStoreFreeAbove" min="0" value="0" />
           </div>
           <hr style="border: none; border-top: 1px solid var(--border); margin: 8px 0;" />
-          <h3 style="margin: 0; font-size: 1rem;">Lalamove & GoSend</h3>
+          <h3 style="margin: 0; font-size: 1rem;">Jasa kirim tambahan</h3>
+          <p class="empty-state" style="margin: 0;">
+            Tambah opsi seperti JNE, J&amp;T, SiCepat, atau kurir lain. Nama ini muncul di dropdown checkout. Isi tarif per km jika ongkir dihitung dari jarak; isi 0 untuk tarif flat saja. Klik <strong>Simpan Pengaturan Kirim</strong> setelah menambah atau menghapus.
+          </p>
+          <div class="custom-shipping-add">
+            <div>
+              <label class="field-label" for="shipCustomLabel">Nama jasa</label>
+              <input type="text" id="shipCustomLabel" placeholder="Mis: JNE Regular" maxlength="80" />
+            </div>
+            <div class="warehouse-coords-grid">
+              <div>
+                <label class="field-label" for="shipCustomFlatFee">Tarif flat / minimum (Rp)</label>
+                <input type="number" id="shipCustomFlatFee" min="0" value="0" />
+              </div>
+              <div>
+                <label class="field-label" for="shipCustomPerKm">Tarif per km (Rp)</label>
+                <input type="number" id="shipCustomPerKm" min="0" value="0" />
+              </div>
+            </div>
+            <div class="warehouse-coords-grid">
+              <div>
+                <label class="field-label" for="shipCustomFreeAbove">Gratis jika subtotal ≥ (Rp)</label>
+                <input type="number" id="shipCustomFreeAbove" min="0" value="0" />
+              </div>
+              <div>
+                <label class="field-label" for="shipCustomNote">Catatan (opsional)</label>
+                <input type="text" id="shipCustomNote" placeholder="Estimasi 2–3 hari" maxlength="200" />
+              </div>
+            </div>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem;">
+              <input type="checkbox" id="shipCustomRequireGpsQuote" checked /> Tampilkan GPS dan hitung ongkir
+            </label>
+            <button type="button" id="shipCustomAddBtn" class="btn-secondary">Tambah ke daftar</button>
+          </div>
+          <div id="shipCustomMethodsList" class="custom-shipping-list"></div>
+          <hr style="border: none; border-top: 1px solid var(--border); margin: 8px 0;" />
+          <h3 style="margin: 0; font-size: 1rem;">Lalamove &amp; GoSend</h3>
           <p class="empty-state" style="margin: 8px 0 12px;">
             Kredensial API diisi di file <code>.env</code> lalu restart server. Setelah itu klik <strong>Uji API</strong> di bawah.
           </p>
@@ -757,6 +825,54 @@
           </ol>
         </div>
 
+        <h2 style="margin-top: 28px;">Pengaturan Pajak</h2>
+        <p class="empty-state" style="margin-bottom: 12px;">
+          <strong>No Tax</strong> = tidak ada pajak.
+          <strong>Exclude</strong> = harga produk belum termasuk pajak, PPN ditambahkan di checkout.
+          <strong>Include</strong> = harga produk sudah termasuk pajak, PPN hanya ditampilkan (total tidak bertambah).
+        </p>
+        <form id="taxSettingsForm" class="auth-form">
+          <div>
+            <label class="field-label" for="taxModeSelect">Perlakuan pajak</label>
+            <select id="taxModeSelect" style="width:100%; box-sizing:border-box;">
+              <option value="none">No Tax (tanpa pajak)</option>
+              <option value="exclude">Exclude Tax (pajak di luar harga)</option>
+              <option value="include">Include Tax (pajak sudah termasuk harga)</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="taxPercentInput">Nilai pajak (%)</label>
+            <input type="number" id="taxPercentInput" min="0" max="100" step="0.01" value="11" />
+          </div>
+          <p class="empty-state" style="margin: 0;">Contoh PPN 11. Isi 0 jika No Tax.</p>
+          <button type="submit" class="btn-primary">Simpan Pengaturan Pajak</button>
+        </form>
+        <p id="taxSettingsMessage" class="message"></p>
+
+        <h2 style="margin-top: 28px;">Batas Waktu Pembayaran</h2>
+        <p class="empty-state" style="margin-bottom: 12px;">
+          Pesanan <strong>belum dibayar</strong> (kecuali COD) otomatis dibatalkan jika melewati durasi ini. Stok dikembalikan. Tampil juga di invoice.
+        </p>
+        <form id="paymentTimeoutForm" class="auth-form">
+          <label class="field-label" style="display:flex;align-items:center;gap:8px;font-weight:500;">
+            <input type="checkbox" id="paymentTimeoutEnabled" checked />
+            Aktifkan pembatalan otomatis
+          </label>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:140px;">
+              <label class="field-label" for="paymentTimeoutHours">Jam</label>
+              <input type="number" id="paymentTimeoutHours" min="0" max="720" step="1" value="24" />
+            </div>
+            <div style="flex:1;min-width:140px;">
+              <label class="field-label" for="paymentTimeoutMinutes">Menit</label>
+              <input type="number" id="paymentTimeoutMinutes" min="0" max="59" step="1" value="0" />
+            </div>
+          </div>
+          <p class="empty-state" style="margin: 0;">Minimal 5 menit jika fitur aktif. Contoh: 24 jam, atau 2 jam 30 menit.</p>
+          <button type="submit" class="btn-primary">Simpan Batas Waktu</button>
+        </form>
+        <p id="paymentTimeoutMessage" class="message"></p>
+
         <h2 style="margin-top: 28px;">Pengaturan Pembayaran (QRIS)</h2>
         <form id="qrisForm" class="auth-form">
           <label for="qrisFile" style="font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Upload Barcode QRIS</label>
@@ -767,7 +883,43 @@
         <div id="qrisPreview" style="margin-top: 12px"></div>
         <p class="empty-state" style="margin-top: 8px">
           Barcode QRIS ini akan ditampilkan di halaman Invoice jika customer memilih metode pembayaran QRIS.
+          Nomor rekening Transfer Bank diatur di menu <strong>Master Bank</strong>.
         </p>
+      </section>
+
+      <section id="banksTab" class="auth-card admin-panel hidden">
+        <h2>Master Bank</h2>
+        <p class="empty-state" style="margin-bottom: 12px">
+          Rekening aktif ditampilkan di invoice jika pelanggan memilih pembayaran <strong>Transfer Bank</strong>.
+        </p>
+        <form id="bankForm" class="auth-form">
+          <div>
+            <label class="field-label" for="bankNameInput">Nama bank</label>
+            <input type="text" id="bankNameInput" placeholder="Contoh: BCA, Mandiri, BNI" required />
+          </div>
+          <div>
+            <label class="field-label" for="bankAccountNumberInput">Nomor rekening</label>
+            <input type="text" id="bankAccountNumberInput" placeholder="Nomor rekening" required />
+          </div>
+          <div>
+            <label class="field-label" for="bankAccountNameInput">Atas nama</label>
+            <input type="text" id="bankAccountNameInput" placeholder="Nama pemilik rekening" />
+          </div>
+          <div>
+            <label class="field-label" for="bankSortOrderInput">Urutan tampil</label>
+            <input type="number" id="bankSortOrderInput" min="0" step="1" value="0" />
+          </div>
+          <label class="field-label" style="display:flex;align-items:center;gap:8px;font-weight:500;">
+            <input type="checkbox" id="bankActiveInput" checked />
+            Aktif (tampil di invoice)
+          </label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="submit" id="bankSubmitBtn" class="btn-primary">Tambah Rekening</button>
+            <button type="button" id="bankCancelEdit" class="btn-secondary hidden">Batal Edit</button>
+          </div>
+        </form>
+        <p id="banksMessage" class="message"></p>
+        <div id="banksList" style="margin-top: 16px; overflow-x: auto;"></div>
       </section>
 
       <section id="bannerTab" class="auth-card admin-panel hidden">
@@ -872,6 +1024,11 @@
             <label class="field-label" for="waBotNumber">Nomor WhatsApp Bot</label>
             <input type="text" id="waBotNumber" placeholder="Contoh: 628123456789 (Kosongkan jika menggunakan nomor perusahaan)" />
           </div>
+          <div style="margin-bottom: 12px;">
+            <label class="field-label" for="waNotifyPhone">Nomor WA admin (notifikasi bukti bayar)</label>
+            <input type="text" id="waNotifyPhone" placeholder="Contoh: 628123456789" />
+            <p class="empty-state" style="margin: 6px 0 0;">Jika kosong, dipakai nomor telepon profil perusahaan. Butuh token Fonnte di server.</p>
+          </div>
 
           <div>
             <label class="field-label" for="waBotFallback">Pesan Gangguan Teknis (Fallback)</label>
@@ -904,7 +1061,7 @@
     </div>
 
     <script src="/common.js?v=11"></script>
-    <script src="/admin.js?v=38"></script>
+    <script src="/admin.js?v=50"></script>
     <script src="/admin-points.js?v=1"></script>
   </body>
 </html>

@@ -4,6 +4,7 @@ let shippingQuoteState = null;
 let checkoutDestCoords = null;
 let cachedCheckoutAddresses = [];
 let shippingOptionsCache = [];
+let taxSettingsCache = { mode: "none", percent: 0 };
 
 const cartTableBody = document.getElementById("cartTableBody");
 const cartSelectAll = document.getElementById("cartSelectAll");
@@ -24,6 +25,8 @@ const checkoutAddressSelect = document.getElementById("checkoutAddressSelect");
 const checkoutAddressHint = document.getElementById("checkoutAddressHint");
 const checkoutAddressBlock = document.getElementById("checkoutAddressBlock");
 const cartSubtotal = document.getElementById("cartSubtotal");
+const cartTaxLine = document.getElementById("cartTaxLine");
+const cartTaxFee = document.getElementById("cartTaxFee");
 const cartShippingFee = document.getElementById("cartShippingFee");
 const cartTotal = document.getElementById("cartTotal");
 const checkoutButton = document.getElementById("checkoutButton");
@@ -60,16 +63,57 @@ function updateFooterSummary() {
   }
 }
 
+function computeCheckoutTax(subtotal) {
+  const mode = taxSettingsCache?.mode || "none";
+  const percent = Number(taxSettingsCache?.percent) || 0;
+  const amountBase = Math.max(0, Math.round(Number(subtotal) || 0));
+  if (mode === "exclude" && percent > 0) {
+    const amount = Math.round(amountBase * (percent / 100));
+    return {
+      mode,
+      percent,
+      amount,
+      addedToTotal: amount,
+      label: `PPN ${percent}% (exclude)`,
+    };
+  }
+  if (mode === "include" && percent > 0) {
+    const dpp = Math.round(amountBase / (1 + percent / 100));
+    const amount = Math.max(0, amountBase - dpp);
+    return {
+      mode,
+      percent,
+      amount,
+      addedToTotal: 0,
+      label: `PPN ${percent}% (include)`,
+    };
+  }
+  return { mode: "none", percent: 0, amount: 0, addedToTotal: 0, label: "Pajak (No Tax)" };
+}
+
 function updateCheckoutTotalsDisplay() {
   const cart = getCart();
   const subtotal = getCartProductsSubtotal(cart, selectedIndices);
   const shippingFee = shippingQuoteState?.fee ?? 0;
+  const tax = computeCheckoutTax(subtotal);
   if (cartSubtotal) cartSubtotal.textContent = formatRupiah(subtotal);
+  if (cartTaxLine) {
+    cartTaxLine.classList.remove("hidden");
+    const labelEl = cartTaxLine.querySelector("[data-tax-label]");
+    if (labelEl) labelEl.textContent = tax.label;
+    if (cartTaxFee) {
+      if (tax.mode === "none") cartTaxFee.textContent = "—";
+      else if (tax.mode === "include") cartTaxFee.textContent = `termasuk ${formatRupiah(tax.amount)}`;
+      else cartTaxFee.textContent = formatRupiah(tax.amount);
+    }
+  }
   if (cartShippingFee) {
     cartShippingFee.textContent = shippingQuoteState ? formatRupiah(shippingFee) : "—";
   }
   if (cartTotal) {
-    cartTotal.textContent = formatRupiah(subtotal + (shippingQuoteState ? shippingFee : 0));
+    cartTotal.textContent = formatRupiah(
+      subtotal + (shippingQuoteState ? shippingFee : 0) + tax.addedToTotal
+    );
   }
 }
 
@@ -234,25 +278,100 @@ function clearShippingQuote() {
     checkoutShippingSummary.classList.add("empty-state");
   }
   updateCheckoutTotalsDisplay();
+  updateShippingActionButtons();
+  if (isNoChargeShipping()) applyNoChargeShippingQuote();
+}
+
+function isGpsQuoteRequired(method = checkoutShippingMethodSelect?.value) {
+  const key = String(method || "");
+  if (!key || key === "pickup") return false;
+  const opt = shippingOptionsCache.find((o) => o.id === key);
+  if (!opt) return false;
+  return opt.requireGpsQuote === true;
+}
+
+function isNoChargeShipping(method = checkoutShippingMethodSelect?.value) {
+  const key = String(method || "");
+  if (!key) return false;
+  return !isGpsQuoteRequired(key);
+}
+
+function applyNoChargeShippingQuote() {
+  const method = checkoutShippingMethodSelect?.value || "pickup";
+  const opt = shippingOptionsCache.find((o) => o.id === method);
+  const label = opt?.label || "Ambil sendiri";
+  const fee = Number(opt?.autoFee) || 0;
+  const included = fee === 0;
+  shippingQuoteState = {
+    method,
+    fee,
+    label,
+    estimated: false,
+    note: included ? "Harga sudah termasuk ongkir" : "Tarif flat (GPS & hitung ongkir dimatikan)",
+    distanceKm: null,
+  };
+  if (checkoutShippingMessage) {
+    checkoutShippingMessage.classList.add("success");
+    checkoutShippingMessage.textContent = included
+      ? "Tidak dikenakan ongkir — harga produk sudah termasuk."
+      : `Ongkir ${formatRupiah(fee)} (tarif flat, tanpa GPS).`;
+  }
+  if (checkoutShippingSummary) {
+    checkoutShippingSummary.classList.remove("empty-state");
+    checkoutShippingSummary.textContent = included
+      ? `${label}: ${formatRupiah(0)} — harga sudah termasuk ongkir`
+      : `${label}: ${formatRupiah(fee)} — tarif flat`;
+  }
+  updateCheckoutTotalsDisplay();
+  updateShippingActionButtons();
+}
+
+function updateShippingActionButtons() {
+  const show = isGpsQuoteRequired();
+  const actions = document.getElementById("checkoutShippingActions");
+  if (actions) {
+    actions.classList.toggle("hidden", !show);
+    if (show) actions.removeAttribute("hidden");
+    else actions.setAttribute("hidden", "");
+  }
+  if (checkoutQuoteShippingBtn) {
+    checkoutQuoteShippingBtn.disabled = !show;
+    checkoutQuoteShippingBtn.hidden = !show;
+  }
+  if (checkoutUseGpsBtn) {
+    checkoutUseGpsBtn.disabled = !show;
+    checkoutUseGpsBtn.hidden = !show;
+  }
 }
 
 async function loadShippingOptions() {
   if (!checkoutShippingMethodSelect) return;
+  const pickupOption = {
+    id: "pickup",
+    label: "Ambil sendiri",
+    description: "Ambil di gudang / toko, tanpa ongkir",
+    requiresQuote: false,
+    requireGpsQuote: false,
+    autoFee: 0,
+  };
   try {
     const data = await apiFetch("/shipping/options");
     const options = Array.isArray(data?.options) ? data.options : [];
-    shippingOptionsCache = options;
+    shippingOptionsCache = options.some((opt) => opt.id === "pickup")
+      ? options
+      : [pickupOption, ...options];
     checkoutShippingMethodSelect.innerHTML =
       '<option value="">— Pilih jasa kirim —</option>' +
-      options.map((opt) => `<option value="${opt.id}">${opt.label}</option>`).join("");
+      shippingOptionsCache.map((opt) => `<option value="${opt.id}">${opt.label}</option>`).join("");
+    updateShippingActionButtons();
   } catch {
-    shippingOptionsCache = [];
+    shippingOptionsCache = [pickupOption];
     checkoutShippingMethodSelect.innerHTML = `
       <option value="">— Pilih jasa kirim —</option>
+      <option value="pickup">Ambil sendiri</option>
       <option value="store">Kirim mobil toko</option>
-      <option value="lalamove">Lalamove</option>
-      <option value="gosend">GoSend</option>
     `;
+    updateShippingActionButtons();
   }
 }
 
@@ -265,7 +384,13 @@ async function handleQuoteShipping() {
     return;
   }
   const selectedOption = shippingOptionsCache.find((opt) => opt.id === method);
-  const needsDestination = method !== "store" || Boolean(selectedOption?.distanceBased);
+  if (isNoChargeShipping(method)) {
+    applyNoChargeShippingQuote();
+    return;
+  }
+  const needsDestination = selectedOption
+    ? Boolean(selectedOption.quoteNeedsDestination || selectedOption.distanceBased)
+    : method !== "store" && method !== "pickup";
   if (needsDestination && !address && !checkoutDestCoords) {
     alert("Isi alamat pengiriman atau gunakan GPS.");
     return;
@@ -320,6 +445,7 @@ async function handleQuoteShipping() {
 }
 
 function handleUseGps() {
+  if (isNoChargeShipping()) return;
   if (!navigator.geolocation) {
     alert("Browser tidak mendukung GPS.");
     return;
@@ -400,8 +526,13 @@ async function handleCheckout() {
       })
       .join("\n");
     const subtotal = getCartProductsSubtotal(cart, selectedIndices);
+    const tax = computeCheckoutTax(subtotal);
+    const taxLine =
+      tax.mode === "none"
+        ? `\nPajak (No Tax): —`
+        : `\n${tax.label}: ${tax.mode === "include" ? "termasuk " : ""}${formatRupiah(tax.amount)}`;
     const confirmed = window.confirm(
-      `Konfirmasi pesanan (${totalQty} item):\n\n${confirmLines}\n\nSubtotal: ${formatRupiah(subtotal)}\nOngkir (${shippingQuoteState.label}): ${formatRupiah(shippingQuoteState.fee)}\nTotal: ${formatRupiah(subtotal + shippingQuoteState.fee)}\n\nLanjutkan pembayaran?`
+      `Konfirmasi pesanan (${totalQty} item):\n\n${confirmLines}\n\nSubtotal: ${formatRupiah(subtotal)}${taxLine}\nOngkir (${shippingQuoteState.label}): ${formatRupiah(shippingQuoteState.fee)}\nTotal: ${formatRupiah(subtotal + shippingQuoteState.fee + tax.addedToTotal)}\n\nLanjutkan pembayaran?`
     );
     if (!confirmed) return;
 
@@ -567,3 +698,16 @@ window.addEventListener("pageshow", () => {
 renderUserArea();
 loadShippingOptions();
 loadProductsForCart();
+(async () => {
+  try {
+    const settings = await loadSettings({ fresh: true });
+    taxSettingsCache = {
+      mode: settings?.tax?.mode || "none",
+      percent: Number(settings?.tax?.percent) || 0,
+    };
+    updateCheckoutTotalsDisplay();
+  } catch {
+    taxSettingsCache = { mode: "none", percent: 0 };
+    updateCheckoutTotalsDisplay();
+  }
+})();

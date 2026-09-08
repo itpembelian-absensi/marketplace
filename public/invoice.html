@@ -33,10 +33,35 @@
       align-items: center;
     }
     .invoice-actions .btn-primary,
-    .invoice-actions .btn-secondary {
+    .invoice-actions .btn-secondary,
+    .invoice-admin-actions .btn-primary,
+    .invoice-admin-actions .btn-danger {
       font-size: 0.95rem;
       padding: 10px 20px;
       min-width: 120px;
+    }
+    .invoice-admin-actions {
+      max-width: 800px;
+      margin: 0 auto 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+      padding: 12px;
+      background: #fff7ed;
+      border: 1px solid #fdba74;
+      border-radius: 8px;
+    }
+    .invoice-admin-actions.hidden {
+      display: none !important;
+    }
+    .invoice-admin-actions .admin-label {
+      font-weight: 700;
+      color: #9a3412;
+      width: 100%;
+      text-align: center;
+      font-size: 0.85rem;
     }
     @media print {
       .no-print { display: none !important; }
@@ -52,13 +77,19 @@
     <button type="button" id="invoicePrintBtn" class="btn-primary">Cetak</button>
     <button type="button" id="invoicePdfBtn" class="btn-primary">Export PDF</button>
   </div>
+  <div id="invoiceAdminActions" class="no-print invoice-admin-actions hidden">
+    <span class="admin-label">Aksi admin</span>
+    <button type="button" id="invoiceMarkPaidBtn" class="btn-primary">Tandai Lunas</button>
+    <button type="button" id="invoiceVoidBtn" class="btn-danger">Batalkan</button>
+    <span id="invoiceAdminMessage" class="message" style="width:100%; text-align:center; margin:0;"></span>
+  </div>
 
   <div class="invoice-container" id="invoiceContainer">
     <div style="text-align:center; padding: 50px; color: #6b7280;">Memuat Invoice...</div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
-  <script src="/common.js?v=10"></script>
-  <script src="/invoice.js?v=11"></script>
+  <script src="/common.js?v=20"></script>
+  <script src="/invoice.js?v=19"></script>
 </body>
 </html>
