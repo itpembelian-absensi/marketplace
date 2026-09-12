@@ -268,10 +268,6 @@ async function loadInvoice() {
     if (order.fulfillment_entity === "SJL") {
       companyName = "PT SUKSES JAYA LESTARI";
     }
-    const companyAddress = company.address || "Alamat belum diatur";
-    const companyPhone = company.phone || "-";
-    const companyEmail = company.email || "-";
-
     const orderStatus = String(order.status || "").toLowerCase();
     const isPaid = orderStatus === "paid";
     const isVoid = orderStatus === "void";
@@ -383,8 +379,6 @@ async function loadInvoice() {
           ${companyLogoHtml}
           <div>
             <h2 style="margin: 0 0 4px 0; color: #111827; font-size: 1.4rem;">${companyName}</h2>
-            <p style="margin: 0; font-size: 0.85rem; color: #6b7280; max-width: 300px; line-height: 1.4;">${companyAddress}</p>
-            <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #6b7280;">Telp: ${companyPhone} | Email: ${companyEmail}</p>
           </div>
         </div>
         <div class="invoice-meta">
