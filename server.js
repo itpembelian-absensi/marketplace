@@ -3971,6 +3971,49 @@ function getMonthPeriodBounds(year, month) {
   return { start, end };
 }
 
+function parseReportDate(value) {
+  const raw = String(value || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
+  const date = new Date(`${raw}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return null;
+  return raw;
+}
+
+function addDaysYmd(ymd, days) {
+  const date = new Date(`${ymd}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getInventoryPeriodBounds(query) {
+  const from = parseReportDate(query?.from);
+  const to = parseReportDate(query?.to);
+  if (from || to) {
+    if (!from || !to) {
+      return { error: "Tanggal dari dan sampai wajib diisi." };
+    }
+    if (from > to) {
+      return { error: "Tanggal dari tidak boleh lebih besar dari tanggal sampai." };
+    }
+    return {
+      start: `${from} 00:00:00`,
+      end: `${addDaysYmd(to, 1)} 00:00:00`,
+      label: `${from} s/d ${to}`,
+    };
+  }
+
+  const year = Number(query?.year);
+  const month = Number(query?.month);
+  if (!year || !month || month < 1 || month > 12) {
+    return { error: "Parameter tanggal atau tahun/bulan wajib diisi dengan benar." };
+  }
+  const bounds = getMonthPeriodBounds(year, month);
+  return { ...bounds, label: `${year}-${String(month).padStart(2, "0")}` };
+}
+
 app.get("/api/admin/sales/report", authMiddleware, requireRole(["admin", "manager"]), async (req, res) => {
   const year = Number(req.query.year);
   const month = Number(req.query.month);
@@ -4080,15 +4123,14 @@ app.get("/api/admin/sales/report", authMiddleware, requireRole(["admin", "manage
 });
 
 app.get("/api/admin/inventory/report", authMiddleware, requireRole(["admin", "manager"]), async (req, res) => {
-  const year = Number(req.query.year);
-  const month = Number(req.query.month);
-
-  if (!year || !month || month < 1 || month > 12) {
-    res.status(400).json({ message: "Parameter tahun dan bulan wajib diisi dengan benar." });
+  const period = getInventoryPeriodBounds(req.query);
+  if (period.error) {
+    res.status(400).json({ message: period.error });
     return;
   }
 
-  const { start: targetPeriodStart, end: targetPeriodEnd } = getMonthPeriodBounds(year, month);
+  const targetPeriodStart = period.start;
+  const targetPeriodEnd = period.end;
 
   try {
     const products = await allQuery("SELECT id, name FROM products ORDER BY name ASC");

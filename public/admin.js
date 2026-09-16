@@ -2897,8 +2897,21 @@ function initSalesReportFilters() {
   initReportPeriodFilters("salesMonth", "salesYear");
 }
 
+function formatLocalYmd(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function initInventoryReportFilters() {
-  initReportPeriodFilters("inventoryMonth", "inventoryYear");
+  const fromEl = document.getElementById("inventoryFrom");
+  const toEl = document.getElementById("inventoryTo");
+  if (!fromEl || !toEl) return;
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  fromEl.value = formatLocalYmd(start);
+  toEl.value = formatLocalYmd(now);
 }
 
 function setSalesMessage(text, isSuccess = false) {
@@ -3080,28 +3093,69 @@ function setInventoryMessage(text, isSuccess = false) {
   el.textContent = text || "";
 }
 
-async function loadInventoryReport() {
-  const tbody = document.getElementById("inventoryTbody");
-  const month = Number(document.getElementById("inventoryMonth")?.value);
-  const year = Number(document.getElementById("inventoryYear")?.value);
+let lastInventoryRows = [];
+let inventorySortKey = "name";
+let inventorySortDir = "asc";
 
-  if (!tbody) return;
-  setInventoryMessage("");
-  tbody.innerHTML =
-    '<tr><td colspan="5" style="padding: 10px; text-align: center;">Memuat laporan...</td></tr>';
+function getInventorySortState() {
+  const raw = document.getElementById("inventorySort")?.value || "name:asc";
+  const [key, dir] = raw.split(":");
+  return { key: key || "name", dir: dir === "desc" ? "desc" : "asc" };
+}
 
-  try {
-    const rows = await apiFetch(`/admin/inventory/report?year=${year}&month=${month}`);
-    if (!rows || !rows.length) {
-      tbody.innerHTML =
-        '<tr><td colspan="5" style="padding: 10px; text-align: center;">Belum ada data produk.</td></tr>';
-      setInventoryMessage("Tidak ada data produk.", true);
-      return;
+function setInventorySortState(key, dir) {
+  inventorySortKey = key;
+  inventorySortDir = dir === "desc" ? "desc" : "asc";
+  const select = document.getElementById("inventorySort");
+  if (select) {
+    const value = `${inventorySortKey}:${inventorySortDir}`;
+    if ([...select.options].some((opt) => opt.value === value)) {
+      select.value = value;
     }
+  }
+  document.querySelectorAll(".inventory-sort").forEach((th) => {
+    th.classList.toggle("is-sorted", th.dataset.sort === inventorySortKey);
+    th.dataset.dir = th.dataset.sort === inventorySortKey ? inventorySortDir : "";
+  });
+}
 
-    tbody.innerHTML = rows
-      .map(
-        (row) => `
+function sortInventoryRows(rows) {
+  const { key, dir } = getInventorySortState();
+  inventorySortKey = key;
+  inventorySortDir = dir;
+  const factor = dir === "desc" ? -1 : 1;
+  return [...rows].sort((a, b) => {
+    const left = a?.[key];
+    const right = b?.[key];
+    if (key === "name") {
+      return String(left || "").localeCompare(String(right || ""), "id", { sensitivity: "base" }) * factor;
+    }
+    return ((Number(left) || 0) - (Number(right) || 0)) * factor;
+  });
+}
+
+function getFilteredInventoryRows() {
+  const query = String(document.getElementById("inventorySearch")?.value || "")
+    .trim()
+    .toLowerCase();
+  const filtered = query
+    ? lastInventoryRows.filter((row) => String(row.name || "").toLowerCase().includes(query))
+    : lastInventoryRows;
+  return sortInventoryRows(filtered);
+}
+
+function renderInventoryRows(rows) {
+  const tbody = document.getElementById("inventoryTbody");
+  if (!tbody) return;
+  if (!rows.length) {
+    tbody.innerHTML =
+      '<tr><td colspan="5" style="padding: 10px; text-align: center;">Tidak ada produk yang cocok.</td></tr>';
+    setInventoryTotals(null);
+    return;
+  }
+  tbody.innerHTML = rows
+    .map(
+      (row) => `
       <tr>
         <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${row.name}</td>
         <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right;">${row.opening_balance}</td>
@@ -3109,13 +3163,78 @@ async function loadInventoryReport() {
         <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; color: var(--danger);">${row.out_qty}</td>
         <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; font-weight: 600;">${row.ending_balance}</td>
       </tr>`
-      )
-      .join("");
+    )
+    .join("");
+  const totals = rows.reduce(
+    (acc, row) => {
+      acc.opening += Number(row.opening_balance) || 0;
+      acc.inQty += Number(row.in_qty) || 0;
+      acc.outQty += Number(row.out_qty) || 0;
+      acc.ending += Number(row.ending_balance) || 0;
+      return acc;
+    },
+    { opening: 0, inQty: 0, outQty: 0, ending: 0 }
+  );
+  setInventoryTotals(totals);
+}
 
-    const monthLabel = MONTH_NAMES[month - 1] || "";
-    setInventoryMessage(`Laporan stok ${monthLabel} ${year} berhasil dimuat.`, true);
+function setInventoryTotals(totals) {
+  const tfoot = document.getElementById("inventoryTfoot");
+  const openingEl = document.getElementById("inventoryTotalOpening");
+  const inEl = document.getElementById("inventoryTotalIn");
+  const outEl = document.getElementById("inventoryTotalOut");
+  const endingEl = document.getElementById("inventoryTotalEnding");
+  if (!tfoot) return;
+  if (!totals) {
+    tfoot.classList.add("hidden");
+    return;
+  }
+  if (openingEl) openingEl.textContent = totals.opening;
+  if (inEl) inEl.textContent = totals.inQty;
+  if (outEl) outEl.textContent = totals.outQty;
+  if (endingEl) endingEl.textContent = totals.ending;
+  tfoot.classList.remove("hidden");
+}
+
+async function loadInventoryReport() {
+  const tbody = document.getElementById("inventoryTbody");
+  const from = document.getElementById("inventoryFrom")?.value;
+  const to = document.getElementById("inventoryTo")?.value;
+
+  if (!tbody) return;
+  if (!from || !to) {
+    setInventoryMessage("Isi tanggal dari dan sampai.");
+    return;
+  }
+  if (from > to) {
+    setInventoryMessage("Tanggal dari tidak boleh lebih besar dari tanggal sampai.");
+    return;
+  }
+
+  setInventoryMessage("");
+  setInventoryTotals(null);
+  lastInventoryRows = [];
+  tbody.innerHTML =
+    '<tr><td colspan="5" style="padding: 10px; text-align: center;">Memuat laporan...</td></tr>';
+
+  try {
+    const rows = await apiFetch(
+      `/admin/inventory/report?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
+    );
+    if (!rows || !rows.length) {
+      tbody.innerHTML =
+        '<tr><td colspan="5" style="padding: 10px; text-align: center;">Belum ada data produk.</td></tr>';
+      setInventoryMessage("Tidak ada data produk.", true);
+      return;
+    }
+
+    lastInventoryRows = rows;
+    setInventorySortState(getInventorySortState().key, getInventorySortState().dir);
+    renderInventoryRows(getFilteredInventoryRows());
+    setInventoryMessage(`Laporan stok ${from} s/d ${to} berhasil dimuat.`, true);
   } catch (error) {
     setInventoryMessage(error.message);
+    setInventoryTotals(null);
     tbody.innerHTML =
       '<tr><td colspan="5" style="padding: 10px; text-align: center; color: red;">Gagal memuat laporan stok.</td></tr>';
   }
@@ -3124,6 +3243,24 @@ async function loadInventoryReport() {
 document.getElementById("salesFilterBtn")?.addEventListener("click", loadSalesReport);
 document.getElementById("salesExportBtn")?.addEventListener("click", exportSalesReportCsv);
 document.getElementById("inventoryFilterBtn")?.addEventListener("click", loadInventoryReport);
+document.getElementById("inventorySort")?.addEventListener("change", () => {
+  if (!lastInventoryRows.length) return;
+  const state = getInventorySortState();
+  setInventorySortState(state.key, state.dir);
+  renderInventoryRows(getFilteredInventoryRows());
+});
+document.getElementById("inventorySearch")?.addEventListener("input", () => {
+  if (!lastInventoryRows.length) return;
+  renderInventoryRows(getFilteredInventoryRows());
+});
+document.getElementById("inventoryTable")?.addEventListener("click", (event) => {
+  const th = event.target.closest(".inventory-sort");
+  if (!th || !lastInventoryRows.length) return;
+  const key = th.dataset.sort;
+  const nextDir = inventorySortKey === key && inventorySortDir === "asc" ? "desc" : "asc";
+  setInventorySortState(key, nextDir);
+  renderInventoryRows(getFilteredInventoryRows());
+});
 initSalesReportFilters();
 initInventoryReportFilters();
 

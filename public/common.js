@@ -320,7 +320,7 @@ async function renderBrandLogo() {
     leftImg.src = logoUrl;
     leftImg.classList.remove("hidden");
   }
-  if (topImg) {
+  if (topImg && !document.body.classList.contains("admin-page")) {
     topImg.src = logoUrl;
     topImg.classList.remove("hidden");
   }

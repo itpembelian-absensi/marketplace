@@ -1175,6 +1175,108 @@ a {
   color: #1d4ed8;
 }
 
+.admin-page .topbar {
+  flex-wrap: nowrap;
+  align-items: center;
+  min-height: 64px;
+  padding: 10px 24px;
+}
+
+.admin-page .brand-logo {
+  width: 44px;
+  height: 44px;
+}
+
+.admin-page .brand h1 {
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+.admin-page .brand p {
+  margin: 2px 0 0;
+}
+
+.admin-page .inventory-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.admin-page .inventory-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.admin-page .inventory-filters input,
+.admin-page .inventory-filters select {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text);
+  min-width: 150px;
+}
+
+.admin-page .inventory-sort {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.admin-page .inventory-sort:hover {
+  background: #f8fafc;
+}
+
+.admin-page .inventory-sort.is-sorted::after {
+  content: " ▲";
+  font-size: 0.7rem;
+  color: #6b7280;
+}
+
+.admin-page .inventory-sort.is-sorted[data-dir="desc"]::after {
+  content: " ▼";
+}
+
+.admin-page .top-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.admin-page #userArea {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-page .top-actions .btn-secondary,
+.admin-page .top-actions .btn-danger,
+.admin-page .top-actions .user-profile-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 12px;
+  line-height: 1;
+  box-sizing: border-box;
+  text-decoration: none;
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+
+.admin-page .top-actions .user-profile-link {
+  padding: 0 10px;
+}
+
 /* Admin: sidebar menu kiri (seperti Explorer) */
 .admin-page .admin-layout {
   display: flex;

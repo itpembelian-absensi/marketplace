@@ -6,7 +6,7 @@
     <link rel="icon" href="/logo-sjs.png" type="image/png" />
     <link rel="apple-touch-icon" href="/logo-sjs.png" />
     <title>Manajemen User - PT SAHABAT JAYA SUKSES</title>
-    <link rel="stylesheet" href="/style.css?v=29" />
+    <link rel="stylesheet" href="/style.css?v=31" />
   </head>
   <body class="admin-page">
     <header class="topbar">
@@ -18,7 +18,6 @@
         </span>
       </a>
       <div class="top-actions">
-        <img id="topLogo" class="top-logo hidden" alt="Logo" />
         <div class="admin-notify" id="adminNotifyWrap">
           <button type="button" class="btn-secondary admin-notify-btn" id="adminNotifyBtn" aria-label="Notifikasi">
             Notifikasi
@@ -263,39 +262,60 @@
 
       <section id="inventoryTab" class="auth-card admin-panel hidden">
         <h2>Laporan Stok (Keluar/Masuk Barang)</h2>
-        <div style="display: flex; gap: 10px; margin-bottom: 12px;">
-          <select id="inventoryMonth" style="padding: 8px;">
-            <option value="1">Januari</option>
-            <option value="2">Februari</option>
-            <option value="3">Maret</option>
-            <option value="4">April</option>
-            <option value="5">Mei</option>
-            <option value="6">Juni</option>
-            <option value="7">Juli</option>
-            <option value="8">Agustus</option>
-            <option value="9">September</option>
-            <option value="10">Oktober</option>
-            <option value="11">November</option>
-            <option value="12">Desember</option>
-          </select>
-          <input type="number" id="inventoryYear" placeholder="Tahun" style="padding: 8px; width: 100px;" />
-          <button id="inventoryFilterBtn" class="btn-primary">Tampilkan</button>
+        <div class="inventory-filters">
+          <label>
+            Dari
+            <input type="date" id="inventoryFrom" />
+          </label>
+          <label>
+            Sampai
+            <input type="date" id="inventoryTo" />
+          </label>
+          <label>
+            Cari produk
+            <input type="search" id="inventorySearch" placeholder="Nama produk" />
+          </label>
+          <label>
+            Urutkan
+            <select id="inventorySort">
+              <option value="name:asc">Produk A-Z</option>
+              <option value="name:desc">Produk Z-A</option>
+              <option value="in_qty:desc">IN terbanyak</option>
+              <option value="in_qty:asc">IN tersedikit</option>
+              <option value="out_qty:desc">OUT terbanyak</option>
+              <option value="out_qty:asc">OUT tersedikit</option>
+              <option value="ending_balance:desc">Ending tertinggi</option>
+              <option value="ending_balance:asc">Ending terendah</option>
+              <option value="opening_balance:desc">Opening tertinggi</option>
+              <option value="opening_balance:asc">Opening terendah</option>
+            </select>
+          </label>
+          <button id="inventoryFilterBtn" class="btn-primary" type="button">Tampilkan</button>
         </div>
         <p id="inventoryMessage" class="message"></p>
         <div id="inventoryTable" style="margin-top: 12px; overflow-x: auto;">
           <table style="width: 100%; border-collapse: collapse; text-align: left;">
             <thead>
               <tr style="border-bottom: 1px solid var(--border);">
-                <th style="padding: 10px;">Produk</th>
-                <th style="padding: 10px; text-align: right;">Opening Balance</th>
-                <th style="padding: 10px; text-align: right; color: var(--primary);">IN (Masuk)</th>
-                <th style="padding: 10px; text-align: right; color: var(--danger);">OUT (Keluar)</th>
-                <th style="padding: 10px; text-align: right;">Ending Balance</th>
+                <th class="inventory-sort" data-sort="name" style="padding: 10px;">Produk</th>
+                <th class="inventory-sort" data-sort="opening_balance" style="padding: 10px; text-align: right;">Opening Balance</th>
+                <th class="inventory-sort" data-sort="in_qty" style="padding: 10px; text-align: right; color: var(--primary);">IN (Masuk)</th>
+                <th class="inventory-sort" data-sort="out_qty" style="padding: 10px; text-align: right; color: var(--danger);">OUT (Keluar)</th>
+                <th class="inventory-sort" data-sort="ending_balance" style="padding: 10px; text-align: right;">Ending Balance</th>
               </tr>
             </thead>
             <tbody id="inventoryTbody">
-              <tr><td colspan="5" style="padding: 10px; text-align: center;">Pilih bulan dan tahun lalu klik Tampilkan.</td></tr>
+              <tr><td colspan="5" style="padding: 10px; text-align: center;">Pilih tanggal dari–sampai lalu klik Tampilkan.</td></tr>
             </tbody>
+            <tfoot id="inventoryTfoot" class="hidden">
+              <tr style="border-top: 2px solid var(--border); background: #f8fafc; font-weight: 700;">
+                <td style="padding: 10px;">Total</td>
+                <td id="inventoryTotalOpening" style="padding: 10px; text-align: right;">0</td>
+                <td id="inventoryTotalIn" style="padding: 10px; text-align: right; color: var(--primary);">0</td>
+                <td id="inventoryTotalOut" style="padding: 10px; text-align: right; color: var(--danger);">0</td>
+                <td id="inventoryTotalEnding" style="padding: 10px; text-align: right;">0</td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </section>
@@ -1111,8 +1131,8 @@
       </main>
     </div>
 
-    <script src="/common.js?v=22"></script>
-    <script src="/admin.js?v=56"></script>
+    <script src="/common.js?v=23"></script>
+    <script src="/admin.js?v=58"></script>
     <script src="/admin-points.js?v=1"></script>
   </body>
 </html>
