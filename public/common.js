@@ -303,7 +303,6 @@ async function renderBrandLogo() {
   const leftImg = document.getElementById("brandLogo");
   const topImg = document.getElementById("topLogo");
   const fallbackEl = document.getElementById("brandFallback");
-  if (!leftImg && !topImg) return;
 
   let logoUrl = DEFAULT_LOGO_URL;
   try {
@@ -312,6 +311,10 @@ async function renderBrandLogo() {
   } catch (error) {
     // use default logo
   }
+
+  applySiteFavicon(logoUrl);
+
+  if (!leftImg && !topImg) return;
 
   if (leftImg) {
     leftImg.src = logoUrl;
@@ -322,6 +325,23 @@ async function renderBrandLogo() {
     topImg.classList.remove("hidden");
   }
   if (fallbackEl) fallbackEl.classList.add("hidden");
+}
+
+function applySiteFavicon(logoUrl) {
+  const href = logoUrl || DEFAULT_LOGO_URL;
+  const links = document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]');
+  if (links.length) {
+    links.forEach((link) => {
+      link.type = "image/png";
+      link.href = href;
+    });
+    return;
+  }
+  const link = document.createElement("link");
+  link.rel = "icon";
+  link.type = "image/png";
+  link.href = href;
+  document.head.appendChild(link);
 }
 
 async function renderHomeWatermark() {
