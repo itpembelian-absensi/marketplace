@@ -242,7 +242,14 @@ async function apiFetch(path, options = {}) {
         "Endpoint belum aktif di server. Hentikan proses Node lama, jalankan ulang npm start, lalu refresh halaman admin."
       );
     }
-    throw new Error(data.message || "Request gagal.");
+    const message = String(data.message || "");
+    if (
+      response.status === 401 &&
+      /token tidak valid|token tidak ditemukan|kadaluarsa/i.test(message)
+    ) {
+      clearAuth();
+    }
+    throw new Error(message || "Request gagal.");
   }
   return data;
 }

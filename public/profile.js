@@ -69,6 +69,14 @@ async function loadProfile() {
     loadRewards();
     loadPointsHistory();
   } catch (error) {
+    const tokenError = /token tidak valid|token tidak ditemukan|kadaluarsa/i.test(
+      error.message || ""
+    );
+    if (tokenError) {
+      clearAuth();
+      window.location.href = "/login.html?next=/profile.html";
+      return;
+    }
     showMessage(error.message);
   }
 }
