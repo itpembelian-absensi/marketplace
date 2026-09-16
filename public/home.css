@@ -2180,7 +2180,6 @@ body.landing-page {
   max-height: 140px;
   height: auto;
   object-fit: contain;
-  filter: grayscale(1) brightness(0.42) sepia(0.55) hue-rotate(8deg) saturate(1.6);
 }
 
 .sjs-brand-tile-name {

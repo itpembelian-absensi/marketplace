@@ -2093,7 +2093,6 @@ body.lightbox-open {
   max-width: 88%;
   max-height: 58%;
   object-fit: contain;
-  filter: grayscale(1) brightness(0.42) sepia(0.55) hue-rotate(8deg) saturate(1.6);
   z-index: 1;
 }
 
