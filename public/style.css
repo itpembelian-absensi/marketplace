@@ -2275,6 +2275,48 @@ body.lightbox-open {
   margin: 0;
 }
 
+.brand-layout-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.brand-layout-opt {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.brand-layout-opt:has(input:checked) {
+  border-color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.brand-layout-opt span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.brand-layout-opt strong {
+  color: #111827;
+  font-size: 0.92rem;
+}
+
+@media (max-width: 720px) {
+  .brand-layout-options {
+    grid-template-columns: 1fr;
+  }
+}
+
 .brand-pos-label {
   display: block;
   font-weight: 600;

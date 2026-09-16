@@ -3581,6 +3581,10 @@ async function loadBrandsPageSettings() {
     title.value = page.title || "";
     description.value = page.description || "";
     setBrandsPageColorInputs(page.titleColor || "#c41e3a");
+    const layout = page.layout === "logo" ? "logo" : "cover";
+    document.querySelectorAll('input[name="brandsPageLayout"]').forEach((input) => {
+      input.checked = input.value === layout;
+    });
   } catch (error) {
     setBrandsPageMessage(error.message);
   }
@@ -3604,6 +3608,7 @@ document.getElementById("brandsPageForm")?.addEventListener("submit", async (eve
         title: document.getElementById("brandsPageTitle")?.value || "",
         description: document.getElementById("brandsPageDescription")?.value || "",
         titleColor: document.getElementById("brandsPageTitleColor")?.value || "#c41e3a",
+        layout: document.querySelector('input[name="brandsPageLayout"]:checked')?.value || "cover",
       }),
     });
     localStorage.removeItem("marketplace_settings_cache");
@@ -3612,6 +3617,10 @@ document.getElementById("brandsPageForm")?.addEventListener("submit", async (eve
     document.getElementById("brandsPageTitle").value = page.title || "";
     document.getElementById("brandsPageDescription").value = page.description || "";
     setBrandsPageColorInputs(page.titleColor || "#c41e3a");
+    const layout = page.layout === "logo" ? "logo" : "cover";
+    document.querySelectorAll('input[name="brandsPageLayout"]').forEach((input) => {
+      input.checked = input.value === layout;
+    });
     setBrandsPageMessage(result.message || "Teks pengantar disimpan.", true);
   } catch (error) {
     setBrandsPageMessage(error.message);
@@ -3820,6 +3829,8 @@ function fillBrandForm(brand) {
   editingBrandId = brand.id;
   document.getElementById("brandNameInput").value = brand.name || "";
   document.getElementById("brandSortInput").value = String(brand.sortOrder || 0);
+  const categoryEl = document.getElementById("brandCategoryInput");
+  if (categoryEl) categoryEl.value = brand.category || "";
   document.getElementById("brandCoverUrl").value = brand.coverUrl || "";
   document.getElementById("brandLogoUrl").value = brand.logoUrl || "";
   const preset = BRAND_LOGO_PRESETS[brand.logoPosition];
@@ -3834,7 +3845,29 @@ function fillBrandForm(brand) {
   if (cancelBtn) cancelBtn.classList.remove("hidden");
 }
 
+async function loadBrandCategoryOptions() {
+  const select = document.getElementById("brandCategoryInput");
+  if (!select) return;
+  const current = select.value;
+  try {
+    const categories = await apiFetch("/categories");
+    const options = ['<option value="">Semua / tanpa kategori khusus</option>'].concat(
+      (Array.isArray(categories) ? categories : []).map(
+        (cat) =>
+          `<option value="${escapeHtml(cat.name)}">${escapeHtml(cat.name)}</option>`
+      )
+    );
+    select.innerHTML = options.join("");
+    if (current && [...select.options].some((opt) => opt.value === current)) {
+      select.value = current;
+    }
+  } catch (error) {
+    // keep default option
+  }
+}
+
 async function loadAdminBrands() {
+  await loadBrandCategoryOptions();
   const grid = document.getElementById("adminBrandsGrid");
   if (!grid) return;
   try {
@@ -3931,12 +3964,13 @@ document.getElementById("brandForm")?.addEventListener("submit", async (event) =
   const { x: logoX, y: logoY } = getBrandLogoXY();
   const logoScale = getBrandLogoScale();
   const sortOrder = Number(document.getElementById("brandSortInput")?.value || 0);
+  const category = document.getElementById("brandCategoryInput")?.value.trim() || "";
   if (!name) {
     setBrandsMessage("Nama merek wajib diisi.");
     return;
   }
   try {
-    const payload = { name, coverUrl, logoUrl, logoPosition, logoX, logoY, logoScale, sortOrder };
+    const payload = { name, coverUrl, logoUrl, logoPosition, logoX, logoY, logoScale, sortOrder, category };
     if (editingBrandId) {
       await apiFetch(`/admin/brands/${editingBrandId}`, {
         method: "PUT",

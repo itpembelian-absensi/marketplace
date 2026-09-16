@@ -74,6 +74,7 @@ const DEFAULT_BRANDS_PAGE = {
   description:
     "Pilihan merek plywood, papan, dan material bangunan yang kami pasok. Mitra terpercaya untuk kebutuhan proyek, interior, dan furniture Anda.",
   titleColor: "#c41e3a",
+  layout: "cover",
 };
 
 function normalizeBrandColor(value, fallback = DEFAULT_BRANDS_PAGE.titleColor) {
@@ -91,11 +92,13 @@ function normalizeBrandsPage(raw) {
   const kicker = String(source.kicker ?? DEFAULT_BRANDS_PAGE.kicker).trim();
   const title = String(source.title ?? DEFAULT_BRANDS_PAGE.title).trim();
   const description = String(source.description ?? DEFAULT_BRANDS_PAGE.description).trim();
+  const layoutRaw = String(source.layout ?? DEFAULT_BRANDS_PAGE.layout).trim().toLowerCase();
   return {
     kicker: (kicker || DEFAULT_BRANDS_PAGE.kicker).slice(0, 80),
     title: (title || DEFAULT_BRANDS_PAGE.title).slice(0, 160),
     description: (description || DEFAULT_BRANDS_PAGE.description).slice(0, 600),
     titleColor: normalizeBrandColor(source.titleColor, DEFAULT_BRANDS_PAGE.titleColor),
+    layout: layoutRaw === "logo" ? "logo" : "cover",
   };
 }
 
@@ -1014,6 +1017,10 @@ async function setupDatabase() {
   const brandColumnsAfterXY = await allQuery("PRAGMA table_info(brands)");
   if (!brandColumnsAfterXY.some((col) => col.name === "logo_scale")) {
     await runQuery("ALTER TABLE brands ADD COLUMN logo_scale REAL NOT NULL DEFAULT 30");
+  }
+  const brandColumnsAfterScale = await allQuery("PRAGMA table_info(brands)");
+  if (!brandColumnsAfterScale.some((col) => col.name === "category")) {
+    await runQuery("ALTER TABLE brands ADD COLUMN category TEXT NOT NULL DEFAULT ''");
   }
   await runQuery(`
     UPDATE brands SET
@@ -3034,13 +3041,32 @@ function mapBrandRow(row) {
     logoY: coords.y,
     logoScale: clampBrandLogoScale(row.logo_scale, 30),
     sortOrder: Number(row.sort_order) || 0,
+    category: String(row.category || "").trim(),
+    categories: [],
   };
 }
 
 app.get("/api/brands", async (req, res) => {
   try {
     const rows = await allQuery("SELECT * FROM brands ORDER BY sort_order ASC, id ASC");
-    res.json(rows.map(mapBrandRow));
+    const products = await allQuery("SELECT name, category FROM products");
+    res.json(
+      rows.map((row) => {
+        const brand = mapBrandRow(row);
+        const cats = new Set();
+        if (brand.category) cats.add(brand.category);
+        const needle = String(brand.name || "").trim().toLowerCase();
+        if (needle) {
+          products.forEach((product) => {
+            const productName = String(product.name || "").toLowerCase();
+            const category = String(product.category || "").trim();
+            if (category && productName.includes(needle)) cats.add(category);
+          });
+        }
+        brand.categories = Array.from(cats);
+        return brand;
+      })
+    );
   } catch (error) {
     res.status(500).json({ message: "Gagal mengambil daftar merek." });
   }
@@ -3053,13 +3079,14 @@ app.post("/api/admin/brands", authMiddleware, requireRole(["admin"]), async (req
   const coords = brandLogoCoords(req.body?.logoPosition, req.body?.logoX, req.body?.logoY);
   const logoScale = clampBrandLogoScale(req.body?.logoScale, 30);
   const sortOrder = Number(req.body?.sortOrder);
+  const category = String(req.body?.category || "").trim().slice(0, 80);
   if (!name) {
     res.status(400).json({ message: "Nama merek wajib diisi." });
     return;
   }
   try {
     const result = await runQuery(
-      "INSERT INTO brands (name, cover_url, logo_url, logo_position, logo_x, logo_y, logo_scale, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO brands (name, cover_url, logo_url, logo_position, logo_x, logo_y, logo_scale, sort_order, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
       [
         name,
         coverUrl,
@@ -3069,6 +3096,7 @@ app.post("/api/admin/brands", authMiddleware, requireRole(["admin"]), async (req
         coords.y,
         logoScale,
         Number.isFinite(sortOrder) ? sortOrder : 0,
+        category,
       ]
     );
     const row = await getQuery("SELECT * FROM brands WHERE id = ?", [result.lastID]);
@@ -3086,6 +3114,7 @@ app.put("/api/admin/brands/:id", authMiddleware, requireRole(["admin"]), async (
   const coords = brandLogoCoords(req.body?.logoPosition, req.body?.logoX, req.body?.logoY);
   const logoScale = clampBrandLogoScale(req.body?.logoScale, 30);
   const sortOrder = Number(req.body?.sortOrder);
+  const category = String(req.body?.category || "").trim().slice(0, 80);
   if (!id) {
     res.status(400).json({ message: "ID merek tidak valid." });
     return;
@@ -3101,7 +3130,7 @@ app.put("/api/admin/brands/:id", authMiddleware, requireRole(["admin"]), async (
       return;
     }
     await runQuery(
-      "UPDATE brands SET name = ?, cover_url = ?, logo_url = ?, logo_position = ?, logo_x = ?, logo_y = ?, logo_scale = ?, sort_order = ? WHERE id = ?",
+      "UPDATE brands SET name = ?, cover_url = ?, logo_url = ?, logo_position = ?, logo_x = ?, logo_y = ?, logo_scale = ?, sort_order = ?, category = ? WHERE id = ?",
       [
         name,
         coverUrl,
@@ -3111,6 +3140,7 @@ app.put("/api/admin/brands/:id", authMiddleware, requireRole(["admin"]), async (
         coords.y,
         logoScale,
         Number.isFinite(sortOrder) ? sortOrder : 0,
+        category,
         id,
       ]
     );

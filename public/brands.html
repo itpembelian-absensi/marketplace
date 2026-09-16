@@ -7,7 +7,7 @@
     <link rel="apple-touch-icon" href="/logo-sjs.png" />
     <title>Daftar Merek - PT Sahabat Jaya Sukses</title>
     <link rel="stylesheet" href="/style.css?v=21" />
-    <link rel="stylesheet" href="/home.css?v=79" />
+    <link rel="stylesheet" href="/home.css?v=80" />
     <script src="https://accounts.google.com/gsi/client" async></script>
   </head>
   <body class="shop-page brands-page">
@@ -106,6 +106,11 @@
           Mitra terpercaya untuk kebutuhan proyek, interior, dan furniture Anda.
         </p>
       </header>
+      <div class="sjs-brands-cats hidden" id="brandsCats">
+        <button type="button" class="sjs-brands-cats-arrow" id="brandsCatsPrev" aria-label="Kategori sebelumnya">‹</button>
+        <div class="sjs-brands-cats-track" id="brandsCatsTrack" role="tablist" aria-label="Kategori merek"></div>
+        <button type="button" class="sjs-brands-cats-arrow" id="brandsCatsNext" aria-label="Kategori berikutnya">›</button>
+      </div>
       <div id="brandsGrid" class="sjs-brands-grid">
         <p class="empty-state" style="grid-column: 1 / -1; text-align: center;">Memuat merek...</p>
       </div>
@@ -135,7 +140,7 @@
     </div>
 
     <script src="/common.js?v=22"></script>
-    <script src="/brands.js?v=7"></script>
+    <script src="/brands.js?v=8"></script>
     <script src="/cs-chat.js?v=6"></script>
   </body>
 </html>
