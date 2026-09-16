@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Manajemen User - PT SAHABAT JAYA SUKSES</title>
-    <link rel="stylesheet" href="/style.css?v=25" />
+    <link rel="stylesheet" href="/style.css?v=28" />
   </head>
   <body class="admin-page">
     <header class="topbar">
@@ -580,8 +580,7 @@
       <section id="brandsTab" class="auth-card admin-panel hidden">
         <h2>Daftar Merek</h2>
         <p class="empty-state" style="margin-bottom: 12px;">
-          Logo merek tampil di menu <strong>Daftar Merek</strong> dengan warna asli file yang diunggah.
-          Pakai file PNG transparan agar hasilnya rapi. Foto latar opsional dan tidak ditampilkan di halaman publik.
+          Logo merek tampil di atas foto latar. Geser logo di pratinjau, atau pakai posisi cepat (tengah / sudut). PNG transparan lebih rapi.
         </p>
         <form id="brandForm" class="auth-form">
           <label for="brandNameInput">Nama merek</label>
@@ -595,10 +594,43 @@
           <input type="hidden" id="brandLogoUrl" />
           <div id="brandLogoPreview" style="margin: 8px 0 12px;"></div>
 
-          <label for="brandCoverFile">Foto latar (opsional, tidak tampil di Daftar Merek)</label>
+          <label for="brandCoverFile">Foto latar (tampil di Daftar Merek sebagai background)</label>
           <input id="brandCoverFile" type="file" accept="image/png,image/jpeg,image/webp" />
           <input type="hidden" id="brandCoverUrl" />
           <div id="brandCoverPreview" style="margin: 8px 0 12px;"></div>
+
+          <span class="brand-pos-label">Posisi logo di foto latar</span>
+          <p class="empty-state" style="margin: 0 0 8px;">Klik dan geser logo untuk memindahkan. Tarik sudut biru untuk memperbesar/memperkecil, atau pakai slider ukuran.</p>
+          <div class="brand-logo-pos-grid" role="radiogroup" aria-label="Posisi logo">
+            <label class="brand-logo-pos-opt" style="grid-area: tl;">
+              <input type="radio" name="brandLogoPosition" value="top-left" />
+              <span>Atas kiri</span>
+            </label>
+            <label class="brand-logo-pos-opt" style="grid-area: tr;">
+              <input type="radio" name="brandLogoPosition" value="top-right" />
+              <span>Atas kanan</span>
+            </label>
+            <label class="brand-logo-pos-opt" style="grid-area: c;">
+              <input type="radio" name="brandLogoPosition" value="center" />
+              <span>Tengah</span>
+            </label>
+            <label class="brand-logo-pos-opt" style="grid-area: bl;">
+              <input type="radio" name="brandLogoPosition" value="bottom-left" />
+              <span>Bawah kiri</span>
+            </label>
+            <label class="brand-logo-pos-opt" style="grid-area: br;">
+              <input type="radio" name="brandLogoPosition" value="bottom-right" checked />
+              <span>Bawah kanan</span>
+            </label>
+          </div>
+          <div id="brandLayoutPreview" class="brand-layout-preview" aria-label="Pratinjau kartu merek"></div>
+          <label for="brandLogoScale" class="brand-pos-label">Ukuran logo</label>
+          <div class="brand-logo-scale-row">
+            <input type="range" id="brandLogoScale" min="8" max="70" step="0.5" value="30" />
+            <span id="brandLogoScaleLabel">30%</span>
+          </div>
+          <input type="hidden" id="brandLogoX" value="84" />
+          <input type="hidden" id="brandLogoY" value="84" />
 
           <button type="submit" id="brandSubmitBtn" class="btn-primary">Tambah Merek</button>
           <button type="button" id="brandCancelEdit" class="btn-secondary hidden">Batal Edit</button>
@@ -1061,7 +1093,7 @@
     </div>
 
     <script src="/common.js?v=11"></script>
-    <script src="/admin.js?v=50"></script>
+    <script src="/admin.js?v=53"></script>
     <script src="/admin-points.js?v=1"></script>
   </body>
 </html>

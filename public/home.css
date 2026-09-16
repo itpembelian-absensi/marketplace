@@ -2149,12 +2149,13 @@ body.landing-page {
 
 .sjs-brands-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 56px 40px;
-  align-items: center;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: stretch;
 }
 
 .sjs-brand-tile {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2162,15 +2163,32 @@ body.landing-page {
   padding: 12px 16px;
   text-decoration: none;
   color: var(--sjs-brown-dark);
-  background: transparent;
+  background: #f7f5f2;
   border: none;
-  opacity: 0.92;
+  overflow: hidden;
+  border-radius: 6px;
+  opacity: 0.96;
   transition: opacity 0.15s, transform 0.15s;
+}
+
+.sjs-brand-tile.has-cover {
+  min-height: 0;
+  padding: 0;
+  aspect-ratio: 16 / 9;
+  background: #d8d3cc;
 }
 
 .sjs-brand-tile:hover {
   opacity: 1;
   transform: translateY(-2px);
+}
+
+.sjs-brand-tile-cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .sjs-brand-tile-logo {
@@ -2180,10 +2198,26 @@ body.landing-page {
   max-height: 140px;
   height: auto;
   object-fit: contain;
+  z-index: 1;
+}
+
+.sjs-brand-tile.has-cover .sjs-brand-tile-logo {
+  position: absolute;
+  left: var(--logo-x, 84%);
+  top: var(--logo-y, 84%);
+  right: auto;
+  bottom: auto;
+  width: var(--logo-scale, 30%);
+  max-width: none;
+  max-height: none;
+  height: auto;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.28));
 }
 
 .sjs-brand-tile-name {
   display: none;
+  z-index: 1;
 }
 
 .sjs-brand-tile.is-text .sjs-brand-tile-name {
@@ -2197,15 +2231,21 @@ body.landing-page {
   line-height: 1.2;
 }
 
+.sjs-brand-tile.has-cover.is-text .sjs-brand-tile-name {
+  position: absolute;
+  color: #fff;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
+}
+
 @media (max-width: 900px) {
   .sjs-brands-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 36px 24px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
   }
   .sjs-brand-tile {
     min-height: 110px;
   }
-  .sjs-brand-tile-logo {
+  .sjs-brand-tile:not(.has-cover) .sjs-brand-tile-logo {
     max-height: 110px;
   }
 }
@@ -2215,13 +2255,13 @@ body.landing-page {
     padding: 24px 16px 48px;
   }
   .sjs-brands-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 28px 16px;
+    grid-template-columns: 1fr;
+    gap: 14px;
   }
   .sjs-brand-tile {
     min-height: 96px;
   }
-  .sjs-brand-tile-logo {
+  .sjs-brand-tile:not(.has-cover) .sjs-brand-tile-logo {
     max-height: 88px;
   }
 }

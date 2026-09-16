@@ -3405,14 +3405,183 @@ function setBrandsMessage(text, isSuccess = false) {
   el.textContent = text || "";
 }
 
+const BRAND_LOGO_PRESETS = {
+  center: { x: 50, y: 50 },
+  "top-left": { x: 16, y: 16 },
+  "top-right": { x: 84, y: 16 },
+  "bottom-left": { x: 16, y: 84 },
+  "bottom-right": { x: 84, y: 84 },
+};
+
+function clampBrandLogoCoord(value, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(92, Math.max(8, Math.round(number * 10) / 10));
+}
+
+function clampBrandLogoScale(value, fallback = 30) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(70, Math.max(8, Math.round(number * 10) / 10));
+}
+
+function brandLogoStyle(x, y, scale) {
+  return `--logo-x:${clampBrandLogoCoord(x, 84)}%;--logo-y:${clampBrandLogoCoord(y, 84)}%;--logo-scale:${clampBrandLogoScale(scale, 30)}%;`;
+}
+
+function setBrandLogoPosition(position) {
+  document.querySelectorAll('input[name="brandLogoPosition"]').forEach((input) => {
+    input.checked = input.value === position;
+  });
+}
+
+function getBrandLogoPosition() {
+  const selected = document.querySelector('input[name="brandLogoPosition"]:checked');
+  return selected?.value || "custom";
+}
+
+function getBrandLogoXY() {
+  const position = getBrandLogoPosition();
+  const preset = BRAND_LOGO_PRESETS[position] || BRAND_LOGO_PRESETS["bottom-right"];
+  return {
+    x: clampBrandLogoCoord(document.getElementById("brandLogoX")?.value, preset.x),
+    y: clampBrandLogoCoord(document.getElementById("brandLogoY")?.value, preset.y),
+  };
+}
+
+function getBrandLogoScale() {
+  return clampBrandLogoScale(document.getElementById("brandLogoScale")?.value, 30);
+}
+
+function writeBrandLogoXY(x, y) {
+  const logoX = document.getElementById("brandLogoX");
+  const logoY = document.getElementById("brandLogoY");
+  if (logoX) logoX.value = String(clampBrandLogoCoord(x, 84));
+  if (logoY) logoY.value = String(clampBrandLogoCoord(y, 84));
+}
+
+function writeBrandLogoScale(scale) {
+  const value = clampBrandLogoScale(scale, 30);
+  const input = document.getElementById("brandLogoScale");
+  const label = document.getElementById("brandLogoScaleLabel");
+  if (input) input.value = String(value);
+  if (label) label.textContent = `${Math.round(value)}%`;
+}
+
+function applyBrandLogoLayout(tile, x, y, scale) {
+  if (!tile) return;
+  tile.style.setProperty("--logo-x", `${clampBrandLogoCoord(x, 84)}%`);
+  tile.style.setProperty("--logo-y", `${clampBrandLogoCoord(y, 84)}%`);
+  tile.style.setProperty("--logo-scale", `${clampBrandLogoScale(scale, 30)}%`);
+}
+
+function bindBrandLogoDrag() {
+  const tile = document.querySelector("#brandLayoutPreview .admin-brand-card-tile.has-cover");
+  const wrap = tile?.querySelector(".logo-wrap");
+  const handle = wrap?.querySelector(".logo-resize-handle");
+  if (!tile || !wrap) return;
+  let dragging = false;
+  let resizing = false;
+  let offsetX = 0;
+  let offsetY = 0;
+  let startScale = 30;
+  let startX = 0;
+
+  const moveToPointer = (event) => {
+    const rect = tile.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const centerX = event.clientX - offsetX;
+    const centerY = event.clientY - offsetY;
+    const halfW = (wrap.offsetWidth / rect.width) * 50;
+    const halfH = (wrap.offsetHeight / rect.height) * 50;
+    const x = Math.min(100 - halfW, Math.max(halfW, ((centerX - rect.left) / rect.width) * 100));
+    const y = Math.min(100 - halfH, Math.max(halfH, ((centerY - rect.top) / rect.height) * 100));
+    writeBrandLogoXY(x, y);
+    setBrandLogoPosition("custom");
+    applyBrandLogoLayout(tile, x, y, getBrandLogoScale());
+  };
+
+  wrap.addEventListener("pointerdown", (event) => {
+    if (event.target.closest(".logo-resize-handle")) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const wrapRect = wrap.getBoundingClientRect();
+    offsetX = event.clientX - (wrapRect.left + wrapRect.width / 2);
+    offsetY = event.clientY - (wrapRect.top + wrapRect.height / 2);
+    dragging = true;
+    wrap.classList.add("is-dragging");
+    wrap.setPointerCapture(event.pointerId);
+    moveToPointer(event);
+  });
+  wrap.addEventListener("pointermove", (event) => {
+    if (dragging) {
+      event.preventDefault();
+      moveToPointer(event);
+      return;
+    }
+    if (!resizing) return;
+    event.preventDefault();
+    const rect = tile.getBoundingClientRect();
+    const scale = startScale + ((event.clientX - startX) / rect.width) * 100;
+    writeBrandLogoScale(scale);
+    const { x, y } = getBrandLogoXY();
+    applyBrandLogoLayout(tile, x, y, getBrandLogoScale());
+  });
+  const stopInteract = (event) => {
+    if (dragging) {
+      dragging = false;
+      wrap.classList.remove("is-dragging");
+      moveToPointer(event);
+    }
+    if (resizing) {
+      resizing = false;
+      wrap.classList.remove("is-resizing");
+    }
+  };
+  wrap.addEventListener("pointerup", stopInteract);
+  wrap.addEventListener("pointercancel", stopInteract);
+
+  handle?.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    resizing = true;
+    startScale = getBrandLogoScale();
+    startX = event.clientX;
+    wrap.classList.add("is-resizing");
+    wrap.setPointerCapture(event.pointerId);
+  });
+}
+
+function renderBrandLayoutPreview() {
+  const el = document.getElementById("brandLayoutPreview");
+  if (!el) return;
+  const coverUrl = document.getElementById("brandCoverUrl")?.value.trim() || "";
+  const logoUrl = document.getElementById("brandLogoUrl")?.value.trim() || "";
+  const name = document.getElementById("brandNameInput")?.value.trim() || "Merek";
+  const { x, y } = getBrandLogoXY();
+  const scale = getBrandLogoScale();
+  const cover = coverUrl
+    ? `<img class="cover" src="${escapeHtml(coverUrl)}" alt="">`
+    : "";
+  const logo = logoUrl
+    ? `<div class="logo-wrap"><img class="logo" src="${escapeHtml(logoUrl)}" alt="" draggable="false"><button type="button" class="logo-resize-handle" aria-label="Ubah ukuran logo"></button></div>`
+    : `<div class="name">${escapeHtml(name)}</div>`;
+  el.innerHTML = `<div class="admin-brand-card-tile${coverUrl ? " has-cover" : ""}${
+    logoUrl ? " has-logo" : ""
+  }" style="${brandLogoStyle(x, y, scale)}">${cover}${logo}</div>`;
+  bindBrandLogoDrag();
+}
+
 function renderBrandImagePreview(containerId, url) {
   const el = document.getElementById(containerId);
   if (!el) return;
   if (!url) {
     el.innerHTML = "";
+    renderBrandLayoutPreview();
     return;
   }
   el.innerHTML = `<img src="${escapeHtml(url)}" alt="" style="max-height:120px; max-width:220px; object-fit:contain; border:1px solid #e5e7eb; border-radius:8px; background:#fff; padding:6px;">`;
+  renderBrandLayoutPreview();
 }
 
 function resetBrandForm() {
@@ -3423,6 +3592,9 @@ function resetBrandForm() {
   const logoUrl = document.getElementById("brandLogoUrl");
   if (coverUrl) coverUrl.value = "";
   if (logoUrl) logoUrl.value = "";
+  writeBrandLogoXY(84, 84);
+  writeBrandLogoScale(30);
+  setBrandLogoPosition("bottom-right");
   renderBrandImagePreview("brandCoverPreview", "");
   renderBrandImagePreview("brandLogoPreview", "");
   const submitBtn = document.getElementById("brandSubmitBtn");
@@ -3437,6 +3609,10 @@ function fillBrandForm(brand) {
   document.getElementById("brandSortInput").value = String(brand.sortOrder || 0);
   document.getElementById("brandCoverUrl").value = brand.coverUrl || "";
   document.getElementById("brandLogoUrl").value = brand.logoUrl || "";
+  const preset = BRAND_LOGO_PRESETS[brand.logoPosition];
+  writeBrandLogoXY(brand.logoX, brand.logoY);
+  writeBrandLogoScale(brand.logoScale);
+  setBrandLogoPosition(preset ? brand.logoPosition : "custom");
   renderBrandImagePreview("brandCoverPreview", brand.coverUrl || "");
   renderBrandImagePreview("brandLogoPreview", brand.logoUrl || "");
   const submitBtn = document.getElementById("brandSubmitBtn");
@@ -3456,12 +3632,18 @@ async function loadAdminBrands() {
     }
     grid.innerHTML = brands
       .map((brand) => {
+        const cover = brand.coverUrl
+          ? `<img class="cover" src="${escapeHtml(brand.coverUrl)}" alt="">`
+          : "";
         const logo = brand.logoUrl
           ? `<img class="logo" src="${escapeHtml(brand.logoUrl)}" alt="">`
           : `<div class="name">${escapeHtml(brand.name)}</div>`;
         return `
           <article class="admin-brand-card">
-            <div class="admin-brand-card-tile${brand.logoUrl ? " has-logo" : ""}">
+            <div class="admin-brand-card-tile${brand.coverUrl ? " has-cover" : ""}${
+              brand.logoUrl ? " has-logo" : ""
+            }" style="${brandLogoStyle(brand.logoX, brand.logoY, brand.logoScale)}">
+              ${cover}
               ${logo}
             </div>
             <div class="admin-brand-card-actions">
@@ -3508,9 +3690,23 @@ document.getElementById("brandLogoFile")?.addEventListener("change", async (even
     document.getElementById("brandLogoUrl").value = url;
     renderBrandImagePreview("brandLogoPreview", url);
     setBrandsMessage("Logo merek berhasil diupload.", true);
+    renderBrandLayoutPreview();
   } catch (error) {
     setBrandsMessage(error.message);
   }
+});
+
+document.getElementById("brandNameInput")?.addEventListener("input", renderBrandLayoutPreview);
+document.getElementById("brandLogoScale")?.addEventListener("input", () => {
+  writeBrandLogoScale(document.getElementById("brandLogoScale").value);
+  renderBrandLayoutPreview();
+});
+document.querySelectorAll('input[name="brandLogoPosition"]').forEach((input) => {
+  input.addEventListener("change", () => {
+    const preset = BRAND_LOGO_PRESETS[input.value];
+    if (preset) writeBrandLogoXY(preset.x, preset.y);
+    renderBrandLayoutPreview();
+  });
 });
 
 document.getElementById("brandForm")?.addEventListener("submit", async (event) => {
@@ -3518,22 +3714,26 @@ document.getElementById("brandForm")?.addEventListener("submit", async (event) =
   const name = document.getElementById("brandNameInput")?.value.trim();
   const coverUrl = document.getElementById("brandCoverUrl")?.value.trim() || "";
   const logoUrl = document.getElementById("brandLogoUrl")?.value.trim() || "";
+  const logoPosition = getBrandLogoPosition();
+  const { x: logoX, y: logoY } = getBrandLogoXY();
+  const logoScale = getBrandLogoScale();
   const sortOrder = Number(document.getElementById("brandSortInput")?.value || 0);
   if (!name) {
     setBrandsMessage("Nama merek wajib diisi.");
     return;
   }
   try {
+    const payload = { name, coverUrl, logoUrl, logoPosition, logoX, logoY, logoScale, sortOrder };
     if (editingBrandId) {
       await apiFetch(`/admin/brands/${editingBrandId}`, {
         method: "PUT",
-        body: JSON.stringify({ name, coverUrl, logoUrl, sortOrder }),
+        body: JSON.stringify(payload),
       });
       setBrandsMessage("Merek diperbarui.", true);
     } else {
       await apiFetch("/admin/brands", {
         method: "POST",
-        body: JSON.stringify({ name, coverUrl, logoUrl, sortOrder }),
+        body: JSON.stringify(payload),
       });
       setBrandsMessage("Merek ditambahkan.", true);
     }

@@ -956,9 +956,45 @@ async function setupDatabase() {
       name TEXT NOT NULL,
       cover_url TEXT NOT NULL DEFAULT '',
       logo_url TEXT NOT NULL DEFAULT '',
+      logo_position TEXT NOT NULL DEFAULT 'bottom-right',
       sort_order INTEGER NOT NULL DEFAULT 0,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
+  `);
+
+  const brandColumns = await allQuery("PRAGMA table_info(brands)");
+  if (!brandColumns.some((col) => col.name === "logo_position")) {
+    await runQuery(
+      "ALTER TABLE brands ADD COLUMN logo_position TEXT NOT NULL DEFAULT 'bottom-right'"
+    );
+  }
+  const brandColumnsAfterPos = await allQuery("PRAGMA table_info(brands)");
+  if (!brandColumnsAfterPos.some((col) => col.name === "logo_x")) {
+    await runQuery("ALTER TABLE brands ADD COLUMN logo_x REAL NOT NULL DEFAULT 84");
+  }
+  if (!brandColumnsAfterPos.some((col) => col.name === "logo_y")) {
+    await runQuery("ALTER TABLE brands ADD COLUMN logo_y REAL NOT NULL DEFAULT 84");
+  }
+  const brandColumnsAfterXY = await allQuery("PRAGMA table_info(brands)");
+  if (!brandColumnsAfterXY.some((col) => col.name === "logo_scale")) {
+    await runQuery("ALTER TABLE brands ADD COLUMN logo_scale REAL NOT NULL DEFAULT 30");
+  }
+  await runQuery(`
+    UPDATE brands SET
+      logo_x = CASE logo_position
+        WHEN 'center' THEN 50
+        WHEN 'top-left' THEN 16
+        WHEN 'top-right' THEN 84
+        WHEN 'bottom-left' THEN 16
+        ELSE logo_x END,
+      logo_y = CASE logo_position
+        WHEN 'center' THEN 50
+        WHEN 'top-left' THEN 16
+        WHEN 'top-right' THEN 16
+        WHEN 'bottom-left' THEN 84
+        ELSE logo_y END
+    WHERE logo_position IN ('center', 'top-left', 'top-right', 'bottom-left')
+      AND logo_x = 84 AND logo_y = 84
   `);
 
   await runQuery(`
@@ -2885,12 +2921,54 @@ app.get("/api/categories", async (req, res) => {
   }
 });
 
+const BRAND_LOGO_PRESETS = {
+  center: { x: 50, y: 50 },
+  "top-left": { x: 16, y: 16 },
+  "top-right": { x: 84, y: 16 },
+  "bottom-left": { x: 16, y: 84 },
+  "bottom-right": { x: 84, y: 84 },
+};
+
+function normalizeBrandLogoPosition(value) {
+  const position = String(value || "")
+    .trim()
+    .toLowerCase();
+  if (position === "custom" || BRAND_LOGO_PRESETS[position]) return position;
+  return "bottom-right";
+}
+
+function clampBrandLogoCoord(value, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(92, Math.max(8, Math.round(number * 10) / 10));
+}
+
+function clampBrandLogoScale(value, fallback = 30) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(70, Math.max(8, Math.round(number * 10) / 10));
+}
+
+function brandLogoCoords(position, x, y) {
+  const preset = BRAND_LOGO_PRESETS[position] || BRAND_LOGO_PRESETS["bottom-right"];
+  return {
+    position: normalizeBrandLogoPosition(position),
+    x: clampBrandLogoCoord(x, preset.x),
+    y: clampBrandLogoCoord(y, preset.y),
+  };
+}
+
 function mapBrandRow(row) {
+  const coords = brandLogoCoords(row.logo_position, row.logo_x, row.logo_y);
   return {
     id: row.id,
     name: row.name,
     coverUrl: row.cover_url || "",
     logoUrl: row.logo_url || "",
+    logoPosition: coords.position,
+    logoX: coords.x,
+    logoY: coords.y,
+    logoScale: clampBrandLogoScale(row.logo_scale, 30),
     sortOrder: Number(row.sort_order) || 0,
   };
 }
@@ -2908,6 +2986,8 @@ app.post("/api/admin/brands", authMiddleware, requireRole(["admin"]), async (req
   const name = String(req.body?.name || "").trim();
   const coverUrl = String(req.body?.coverUrl || "").trim();
   const logoUrl = String(req.body?.logoUrl || "").trim();
+  const coords = brandLogoCoords(req.body?.logoPosition, req.body?.logoX, req.body?.logoY);
+  const logoScale = clampBrandLogoScale(req.body?.logoScale, 30);
   const sortOrder = Number(req.body?.sortOrder);
   if (!name) {
     res.status(400).json({ message: "Nama merek wajib diisi." });
@@ -2915,8 +2995,17 @@ app.post("/api/admin/brands", authMiddleware, requireRole(["admin"]), async (req
   }
   try {
     const result = await runQuery(
-      "INSERT INTO brands (name, cover_url, logo_url, sort_order) VALUES (?, ?, ?, ?)",
-      [name, coverUrl, logoUrl, Number.isFinite(sortOrder) ? sortOrder : 0]
+      "INSERT INTO brands (name, cover_url, logo_url, logo_position, logo_x, logo_y, logo_scale, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      [
+        name,
+        coverUrl,
+        logoUrl,
+        coords.position,
+        coords.x,
+        coords.y,
+        logoScale,
+        Number.isFinite(sortOrder) ? sortOrder : 0,
+      ]
     );
     const row = await getQuery("SELECT * FROM brands WHERE id = ?", [result.lastID]);
     res.status(201).json({ message: "Merek berhasil ditambahkan.", brand: mapBrandRow(row) });
@@ -2930,6 +3019,8 @@ app.put("/api/admin/brands/:id", authMiddleware, requireRole(["admin"]), async (
   const name = String(req.body?.name || "").trim();
   const coverUrl = String(req.body?.coverUrl || "").trim();
   const logoUrl = String(req.body?.logoUrl || "").trim();
+  const coords = brandLogoCoords(req.body?.logoPosition, req.body?.logoX, req.body?.logoY);
+  const logoScale = clampBrandLogoScale(req.body?.logoScale, 30);
   const sortOrder = Number(req.body?.sortOrder);
   if (!id) {
     res.status(400).json({ message: "ID merek tidak valid." });
@@ -2946,8 +3037,18 @@ app.put("/api/admin/brands/:id", authMiddleware, requireRole(["admin"]), async (
       return;
     }
     await runQuery(
-      "UPDATE brands SET name = ?, cover_url = ?, logo_url = ?, sort_order = ? WHERE id = ?",
-      [name, coverUrl, logoUrl, Number.isFinite(sortOrder) ? sortOrder : 0, id]
+      "UPDATE brands SET name = ?, cover_url = ?, logo_url = ?, logo_position = ?, logo_x = ?, logo_y = ?, logo_scale = ?, sort_order = ? WHERE id = ?",
+      [
+        name,
+        coverUrl,
+        logoUrl,
+        coords.position,
+        coords.x,
+        coords.y,
+        logoScale,
+        Number.isFinite(sortOrder) ? sortOrder : 0,
+        id,
+      ]
     );
     const row = await getQuery("SELECT * FROM brands WHERE id = ?", [id]);
     res.json({ message: "Merek berhasil diperbarui.", brand: mapBrandRow(row) });

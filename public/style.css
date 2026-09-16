@@ -2053,7 +2053,7 @@ body.lightbox-open {
 
 .admin-brands-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 10px;
   margin-top: 16px;
 }
@@ -2067,13 +2067,14 @@ body.lightbox-open {
 
 .admin-brand-card-tile {
   position: relative;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 16 / 9;
   background: #f0eeeb;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .admin-brand-card-tile::after {
@@ -2081,10 +2082,16 @@ body.lightbox-open {
 }
 
 .admin-brand-card-tile img.cover {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: none;
+}
+
+.admin-brand-card-tile.has-cover img.cover {
+  display: block;
 }
 
 .admin-brand-card-tile img.logo {
@@ -2096,6 +2103,42 @@ body.lightbox-open {
   z-index: 1;
 }
 
+.admin-brand-card-tile.has-cover > img.logo {
+  position: absolute;
+  left: var(--logo-x, 84%);
+  top: var(--logo-y, 84%);
+  right: auto;
+  bottom: auto;
+  width: var(--logo-scale, 30%);
+  max-width: none;
+  max-height: none;
+  height: auto;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.28));
+}
+
+.admin-brand-card-tile.has-cover .logo-wrap {
+  position: absolute;
+  left: var(--logo-x, 84%);
+  top: var(--logo-y, 84%);
+  width: var(--logo-scale, 30%);
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.28));
+}
+
+.admin-brand-card-tile.has-cover .logo-wrap img.logo {
+  position: static;
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  transform: none;
+  pointer-events: none;
+  filter: none;
+}
+
 .admin-brand-card-tile .name {
   position: static;
   text-align: center;
@@ -2104,6 +2147,94 @@ body.lightbox-open {
   font-weight: 700;
   text-transform: uppercase;
   text-shadow: none;
+  z-index: 1;
+}
+
+.brand-pos-label {
+  display: block;
+  font-weight: 600;
+  margin: 4px 0 8px;
+}
+
+.brand-logo-pos-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-areas:
+    "tl . tr"
+    ". c ."
+    "bl . br";
+  gap: 8px;
+  max-width: 420px;
+  margin-bottom: 12px;
+}
+
+.brand-logo-pos-opt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.brand-logo-pos-opt:has(input:checked) {
+  border-color: #1d4ed8;
+  background: #eff6ff;
+  font-weight: 600;
+}
+
+.brand-layout-preview {
+  max-width: 520px;
+  margin: 0 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.brand-layout-preview .admin-brand-card-tile {
+  border-radius: 0;
+}
+
+.brand-logo-scale-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 420px;
+  margin: 0 0 14px;
+}
+
+.brand-logo-scale-row input[type="range"] {
+  flex: 1;
+}
+
+.brand-layout-preview .logo-resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 3px;
+  background: #1d4ed8;
+  cursor: nwse-resize;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.brand-layout-preview .admin-brand-card-tile.has-cover .logo-wrap {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.brand-layout-preview .admin-brand-card-tile.has-cover .logo-wrap.is-dragging,
+.brand-layout-preview .admin-brand-card-tile.has-cover .logo-wrap.is-resizing {
+  cursor: grabbing;
 }
 
 .admin-brand-card-actions {
