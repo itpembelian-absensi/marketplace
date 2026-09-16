@@ -13,6 +13,23 @@ function brandLogoStyle(x, y, scale) {
   return `--logo-x:${clampBrandLogoCoord(x, 84)}%;--logo-y:${clampBrandLogoCoord(y, 84)}%;--logo-scale:${clampScale(scale)}%;`;
 }
 
+async function loadBrandsIntro() {
+  const kickerEl = document.getElementById("brandsIntroKicker");
+  const titleEl = document.getElementById("brandsIntroTitle");
+  const descEl = document.getElementById("brandsIntroDescription");
+  if (!kickerEl && !titleEl && !descEl) return;
+  try {
+    const settings = await loadSettings({ fresh: true });
+    const page = settings?.brandsPage || {};
+    if (kickerEl && page.kicker) kickerEl.textContent = page.kicker;
+    if (titleEl && page.title) titleEl.textContent = page.title;
+    if (titleEl && page.titleColor) titleEl.style.color = page.titleColor;
+    if (descEl && page.description) descEl.textContent = page.description;
+  } catch (error) {
+    // keep default HTML copy
+  }
+}
+
 async function loadPublicBrands() {
   const grid = document.getElementById("brandsGrid");
   if (!grid) return;
@@ -61,3 +78,4 @@ async function loadPublicBrands() {
 }
 
 loadPublicBrands();
+loadBrandsIntro();

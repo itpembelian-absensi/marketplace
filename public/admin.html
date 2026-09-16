@@ -6,7 +6,7 @@
     <link rel="icon" href="/logo-sjs.png" type="image/png" />
     <link rel="apple-touch-icon" href="/logo-sjs.png" />
     <title>Manajemen User - PT SAHABAT JAYA SUKSES</title>
-    <link rel="stylesheet" href="/style.css?v=28" />
+    <link rel="stylesheet" href="/style.css?v=29" />
   </head>
   <body class="admin-page">
     <header class="topbar">
@@ -581,6 +581,23 @@
 
       <section id="brandsTab" class="auth-card admin-panel hidden">
         <h2>Daftar Merek</h2>
+        <form id="brandsPageForm" class="auth-form" style="margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
+          <h3 style="margin: 0 0 8px;">Teks pengantar halaman Daftar Merek</h3>
+          <p class="empty-state" style="margin-bottom: 12px;">Teks ini tampil di atas foto merek. Kosongkan lalu simpan untuk kembali ke teks bawaan.</p>
+          <label for="brandsPageKicker">Label kecil</label>
+          <input id="brandsPageKicker" type="text" maxlength="80" placeholder="Contoh: Mitra Kami" />
+          <label for="brandsPageTitle">Judul</label>
+          <input id="brandsPageTitle" type="text" maxlength="160" placeholder="Contoh: Mitra &amp; Merek Terpercaya untuk Kualitas Terbaik" />
+          <label for="brandsPageTitleColor">Warna judul</label>
+          <div class="brand-title-color-row">
+            <input id="brandsPageTitleColor" type="color" value="#c41e3a" aria-label="Pilih warna judul" />
+            <input id="brandsPageTitleColorHex" type="text" maxlength="7" value="#c41e3a" placeholder="#c41e3a" />
+          </div>
+          <label for="brandsPageDescription">Deskripsi</label>
+          <textarea id="brandsPageDescription" rows="3" maxlength="600" placeholder="Tulis penjelasan singkat tentang merek yang dipasok."></textarea>
+          <button type="submit" class="btn-primary">Simpan Teks Pengantar</button>
+          <p id="brandsPageMessage" class="message"></p>
+        </form>
         <p class="empty-state" style="margin-bottom: 12px;">
           Logo merek tampil di atas foto latar. Geser logo di pratinjau, atau pakai posisi cepat (tengah / sudut). PNG transparan lebih rapi.
         </p>
@@ -1094,8 +1111,8 @@
       </main>
     </div>
 
-    <script src="/common.js?v=11"></script>
-    <script src="/admin.js?v=53"></script>
+    <script src="/common.js?v=22"></script>
+    <script src="/admin.js?v=56"></script>
     <script src="/admin-points.js?v=1"></script>
   </body>
 </html>

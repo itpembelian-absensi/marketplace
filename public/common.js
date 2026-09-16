@@ -826,6 +826,59 @@ function isShopPath() {
   return path === "/shop.html" || path === "/shop" || path.endsWith("/shop.html");
 }
 
+const SJS_SOCIAL_DEFAULTS = [
+  { platform: "instagram", label: "Instagram", url: "https://www.instagram.com/sahabatjayasukses/" },
+  { platform: "facebook", label: "Facebook", url: "https://www.facebook.com/sahabatjayasukses" },
+  { platform: "tiktok", label: "TikTok", url: "https://www.tiktok.com/@sahabatjayasukses" },
+  { platform: "tokopedia", label: "Tokopedia", url: "" },
+];
+
+const SJS_SOCIAL_ICONS = {
+  instagram: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7zm11 1.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>`,
+  facebook: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 10V7.5c0-.8.7-1.5 1.5-1.5H16V3h-2.2C11.7 3 10 4.7 10 7v3H8v3.5h2V21h3v-7.5h2.5L16 10h-3z"/></svg>`,
+  tiktok: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.5 3h-3.1v12.4a2.6 2.6 0 1 1-2.6-2.6c.2 0 .5 0 .7.1v-3.2a5.8 5.8 0 1 0 5.8 5.8V8.8c1.1.8 2.4 1.2 3.7 1.2V7c-2 0-3.7-.8-5-2.1V3z"/></svg>`,
+  tokopedia: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 7V6a4 4 0 1 1 8 0v1h2.2c.5 0 .9.4.9.9l-1.1 12.2c-.1 1-.9 1.9-1.9 1.9H8c-1 0-1.8-.8-1.9-1.9L5 7.9c0-.5.4-.9.9-.9H8zm2 0h4V6a2 2 0 1 0-4 0v1zm1.1 5.2c-.8 0-1.4.5-1.6 1.2-.2.6.1 1.3.7 1.6.3.2.5.4.5.7 0 .3-.2.5-.5.5s-.5-.2-.5-.5h-1.6c.1 1.1 1 1.9 2.1 1.9 1.2 0 2.1-.9 2.1-2.1 0-.7-.4-1.3-1-1.6-.4-.2-.7-.5-.6-.8 0-.2.2-.4.5-.4s.5.2.5.5h1.6c-.1-1.1-1-1.9-2.2-1.9z"/></svg>`,
+};
+
+function isUsableSocialUrl(url) {
+  const value = String(url || "").trim();
+  return Boolean(value) && value !== "#" && value !== "/";
+}
+
+function getSjsSocialLinks(settings) {
+  const fromSettings = settings?.homePage?.footerSection?.socialLinks;
+  return SJS_SOCIAL_DEFAULTS.map((def, index) => {
+    const item =
+      (Array.isArray(fromSettings) && fromSettings.find((row) => row.platform === def.platform)) ||
+      (Array.isArray(fromSettings) && fromSettings[index]) ||
+      def;
+    return {
+      platform: def.platform,
+      label: def.label,
+      url: isUsableSocialUrl(item?.url) ? String(item.url).trim() : def.url,
+    };
+  }).filter((item) => isUsableSocialUrl(item.url));
+}
+
+async function renderHeaderSocial() {
+  const el = document.getElementById("headerSocial");
+  if (!el) return;
+  let links = getSjsSocialLinks(null);
+  try {
+    const settings = await loadSettings();
+    links = getSjsSocialLinks(settings);
+  } catch (error) {
+    // keep defaults
+  }
+  el.innerHTML = links
+    .map((item) => {
+      const icon = SJS_SOCIAL_ICONS[item.platform] || SJS_SOCIAL_ICONS.instagram;
+      const extraClass = item.platform === "tokopedia" ? " is-tokopedia" : "";
+      return `<a href="${escapeHtml(item.url)}" class="sjs-header-social-link${extraClass}" target="_blank" rel="noopener noreferrer" aria-label="${item.label} SJS">${icon}</a>`;
+    })
+    .join("");
+}
+
 function renderHeaderCartButton() {
   const cartButton = document.getElementById("cartButton");
   if (!cartButton) return;
@@ -1253,4 +1306,5 @@ initLayananNav();
 renderHomeWatermark();
 renderHomeCompanyProfile();
 renderHeaderCartButton();
+renderHeaderSocial();
 renderHeroBanners();

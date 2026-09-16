@@ -505,7 +505,10 @@ function initTabs() {
       if (tabId === "salesTab") loadSalesReport();
       if (tabId === "inventoryTab") loadInventoryReport();
       if (tabId === "bannerTab") loadHomePageSettings();
-      if (tabId === "brandsTab") loadAdminBrands();
+      if (tabId === "brandsTab") {
+        loadAdminBrands();
+        loadBrandsPageSettings();
+      }
       if (tabId === "articlesTab") loadAdminArticles();
       if (tabId === "banksTab") loadBanks();
     });
@@ -1430,9 +1433,10 @@ const DEFAULT_FOOTER_SECTION = {
   emailPlaceholder: "Masukkan e-mail...",
   buttonText: "Kirim",
   socialLinks: [
-    { platform: "instagram", url: "#" },
-    { platform: "facebook", url: "#" },
-    { platform: "tiktok", url: "#" },
+    { platform: "instagram", url: "https://www.instagram.com/sahabatjayasukses/" },
+    { platform: "facebook", url: "https://www.facebook.com/sahabatjayasukses" },
+    { platform: "tiktok", url: "https://www.tiktok.com/@sahabatjayasukses" },
+    { platform: "tokopedia", url: "" },
   ],
   columns: [
     {
@@ -1796,17 +1800,24 @@ function renderHomeFooterForm(footer) {
   const columns = (data.columns || DEFAULT_FOOTER_SECTION.columns).slice(0, 3);
   while (columns.length < 3) columns.push({ ...DEFAULT_FOOTER_SECTION.columns[columns.length] });
 
-  const socialRows = (data.socialLinks || DEFAULT_FOOTER_SECTION.socialLinks)
-    .slice(0, 3)
-    .map((item, index) => {
-      const labels = ["Instagram", "Facebook", "TikTok"];
-      return `
+  const socialMeta = [
+    { label: "Instagram", placeholder: "https://www.instagram.com/sahabatjayasukses/" },
+    { label: "Facebook", placeholder: "https://www.facebook.com/sahabatjayasukses" },
+    { label: "TikTok", placeholder: "https://www.tiktok.com/@sahabatjayasukses" },
+    { label: "Tokopedia", placeholder: "https://www.tokopedia.com/nama-toko" },
+  ];
+  const socialSource = [...(data.socialLinks || DEFAULT_FOOTER_SECTION.socialLinks)];
+  while (socialSource.length < 4) {
+    socialSource.push({ ...(DEFAULT_FOOTER_SECTION.socialLinks[socialSource.length] || { platform: "tokopedia", url: "" }) });
+  }
+  const socialRows = socialSource.slice(0, 4).map((item, index) => {
+    const meta = socialMeta[index] || { label: "Sosmed", placeholder: "https://" };
+    return `
         <div style="margin-bottom:8px;">
-          <label style="font-size:0.85rem;color:#6b7280;">${labels[index] || "Sosmed"} URL:</label>
-          <input type="text" class="home-footer-social-url" data-index="${index}" value="${(item.url || "").replace(/"/g, "&quot;")}" placeholder="https://..." style="width:100%;box-sizing:border-box;" />
+          <label style="font-size:0.85rem;color:#6b7280;">${meta.label} URL:</label>
+          <input type="text" class="home-footer-social-url" data-index="${index}" value="${(item.url || "").replace(/"/g, "&quot;")}" placeholder="${meta.placeholder}" style="width:100%;box-sizing:border-box;" />
         </div>`;
-    })
-    .join("");
+  }).join("");
 
   const columnRows = columns
     .map((col, colIndex) => {
@@ -1847,7 +1858,8 @@ function renderHomeFooterForm(footer) {
         </div>
       </div>
     </div>
-    <h4 style="margin:12px 0 8px; color:#5a3e32;">Link Media Sosial</h4>
+    <h4 style="margin:12px 0 8px; color:#5a3e32;">Link Media Sosial &amp; Tokopedia</h4>
+    <p style="margin:0 0 8px;font-size:0.85rem;color:#6b7280;">Isi URL Tokopedia supaya ikon toko muncul di header dan footer. Kosongkan jika belum ingin ditampilkan.</p>
     ${socialRows}
     <h4 style="margin:16px 0 8px; color:#5a3e32;">Kolom Footer</h4>
     ${columnRows}
@@ -1863,7 +1875,7 @@ function collectFooterSectionFromForm() {
   footerSection.emailPlaceholder = document.getElementById("homeFooterEmailPlaceholder")?.value.trim() || "";
   footerSection.buttonText = document.getElementById("homeFooterButtonText")?.value.trim() || "";
   footerSection.copyright = document.getElementById("homeFooterCopyright")?.value.trim() || "";
-  footerSection.socialLinks = [0, 1, 2].map((index) => ({
+  footerSection.socialLinks = [0, 1, 2, 3].map((index) => ({
     platform: DEFAULT_FOOTER_SECTION.socialLinks[index]?.platform || "instagram",
     url: homePageForm.querySelector(`.home-footer-social-url[data-index="${index}"]`)?.value.trim() || "#",
   }));
@@ -3404,6 +3416,70 @@ function setBrandsMessage(text, isSuccess = false) {
   el.classList.toggle("success", !!isSuccess);
   el.textContent = text || "";
 }
+
+function setBrandsPageMessage(text, isSuccess = false) {
+  const el = document.getElementById("brandsPageMessage");
+  if (!el) return;
+  el.classList.toggle("success", !!isSuccess);
+  el.textContent = text || "";
+}
+
+function setBrandsPageColorInputs(color) {
+  const picker = document.getElementById("brandsPageTitleColor");
+  const hex = document.getElementById("brandsPageTitleColorHex");
+  const value = /^#([0-9a-fA-F]{6})$/.test(color || "") ? color.toLowerCase() : "#c41e3a";
+  if (picker) picker.value = value;
+  if (hex) hex.value = value;
+}
+
+async function loadBrandsPageSettings() {
+  const kicker = document.getElementById("brandsPageKicker");
+  const title = document.getElementById("brandsPageTitle");
+  const description = document.getElementById("brandsPageDescription");
+  if (!kicker || !title || !description) return;
+  try {
+    const settings = await loadSettings({ fresh: true });
+    const page = settings?.brandsPage || {};
+    kicker.value = page.kicker || "";
+    title.value = page.title || "";
+    description.value = page.description || "";
+    setBrandsPageColorInputs(page.titleColor || "#c41e3a");
+  } catch (error) {
+    setBrandsPageMessage(error.message);
+  }
+}
+
+document.getElementById("brandsPageTitleColor")?.addEventListener("input", (event) => {
+  setBrandsPageColorInputs(event.target.value);
+});
+document.getElementById("brandsPageTitleColorHex")?.addEventListener("change", (event) => {
+  setBrandsPageColorInputs(event.target.value);
+});
+
+document.getElementById("brandsPageForm")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try {
+    setBrandsPageMessage("Menyimpan...");
+    const result = await apiFetch("/admin/settings/brands_page", {
+      method: "PUT",
+      body: JSON.stringify({
+        kicker: document.getElementById("brandsPageKicker")?.value || "",
+        title: document.getElementById("brandsPageTitle")?.value || "",
+        description: document.getElementById("brandsPageDescription")?.value || "",
+        titleColor: document.getElementById("brandsPageTitleColor")?.value || "#c41e3a",
+      }),
+    });
+    localStorage.removeItem("marketplace_settings_cache");
+    const page = result?.brandsPage || {};
+    document.getElementById("brandsPageKicker").value = page.kicker || "";
+    document.getElementById("brandsPageTitle").value = page.title || "";
+    document.getElementById("brandsPageDescription").value = page.description || "";
+    setBrandsPageColorInputs(page.titleColor || "#c41e3a");
+    setBrandsPageMessage(result.message || "Teks pengantar disimpan.", true);
+  } catch (error) {
+    setBrandsPageMessage(error.message);
+  }
+});
 
 const BRAND_LOGO_PRESETS = {
   center: { x: 50, y: 50 },

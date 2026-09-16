@@ -7,7 +7,7 @@
     <link rel="apple-touch-icon" href="/logo-sjs.png" />
     <title>Daftar Merek - PT Sahabat Jaya Sukses</title>
     <link rel="stylesheet" href="/style.css?v=21" />
-    <link rel="stylesheet" href="/home.css?v=74" />
+    <link rel="stylesheet" href="/home.css?v=79" />
     <script src="https://accounts.google.com/gsi/client" async></script>
   </head>
   <body class="shop-page brands-page">
@@ -67,7 +67,9 @@
           <a href="/brands.html" class="sjs-nav-item sjs-nav-active">Daftar Merek</a>
           <a href="/artikel.html" class="sjs-nav-item">Artikel</a>
         </div>
-        <a href="/lacak.html" class="sjs-nav-track">
+        <div class="sjs-navbar-end">
+          <nav id="headerSocial" class="sjs-header-social" aria-label="Media sosial SJS"></nav>
+          <a href="/lacak.html" class="sjs-nav-track">
           <svg class="sjs-nav-track-icon" viewBox="0 0 48 32" aria-hidden="true">
             <g fill="currentColor">
               <rect x="0" y="5" width="11" height="3" rx="1.5"/>
@@ -80,12 +82,30 @@
           </svg>
           Lacak pengirimanmu
         </a>
+        </div>
       </div>
     </nav>
     </div>
 
     <main class="sjs-brands-main">
-      <h1 class="sjs-brands-title">Daftar Merek</h1>
+      <div class="sjs-brands-toolbar">
+        <a class="sjs-brands-back" href="/">← Kembali</a>
+        <nav class="sjs-brands-crumb" aria-label="Navigasi">
+          <a href="/" aria-label="Beranda">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-5v-6H11v6H6v-9H3z"/></svg>
+          </a>
+          <span aria-hidden="true">›</span>
+          <span>Daftar Merek</span>
+        </nav>
+      </div>
+      <header class="sjs-brands-intro">
+        <p class="sjs-brands-kicker" id="brandsIntroKicker">Mitra Kami</p>
+        <h1 id="brandsIntroTitle">Mitra &amp; Merek Terpercaya untuk Kualitas Terbaik</h1>
+        <p id="brandsIntroDescription">
+          Pilihan merek plywood, papan, dan material bangunan yang kami pasok.
+          Mitra terpercaya untuk kebutuhan proyek, interior, dan furniture Anda.
+        </p>
+      </header>
       <div id="brandsGrid" class="sjs-brands-grid">
         <p class="empty-state" style="grid-column: 1 / -1; text-align: center;">Memuat merek...</p>
       </div>
@@ -114,8 +134,8 @@
       </div>
     </div>
 
-    <script src="/common.js?v=20"></script>
-    <script src="/brands.js?v=5"></script>
+    <script src="/common.js?v=22"></script>
+    <script src="/brands.js?v=7"></script>
     <script src="/cs-chat.js?v=6"></script>
   </body>
 </html>

@@ -68,6 +68,37 @@ const DEFAULT_COMPANY_PROFILE = {
   address: "(isi alamat perusahaan)",
 };
 
+const DEFAULT_BRANDS_PAGE = {
+  kicker: "Mitra Kami",
+  title: "Mitra & Merek Terpercaya untuk Kualitas Terbaik",
+  description:
+    "Pilihan merek plywood, papan, dan material bangunan yang kami pasok. Mitra terpercaya untuk kebutuhan proyek, interior, dan furniture Anda.",
+  titleColor: "#c41e3a",
+};
+
+function normalizeBrandColor(value, fallback = DEFAULT_BRANDS_PAGE.titleColor) {
+  const hex = String(value || "").trim();
+  if (/^#([0-9a-fA-F]{6})$/.test(hex)) return hex.toLowerCase();
+  if (/^#([0-9a-fA-F]{3})$/.test(hex)) {
+    const [r, g, b] = hex.slice(1).split("");
+    return `#${r}${r}${g}${g}${b}${b}`.toLowerCase();
+  }
+  return fallback;
+}
+
+function normalizeBrandsPage(raw) {
+  const source = raw && typeof raw === "object" ? raw : {};
+  const kicker = String(source.kicker ?? DEFAULT_BRANDS_PAGE.kicker).trim();
+  const title = String(source.title ?? DEFAULT_BRANDS_PAGE.title).trim();
+  const description = String(source.description ?? DEFAULT_BRANDS_PAGE.description).trim();
+  return {
+    kicker: (kicker || DEFAULT_BRANDS_PAGE.kicker).slice(0, 80),
+    title: (title || DEFAULT_BRANDS_PAGE.title).slice(0, 160),
+    description: (description || DEFAULT_BRANDS_PAGE.description).slice(0, 600),
+    titleColor: normalizeBrandColor(source.titleColor, DEFAULT_BRANDS_PAGE.titleColor),
+  };
+}
+
 const DEFAULT_HOME_PAGE = {
   tagline: "Your Board Solusions",
   sectionTitle: "Satu tempat yang bikin #SemuaJadiSimple",
@@ -103,9 +134,10 @@ const DEFAULT_HOME_PAGE = {
     emailPlaceholder: "Masukkan e-mail...",
     buttonText: "Kirim",
     socialLinks: [
-      { platform: "instagram", url: "#" },
-      { platform: "facebook", url: "#" },
-      { platform: "tiktok", url: "#" },
+      { platform: "instagram", url: "https://www.instagram.com/sahabatjayasukses/" },
+      { platform: "facebook", url: "https://www.facebook.com/sahabatjayasukses" },
+      { platform: "tiktok", url: "https://www.tiktok.com/@sahabatjayasukses" },
+      { platform: "tokopedia", url: "" },
     ],
     columns: [
       {
@@ -188,13 +220,17 @@ function normalizeFooterSection(raw) {
 
   const socialDefaults = defaults.socialLinks || [];
   const socialRaw = Array.isArray(base.socialLinks) && base.socialLinks.length ? base.socialLinks : socialDefaults;
-  base.socialLinks = socialRaw.slice(0, 3).map((item, index) => ({
+  base.socialLinks = socialRaw.slice(0, 4).map((item, index) => ({
     ...(socialDefaults[index] || { platform: "instagram", url: "#" }),
     platform: String(item?.platform || socialDefaults[index]?.platform || "instagram").trim(),
-    url: String(item?.url || "#").trim() || "#",
+    url: (() => {
+      const raw = String(item?.url || "").trim();
+      const fallback = (socialDefaults[index] || {}).url || "";
+      return !raw || raw === "#" ? fallback : raw;
+    })(),
   }));
-  while (base.socialLinks.length < 3) {
-    base.socialLinks.push({ ...(socialDefaults[base.socialLinks.length] || { platform: "instagram", url: "#" }) });
+  while (base.socialLinks.length < 4) {
+    base.socialLinks.push({ ...(socialDefaults[base.socialLinks.length] || { platform: "tokopedia", url: "" }) });
   }
 
   const colDefaults = defaults.columns || [];
@@ -1805,6 +1841,7 @@ app.get("/api/settings", async (req, res) => {
     ]);
     const bannersRow = await getQuery("SELECT value FROM app_settings WHERE key = ?", ["hero_banners"]);
     const homePageRow = await getQuery("SELECT value FROM app_settings WHERE key = ?", ["home_page"]);
+    const brandsPageRow = await getQuery("SELECT value FROM app_settings WHERE key = ?", ["brands_page"]);
     const qrisRow = await getQuery("SELECT value FROM app_settings WHERE key = ?", ["qris_image_url"]);
 
     let companyProfile = { ...DEFAULT_COMPANY_PROFILE };
@@ -1830,6 +1867,14 @@ app.get("/api/settings", async (req, res) => {
       } catch (error) {}
     }
     const homePage = normalizeHomePage(homePageRaw, heroBanners);
+
+    let brandsPageRaw = null;
+    if (brandsPageRow?.value) {
+      try {
+        brandsPageRaw = JSON.parse(brandsPageRow.value);
+      } catch (error) {}
+    }
+    const brandsPage = normalizeBrandsPage(brandsPageRaw);
 
     let whatsappBotNumber = process.env.WHATSAPP_BOT_NUMBER || "";
     let sasaChatEnabled = true;
@@ -1859,6 +1904,7 @@ app.get("/api/settings", async (req, res) => {
       companyProfile,
       heroBanners,
       homePage,
+      brandsPage,
       qrisImageUrl: qrisRow?.value || "",
       whatsappBotNumber,
       sasaChatEnabled,
@@ -1990,6 +2036,24 @@ app.put(
       res.json({ message: "Pengaturan halaman utama berhasil disimpan.", homePage });
     } catch (error) {
       res.status(500).json({ message: "Gagal menyimpan pengaturan halaman utama." });
+    }
+  }
+);
+
+app.put(
+  "/api/admin/settings/brands_page",
+  authMiddleware,
+  requireRole(["admin"]),
+  async (req, res) => {
+    const brandsPage = normalizeBrandsPage(req.body || {});
+    try {
+      await runQuery(
+        "INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        ["brands_page", JSON.stringify(brandsPage)]
+      );
+      res.json({ message: "Teks pengantar Daftar Merek berhasil disimpan.", brandsPage });
+    } catch (error) {
+      res.status(500).json({ message: "Gagal menyimpan teks pengantar Daftar Merek." });
     }
   }
 );

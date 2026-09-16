@@ -645,6 +645,58 @@ body.landing-page {
   gap: 12px;
 }
 
+.sjs-navbar-end {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.sjs-header-social {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sjs-header-social-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  color: #fff;
+  border-radius: 6px;
+  text-decoration: none;
+  opacity: 0.95;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.sjs-header-social-link:hover {
+  background: rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
+}
+
+.sjs-header-social-link svg {
+  width: 18px;
+  height: 18px;
+}
+
+.sjs-header-social-link.is-tokopedia {
+  color: #42b549;
+  background: transparent;
+}
+
+.sjs-header-social-link.is-tokopedia:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.sjs-header-social-link.is-tokopedia svg {
+  overflow: visible;
+  stroke: #fff;
+  stroke-width: 1.4;
+  paint-order: stroke fill;
+}
+
 .sjs-nav-links {
   display: flex;
   align-items: center;
@@ -1163,6 +1215,15 @@ body.landing-page {
   .sjs-nav-item {
     font-size: 0.92rem;
     padding: 12px 12px;
+  }
+
+  .sjs-navbar-end {
+    gap: 8px;
+  }
+
+  .sjs-header-social-link {
+    width: 30px;
+    height: 30px;
   }
 
   .sjs-nav-track {
@@ -1728,6 +1789,14 @@ body.landing-page {
   height: 26px;
 }
 
+.home-footer-social-link.is-tokopedia {
+  color: #42b549;
+}
+
+.home-footer-social-link.is-tokopedia:hover {
+  color: #2e9a36;
+}
+
 .home-footer-msg {
   margin: 12px 0 0;
   font-size: 0.9rem;
@@ -2126,25 +2195,81 @@ body.landing-page {
 }
 
 .brands-page {
-  background: #f0eeeb;
+  background: #faf8f6;
 }
 
 .sjs-brands-main {
   max-width: 1120px;
   margin: 0 auto;
-  padding: 40px 28px 72px;
+  padding: 28px 28px 72px;
 }
 
-.sjs-brands-title {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+.sjs-brands-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.sjs-brands-back {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border: 1px solid #e4ddd6;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--sjs-brown-dark);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.sjs-brands-back:hover {
+  border-color: var(--sjs-brown);
+}
+
+.sjs-brands-crumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--sjs-brown);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.sjs-brands-crumb a {
+  color: var(--sjs-brown-dark);
+  display: inline-flex;
+}
+
+.sjs-brands-intro {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto 40px;
+}
+
+.sjs-brands-kicker {
+  margin: 0 0 10px;
+  color: var(--sjs-brown);
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.sjs-brands-intro h1 {
+  margin: 0 0 12px;
+  color: #c41e3a;
+  font-size: clamp(1.7rem, 3.4vw, 2.35rem);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.sjs-brands-intro p {
+  margin: 0;
+  color: var(--sjs-text-muted, #6b5e55);
+  font-size: 1.05rem;
+  line-height: 1.65;
 }
 
 .sjs-brands-grid {
