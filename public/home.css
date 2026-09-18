@@ -2340,14 +2340,14 @@ body.landing-page {
 }
 
 .sjs-brands-grid.is-logo-grid {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 20px;
 }
 
 .sjs-brand-tile.is-logo-card {
   min-height: 0;
-  aspect-ratio: 1.35 / 1;
-  padding: 18px 16px;
+  aspect-ratio: 1.32 / 1;
+  padding: 22px 18px;
   background: var(--sjs-brand-card-bg, #fff);
   border-radius: 16px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
@@ -2356,8 +2356,8 @@ body.landing-page {
 .sjs-brand-tile.is-logo-card .sjs-brand-tile-logo {
   width: 100%;
   max-width: none;
-  max-height: 78px;
-  height: 78px;
+  max-height: 96px;
+  height: 96px;
 }
 
 .sjs-brand-tile {
@@ -2445,7 +2445,15 @@ body.landing-page {
 
 @media (max-width: 1100px) {
   .sjs-brands-grid.is-logo-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .sjs-brand-tile.is-logo-card {
+    padding: 16px 12px;
+  }
+  .sjs-brand-tile.is-logo-card .sjs-brand-tile-logo {
+    max-height: 72px;
+    height: 72px;
   }
 }
 
@@ -2480,12 +2488,20 @@ body.landing-page {
   }
   .sjs-brands-grid.is-logo-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
   }
   .sjs-brand-tile {
     min-height: 96px;
   }
   .sjs-brand-tile:not(.has-cover) .sjs-brand-tile-logo {
     max-height: 88px;
+  }
+  .sjs-brand-tile.is-logo-card {
+    padding: 14px 10px;
+  }
+  .sjs-brand-tile.is-logo-card .sjs-brand-tile-logo {
+    max-height: 52px;
+    height: 52px;
   }
 }
 
