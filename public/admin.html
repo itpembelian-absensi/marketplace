@@ -628,9 +628,14 @@
               <input type="radio" name="brandsPageLayout" value="logo" />
               <span>
                 <strong>Kartu logo</strong>
-                Grid logo putih dengan tab kategori (Semua, ACP, dll.).
+                Grid logo dengan tab kategori (Semua, ACP, dll.). Warna dasar kartu bisa diganti di bawah.
               </span>
             </label>
+          </div>
+          <label for="brandsPageCardColor">Warna dasar kartu logo</label>
+          <div class="brand-title-color-row">
+            <input id="brandsPageCardColor" type="color" value="#ffffff" aria-label="Pilih warna dasar kartu logo" />
+            <input id="brandsPageCardColorHex" type="text" maxlength="7" value="#ffffff" placeholder="#ffffff" />
           </div>
           <button type="submit" class="btn-primary">Simpan Teks Pengantar</button>
           <p id="brandsPageMessage" class="message"></p>
@@ -1154,7 +1159,7 @@
     </div>
 
     <script src="/common.js?v=23"></script>
-    <script src="/admin.js?v=59"></script>
+    <script src="/admin.js?v=60"></script>
     <script src="/admin-points.js?v=1"></script>
   </body>
 </html>

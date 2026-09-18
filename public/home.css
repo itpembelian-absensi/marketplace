@@ -2348,7 +2348,7 @@ body.landing-page {
   min-height: 0;
   aspect-ratio: 1.35 / 1;
   padding: 18px 16px;
-  background: #fff;
+  background: var(--sjs-brand-card-bg, #fff);
   border-radius: 16px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
 }

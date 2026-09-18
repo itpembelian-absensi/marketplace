@@ -74,6 +74,7 @@ const DEFAULT_BRANDS_PAGE = {
   description:
     "Pilihan merek plywood, papan, dan material bangunan yang kami pasok. Mitra terpercaya untuk kebutuhan proyek, interior, dan furniture Anda.",
   titleColor: "#c41e3a",
+  cardColor: "#ffffff",
   layout: "cover",
 };
 
@@ -98,6 +99,7 @@ function normalizeBrandsPage(raw) {
     title: (title || DEFAULT_BRANDS_PAGE.title).slice(0, 160),
     description: (description || DEFAULT_BRANDS_PAGE.description).slice(0, 600),
     titleColor: normalizeBrandColor(source.titleColor, DEFAULT_BRANDS_PAGE.titleColor),
+    cardColor: normalizeBrandColor(source.cardColor, DEFAULT_BRANDS_PAGE.cardColor),
     layout: layoutRaw === "logo" ? "logo" : "cover",
   };
 }

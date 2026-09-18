@@ -3561,12 +3561,20 @@ function setBrandsPageMessage(text, isSuccess = false) {
   el.textContent = text || "";
 }
 
-function setBrandsPageColorInputs(color) {
-  const picker = document.getElementById("brandsPageTitleColor");
-  const hex = document.getElementById("brandsPageTitleColorHex");
-  const value = /^#([0-9a-fA-F]{6})$/.test(color || "") ? color.toLowerCase() : "#c41e3a";
+function setColorPairInputs(pickerId, hexId, color, fallback) {
+  const picker = document.getElementById(pickerId);
+  const hex = document.getElementById(hexId);
+  const value = /^#([0-9a-fA-F]{6})$/.test(color || "") ? color.toLowerCase() : fallback;
   if (picker) picker.value = value;
   if (hex) hex.value = value;
+}
+
+function setBrandsPageColorInputs(color) {
+  setColorPairInputs("brandsPageTitleColor", "brandsPageTitleColorHex", color, "#c41e3a");
+}
+
+function setBrandsPageCardColorInputs(color) {
+  setColorPairInputs("brandsPageCardColor", "brandsPageCardColorHex", color, "#ffffff");
 }
 
 async function loadBrandsPageSettings() {
@@ -3581,6 +3589,7 @@ async function loadBrandsPageSettings() {
     title.value = page.title || "";
     description.value = page.description || "";
     setBrandsPageColorInputs(page.titleColor || "#c41e3a");
+    setBrandsPageCardColorInputs(page.cardColor || "#ffffff");
     const layout = page.layout === "logo" ? "logo" : "cover";
     document.querySelectorAll('input[name="brandsPageLayout"]').forEach((input) => {
       input.checked = input.value === layout;
@@ -3596,6 +3605,12 @@ document.getElementById("brandsPageTitleColor")?.addEventListener("input", (even
 document.getElementById("brandsPageTitleColorHex")?.addEventListener("change", (event) => {
   setBrandsPageColorInputs(event.target.value);
 });
+document.getElementById("brandsPageCardColor")?.addEventListener("input", (event) => {
+  setBrandsPageCardColorInputs(event.target.value);
+});
+document.getElementById("brandsPageCardColorHex")?.addEventListener("change", (event) => {
+  setBrandsPageCardColorInputs(event.target.value);
+});
 
 document.getElementById("brandsPageForm")?.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -3608,6 +3623,7 @@ document.getElementById("brandsPageForm")?.addEventListener("submit", async (eve
         title: document.getElementById("brandsPageTitle")?.value || "",
         description: document.getElementById("brandsPageDescription")?.value || "",
         titleColor: document.getElementById("brandsPageTitleColor")?.value || "#c41e3a",
+        cardColor: document.getElementById("brandsPageCardColor")?.value || "#ffffff",
         layout: document.querySelector('input[name="brandsPageLayout"]:checked')?.value || "cover",
       }),
     });
@@ -3617,6 +3633,7 @@ document.getElementById("brandsPageForm")?.addEventListener("submit", async (eve
     document.getElementById("brandsPageTitle").value = page.title || "";
     document.getElementById("brandsPageDescription").value = page.description || "";
     setBrandsPageColorInputs(page.titleColor || "#c41e3a");
+    setBrandsPageCardColorInputs(page.cardColor || "#ffffff");
     const layout = page.layout === "logo" ? "logo" : "cover";
     document.querySelectorAll('input[name="brandsPageLayout"]').forEach((input) => {
       input.checked = input.value === layout;

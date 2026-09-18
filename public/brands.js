@@ -126,6 +126,7 @@ async function loadBrandsIntro() {
     const settings = await loadSettings({ fresh: true });
     const page = settings?.brandsPage || {};
     brandsLayout = page.layout === "logo" ? "logo" : "cover";
+    document.documentElement.style.setProperty("--sjs-brand-card-bg", page.cardColor || "#ffffff");
     if (kickerEl && page.kicker) kickerEl.textContent = page.kicker;
     if (titleEl && page.title) titleEl.textContent = page.title;
     if (titleEl && page.titleColor) titleEl.style.color = page.titleColor;
