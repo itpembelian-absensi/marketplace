@@ -6,7 +6,7 @@
     <link rel="icon" href="/logo-sjs.png" type="image/png" />
     <link rel="apple-touch-icon" href="/logo-sjs.png" />
     <title>Manajemen User - PT SAHABAT JAYA SUKSES</title>
-    <link rel="stylesheet" href="/style.css?v=32" />
+    <link rel="stylesheet" href="/style.css?v=35" />
   </head>
   <body class="admin-page">
     <header class="topbar">
@@ -397,22 +397,71 @@
           <div class="info-card" style="margin-bottom: 20px;">
             <h3>Penyesuaian Saldo Poin Manual</h3>
             <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 10px;">Gunakan ini untuk menambah/mengurangi poin user secara manual. Gunakan angka negatif (misal: -50) untuk mengurangi.</p>
-            <form id="adjustPointsForm" class="auth-form" style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
-              <div style="flex: 1; min-width: 200px;">
+            <form id="adjustPointsForm" class="auth-form" style="align-items: flex-start; max-width: 420px;">
+              <div style="width: 100%;">
                 <label style="font-size: 0.85rem; font-weight: 500; margin-bottom: 4px; display: block;">Pilih User</label>
-                <select id="adjustPointsUserId" required></select>
+                <div style="display: flex; gap: 8px; width: 100%;">
+                  <input type="hidden" id="adjustPointsUserId" />
+                  <input type="text" id="adjustPointsUserSearch" placeholder="Klik untuk memilih user" readonly style="flex: 1; box-sizing: border-box; cursor: pointer; background: #fff;" />
+                  <button type="button" id="openUserLookupBtn" class="btn-secondary">Cari</button>
+                </div>
               </div>
-              <div style="width: 120px;">
+              <div style="width: 180px;">
                 <label style="font-size: 0.85rem; font-weight: 500; margin-bottom: 4px; display: block;">Jumlah Poin</label>
-                <input type="number" id="adjustPointsAmount" placeholder="100 / -50" required />
+                <input type="number" id="adjustPointsAmount" placeholder="100 / -50" required style="width: 100%; box-sizing: border-box;" />
               </div>
-              <div style="flex: 1; min-width: 200px;">
+              <div style="width: 100%;">
                 <label style="font-size: 0.85rem; font-weight: 500; margin-bottom: 4px; display: block;">Keterangan</label>
-                <input type="text" id="adjustPointsDesc" placeholder="Alasan penyesuaian" />
+                <input type="text" id="adjustPointsDesc" placeholder="Alasan penyesuaian" style="width: 100%; box-sizing: border-box;" />
               </div>
-              <button type="submit" class="btn-primary" style="margin-bottom: 2px;">Simpan</button>
+              <button type="submit" class="btn-primary">Simpan</button>
             </form>
             <p id="adjustPointsMessage" class="message"></p>
+          </div>
+
+          <div id="userLookupModal" class="lookup-modal hidden" aria-hidden="true">
+            <div class="lookup-modal-card" role="dialog" aria-labelledby="userLookupTitle">
+              <div class="lookup-modal-head">
+                <strong id="userLookupTitle">Pilih User</strong>
+                <button type="button" id="userLookupClose" aria-label="Tutup">&times;</button>
+              </div>
+              <div class="lookup-modal-search">
+                <label for="userLookupBy">Cari berdasarkan</label>
+                <select id="userLookupBy">
+                  <option value="name">Nama</option>
+                  <option value="email">Email</option>
+                  <option value="id">ID</option>
+                </select>
+                <input type="text" id="userLookupQuery" placeholder="Ketik kata kunci" />
+                <button type="button" id="userLookupSearchBtn" class="btn-primary">Cari</button>
+                <button type="button" id="userLookupClearBtn" class="btn-secondary">Bersihkan</button>
+              </div>
+              <div class="lookup-modal-meta">
+                <span id="userLookupRecord">Record 0 of 0</span>
+                <div class="lookup-pager">
+                  <button type="button" id="userLookupFirst" aria-label="Halaman pertama">|&lt;</button>
+                  <button type="button" id="userLookupPrev" aria-label="Sebelumnya">&lt;</button>
+                  <button type="button" id="userLookupNext" aria-label="Berikutnya">&gt;</button>
+                  <button type="button" id="userLookupLast" aria-label="Halaman terakhir">&gt;|</button>
+                </div>
+              </div>
+              <div class="lookup-modal-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Nama</th>
+                      <th>Email</th>
+                      <th>Poin</th>
+                    </tr>
+                  </thead>
+                  <tbody id="userLookupTbody"></tbody>
+                </table>
+              </div>
+              <div class="lookup-modal-foot">
+                <button type="button" id="userLookupCloseBottom" class="btn-secondary">Tutup</button>
+              </div>
+            </div>
           </div>
 
           <h3>Saldo Poin User</h3>
@@ -971,6 +1020,51 @@
         </form>
         <p id="paymentTimeoutMessage" class="message"></p>
 
+        <h2 style="margin-top: 28px;">Pengaturan Email (Reset Password)</h2>
+        <p class="empty-state" style="margin-bottom: 12px;">
+          Dipakai untuk mengirim tautan reset password. Untuk Gmail, buat App Password lalu isi host <code>smtp.gmail.com</code>, port <code>587</code>.
+          Kosongkan password jika tidak ingin mengubah password yang sudah tersimpan.
+        </p>
+        <form id="mailSettingsForm" class="auth-form">
+          <div>
+            <label class="field-label" for="mailHost">SMTP host</label>
+            <input type="text" id="mailHost" placeholder="smtp.gmail.com" autocomplete="off" />
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:140px;">
+              <label class="field-label" for="mailPort">Port</label>
+              <input type="number" id="mailPort" min="1" max="65535" value="587" />
+            </div>
+            <div style="flex:1;min-width:180px;display:flex;align-items:flex-end;">
+              <label class="field-label" style="display:flex;align-items:center;gap:8px;font-weight:500;">
+                <input type="checkbox" id="mailSecure" />
+                SSL (port 465)
+              </label>
+            </div>
+          </div>
+          <div>
+            <label class="field-label" for="mailUser">Username SMTP</label>
+            <input type="text" id="mailUser" placeholder="email@gmail.com" autocomplete="off" />
+          </div>
+          <div>
+            <label class="field-label" for="mailPass">Password SMTP</label>
+            <input type="password" id="mailPass" placeholder="Kosongkan jika tidak diubah" autocomplete="new-password" />
+          </div>
+          <div>
+            <label class="field-label" for="mailFrom">Email pengirim</label>
+            <input type="email" id="mailFrom" placeholder="noreply@domain.com" autocomplete="off" />
+          </div>
+          <button type="submit" class="btn-primary">Simpan Pengaturan Email</button>
+        </form>
+        <form id="mailTestForm" class="auth-form" style="margin-top: 12px;">
+          <div>
+            <label class="field-label" for="mailTestTo">Kirim email percobaan ke</label>
+            <input type="email" id="mailTestTo" placeholder="email@domain.com" />
+          </div>
+          <button type="submit" class="btn-secondary">Kirim email percobaan</button>
+        </form>
+        <p id="mailSettingsMessage" class="message"></p>
+
         <h2 style="margin-top: 28px;">Pengaturan Pembayaran (QRIS)</h2>
         <form id="qrisForm" class="auth-form">
           <label for="qrisFile" style="font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 4px; display: block;">Upload Barcode QRIS</label>
@@ -1158,8 +1252,8 @@
       </main>
     </div>
 
-    <script src="/common.js?v=23"></script>
-    <script src="/admin.js?v=60"></script>
-    <script src="/admin-points.js?v=1"></script>
+    <script src="/common.js?v=24"></script>
+    <script src="/admin.js?v=61"></script>
+    <script src="/admin-points.js?v=4"></script>
   </body>
 </html>

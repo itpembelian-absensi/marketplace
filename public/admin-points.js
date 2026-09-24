@@ -1,4 +1,155 @@
-// --- Points Logic ---
+const rewardForm = document.getElementById("rewardForm");
+const rewardNameInput = document.getElementById("rewardName");
+const rewardPointsInput = document.getElementById("rewardPoints");
+const rewardTypeInput = document.getElementById("rewardType");
+const rewardValueInput = document.getElementById("rewardValue");
+const rewardActiveInput = document.getElementById("rewardActive");
+const rewardDescInput = document.getElementById("rewardDesc");
+const rewardSubmitBtn = document.getElementById("rewardSubmitBtn");
+const rewardCancelBtn = document.getElementById("rewardCancelBtn");
+const rewardMessage = document.getElementById("rewardMessage");
+const rewardsTbody = document.getElementById("rewardsTbody");
+const userPointsTbody = document.getElementById("userPointsTbody");
+const pointsHistoryTbody = document.getElementById("pointsHistoryTbody");
+const adjustPointsForm = document.getElementById("adjustPointsForm");
+const adjustPointsUserId = document.getElementById("adjustPointsUserId");
+const adjustPointsUserSearch = document.getElementById("adjustPointsUserSearch");
+const openUserLookupBtn = document.getElementById("openUserLookupBtn");
+const userLookupModal = document.getElementById("userLookupModal");
+const userLookupBy = document.getElementById("userLookupBy");
+const userLookupQuery = document.getElementById("userLookupQuery");
+const userLookupTbody = document.getElementById("userLookupTbody");
+const userLookupRecord = document.getElementById("userLookupRecord");
+const adjustPointsAmount = document.getElementById("adjustPointsAmount");
+const adjustPointsDesc = document.getElementById("adjustPointsDesc");
+const adjustPointsMessage = document.getElementById("adjustPointsMessage");
+let editingRewardId = null;
+let pointsUserOptions = [];
+let lookupFiltered = [];
+let lookupPage = 0;
+const LOOKUP_PAGE_SIZE = 8;
+
+function openUserLookup() {
+  if (!userLookupModal) return;
+  if (userLookupQuery) userLookupQuery.value = "";
+  lookupPage = 0;
+  applyUserLookup();
+  userLookupModal.classList.remove("hidden");
+  userLookupModal.setAttribute("aria-hidden", "false");
+  userLookupQuery?.focus();
+}
+
+function closeUserLookup() {
+  userLookupModal?.classList.add("hidden");
+  userLookupModal?.setAttribute("aria-hidden", "true");
+}
+
+function applyUserLookup() {
+  const by = userLookupBy?.value || "name";
+  const keyword = String(userLookupQuery?.value || "").trim().toLowerCase();
+  lookupFiltered = pointsUserOptions.filter((user) => {
+    if (!keyword) return true;
+    if (by === "email") return String(user.email || "").toLowerCase().includes(keyword);
+    if (by === "id") return String(user.id).includes(keyword);
+    return String(user.name || "").toLowerCase().includes(keyword);
+  });
+  const maxPage = Math.max(0, Math.ceil(lookupFiltered.length / LOOKUP_PAGE_SIZE) - 1);
+  if (lookupPage > maxPage) lookupPage = maxPage;
+  renderUserLookupPage();
+}
+
+function renderUserLookupPage() {
+  if (!userLookupTbody) return;
+  const total = lookupFiltered.length;
+  const start = lookupPage * LOOKUP_PAGE_SIZE;
+  const pageRows = lookupFiltered.slice(start, start + LOOKUP_PAGE_SIZE);
+  const from = total ? start + 1 : 0;
+  const to = Math.min(start + LOOKUP_PAGE_SIZE, total);
+  if (userLookupRecord) userLookupRecord.textContent = `Record ${from}..${to} of ${total}`;
+  if (!pageRows.length) {
+    userLookupTbody.innerHTML = '<tr><td colspan="4" style="padding:12px;text-align:center;">User tidak ditemukan.</td></tr>';
+    return;
+  }
+  userLookupTbody.innerHTML = pageRows.map((user) => `
+    <tr data-user-id="${user.id}">
+      <td>#${user.id}</td>
+      <td>${escapeHtml(user.name)}</td>
+      <td>${escapeHtml(user.email)}</td>
+      <td>${user.total_points}</td>
+    </tr>
+  `).join("");
+}
+
+function selectLookupUser(user) {
+  if (!user || !adjustPointsUserId || !adjustPointsUserSearch) return;
+  adjustPointsUserId.value = String(user.id);
+  adjustPointsUserSearch.value = `${user.name} (${user.email})`;
+  closeUserLookup();
+}
+
+adjustPointsUserSearch?.addEventListener("click", openUserLookup);
+openUserLookupBtn?.addEventListener("click", openUserLookup);
+document.getElementById("userLookupSearchBtn")?.addEventListener("click", () => {
+  lookupPage = 0;
+  applyUserLookup();
+});
+document.getElementById("userLookupClearBtn")?.addEventListener("click", () => {
+  if (userLookupQuery) userLookupQuery.value = "";
+  lookupPage = 0;
+  applyUserLookup();
+});
+userLookupQuery?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    lookupPage = 0;
+    applyUserLookup();
+  }
+});
+document.getElementById("userLookupFirst")?.addEventListener("click", () => {
+  lookupPage = 0;
+  renderUserLookupPage();
+});
+document.getElementById("userLookupPrev")?.addEventListener("click", () => {
+  lookupPage = Math.max(0, lookupPage - 1);
+  renderUserLookupPage();
+});
+document.getElementById("userLookupNext")?.addEventListener("click", () => {
+  const maxPage = Math.max(0, Math.ceil(lookupFiltered.length / LOOKUP_PAGE_SIZE) - 1);
+  lookupPage = Math.min(maxPage, lookupPage + 1);
+  renderUserLookupPage();
+});
+document.getElementById("userLookupLast")?.addEventListener("click", () => {
+  lookupPage = Math.max(0, Math.ceil(lookupFiltered.length / LOOKUP_PAGE_SIZE) - 1);
+  renderUserLookupPage();
+});
+userLookupTbody?.addEventListener("click", (event) => {
+  const row = event.target.closest("tr[data-user-id]");
+  if (!row) return;
+  const user = pointsUserOptions.find((item) => String(item.id) === row.dataset.userId);
+  selectLookupUser(user);
+});
+document.getElementById("userLookupClose")?.addEventListener("click", closeUserLookup);
+document.getElementById("userLookupCloseBottom")?.addEventListener("click", closeUserLookup);
+userLookupModal?.addEventListener("click", (event) => {
+  if (event.target === userLookupModal) closeUserLookup();
+});
+
+const pointSubTabs = ["pointsRewardSubTab", "pointsUserSubTab", "pointsHistorySubTab"];
+
+document.querySelectorAll("#pointsTab .tabs .tab").forEach((button) => {
+  button.addEventListener("click", () => {
+    const tabId = button.dataset.tab;
+    document.querySelectorAll("#pointsTab .tabs .tab").forEach((item) => {
+      item.classList.toggle("active", item === button);
+    });
+    pointSubTabs.forEach((id) => {
+      document.getElementById(id)?.classList.toggle("hidden", id !== tabId);
+    });
+    if (tabId === "pointsRewardSubTab") loadRewards();
+    if (tabId === "pointsUserSubTab") loadPointsUsers();
+    if (tabId === "pointsHistorySubTab") loadPointsHistory();
+  });
+});
 
 function setRewardMessage(msg, isSuccess = false) {
   if (!rewardMessage) return;
@@ -9,7 +160,7 @@ function setRewardMessage(msg, isSuccess = false) {
 async function loadRewards() {
   if (!rewardsTbody) return;
   try {
-    const data = await apiFetch('/points/rewards');
+    const data = await apiFetch('/admin/points/rewards');
     if (!data || !data.length) {
       rewardsTbody.innerHTML = '<tr><td colspan="5" style="padding: 10px; text-align: center;">Belum ada hadiah.</td></tr>';
       return;
@@ -114,10 +265,8 @@ async function loadPointsUsers() {
       </tr>
     `).join('');
     
-    // populate select options
-    if (adjustPointsUserId) {
-      adjustPointsUserId.innerHTML = '<option value="">Pilih User</option>' + data.map(u => `<option value="${u.id}">${u.name} (${u.email})</option>`).join('');
-    }
+    pointsUserOptions = data;
+    if (userLookupModal && !userLookupModal.classList.contains("hidden")) applyUserLookup();
   } catch (e) {
     userPointsTbody.innerHTML = '<tr><td colspan="4" style="padding: 10px; text-align: center; color: red;">Gagal memuat.</td></tr>';
   }
@@ -127,11 +276,17 @@ if (adjustPointsForm) {
   adjustPointsForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!adjustPointsMessage) return;
+    if (!adjustPointsUserId?.value) {
+      adjustPointsMessage.textContent = "Pilih user dari hasil pencarian.";
+      adjustPointsMessage.className = "message";
+      renderUserLookup(adjustPointsUserSearch?.value || "");
+      return;
+    }
     try {
       await apiFetch('/admin/points/adjust', {
         method: 'POST',
         body: JSON.stringify({
-          user_id: Number(adjustPointsUserId.value),
+          user_id: Number(adjustPointsUserId?.value),
           amount: Number(adjustPointsAmount.value),
           description: adjustPointsDesc.value.trim()
         })
@@ -169,3 +324,9 @@ async function loadPointsHistory() {
     pointsHistoryTbody.innerHTML = '<tr><td colspan="5" style="padding: 10px; text-align: center; color: red;">Gagal memuat.</td></tr>';
   }
 }
+
+document.querySelector('.admin-sidebar .tab[data-tab="pointsTab"]')?.addEventListener("click", () => {
+  loadRewards();
+  loadPointsUsers();
+  loadPointsHistory();
+});

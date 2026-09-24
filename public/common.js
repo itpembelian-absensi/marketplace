@@ -544,6 +544,93 @@ function closeAuthModal() {
     msg.textContent = "";
     msg.classList.remove("success");
   }
+  setAuthModalMode("login");
+}
+
+function setAuthModalMode(mode) {
+  const isForgot = mode === "forgot";
+  document.getElementById("headerLoginForm")?.classList.toggle("hidden", isForgot);
+  document.getElementById("headerForgotForm")?.classList.toggle("hidden", !isForgot);
+  document.getElementById("headerGoogleSignIn")?.classList.toggle("hidden", isForgot);
+  document.querySelector("#authModal .sjs-auth-register-link")?.classList.toggle("hidden", isForgot);
+  const title = document.getElementById("authModalTitle");
+  const sub = document.querySelector("#authModal .sjs-auth-modal-sub");
+  if (title) title.textContent = isForgot ? "Reset Password" : "Masuk / Daftar";
+  if (sub) {
+    sub.textContent = isForgot
+      ? "Masukkan email akun. Kami kirim tautan untuk membuat password baru."
+      : "Masuk ke akun SJS untuk belanja dan lacak pesanan.";
+  }
+}
+
+function ensureForgotPasswordUi() {
+  const loginForm = document.getElementById("headerLoginForm");
+  if (!loginForm || document.getElementById("headerForgotLink")) return;
+
+  const forgotLink = document.createElement("button");
+  forgotLink.type = "button";
+  forgotLink.id = "headerForgotLink";
+  forgotLink.className = "sjs-auth-forgot-link";
+  forgotLink.textContent = "Lupa password?";
+  loginForm.querySelector("button[type='submit']")?.before(forgotLink);
+
+  const forgotForm = document.createElement("form");
+  forgotForm.id = "headerForgotForm";
+  forgotForm.className = "auth-form hidden";
+  forgotForm.autocomplete = "off";
+  forgotForm.innerHTML = `
+    <div>
+      <label for="headerForgotEmail">Email</label>
+      <input type="email" id="headerForgotEmail" placeholder="contoh@email.com" required autocomplete="email" />
+    </div>
+    <button type="submit" class="sjs-auth-submit">Kirim tautan reset</button>
+    <button type="button" class="sjs-auth-forgot-back" id="headerForgotBack">Kembali ke login</button>
+  `;
+  loginForm.insertAdjacentElement("afterend", forgotForm);
+
+  forgotLink.addEventListener("click", () => {
+    const loginEmail = document.getElementById("headerLoginEmail")?.value.trim();
+    const forgotEmail = document.getElementById("headerForgotEmail");
+    if (forgotEmail && loginEmail) forgotEmail.value = loginEmail;
+    const msg = document.getElementById("headerLoginMessage");
+    if (msg) {
+      msg.textContent = "";
+      msg.classList.remove("success");
+    }
+    setAuthModalMode("forgot");
+    forgotEmail?.focus();
+  });
+
+  document.getElementById("headerForgotBack")?.addEventListener("click", () => {
+    const msg = document.getElementById("headerLoginMessage");
+    if (msg) {
+      msg.textContent = "";
+      msg.classList.remove("success");
+    }
+    setAuthModalMode("login");
+  });
+
+  forgotForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const msg = document.getElementById("headerLoginMessage");
+    if (msg) {
+      msg.textContent = "Mengirim tautan reset...";
+      msg.classList.remove("success");
+    }
+    const email = document.getElementById("headerForgotEmail")?.value.trim();
+    try {
+      const result = await apiFetch("/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+      if (msg) {
+        msg.classList.add("success");
+        msg.textContent = result.message || "Tautan reset sudah dikirim.";
+      }
+    } catch (error) {
+      if (msg) msg.textContent = error.message;
+    }
+  });
 }
 
 function toggleProfileDropdown() {
@@ -725,6 +812,7 @@ function initLandingAuth() {
     }
   });
 
+  ensureForgotPasswordUi();
   const loginForm = document.getElementById("headerLoginForm");
   const loginMessage = document.getElementById("headerLoginMessage");
   loginForm?.addEventListener("submit", async (event) => {

@@ -4,11 +4,18 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const sqlite3 = require("sqlite3").verbose();
 const multer = require("multer");
 const { OAuth2Client } = require("google-auth-library");
+const {
+  mergeMailSettings,
+  isMailConfigured,
+  publicMailSettings,
+  sendMail,
+} = require("./lib/mail");
 
 const googleClient = new OAuth2Client();
 const {
@@ -924,6 +931,17 @@ async function setupDatabase() {
   }
 
   await runQuery(`
+    CREATE TABLE IF NOT EXISTS password_resets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      token_hash TEXT NOT NULL UNIQUE,
+      expires_at INTEGER NOT NULL,
+      used_at INTEGER,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await runQuery(`
     CREATE TABLE IF NOT EXISTS products (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -1545,6 +1563,198 @@ app.post("/api/auth/google", async (req, res) => {
 
 app.get("/api/settings/google-client-id", (req, res) => {
   res.json({ clientId: process.env.GOOGLE_CLIENT_ID || "" });
+});
+
+const RESET_TTL_MS = 60 * 60 * 1000;
+const forgotAttempts = new Map();
+
+function clientIp(req) {
+  const forwarded = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+  return forwarded || req.ip || "unknown";
+}
+
+function tooManyForgotAttempts(ip) {
+  const now = Date.now();
+  const windowMs = 15 * 60 * 1000;
+  const recent = (forgotAttempts.get(ip) || []).filter((stamp) => now - stamp < windowMs);
+  if (recent.length >= 5) {
+    forgotAttempts.set(ip, recent);
+    return true;
+  }
+  recent.push(now);
+  forgotAttempts.set(ip, recent);
+  return false;
+}
+
+function appBaseUrl(req) {
+  const configured = String(process.env.APP_PUBLIC_URL || "").trim().replace(/\/$/, "");
+  if (configured) return configured;
+  const proto = String(req.headers["x-forwarded-proto"] || req.protocol || "http").split(",")[0].trim();
+  return `${proto}://${req.get("host")}`;
+}
+
+function maskEmail(email) {
+  const [local, domain] = String(email || "").split("@");
+  if (!local || !domain) return "";
+  const visible = local.slice(0, 1);
+  return `${visible}***@${domain}`;
+}
+
+async function getStoredMailSettings() {
+  const row = await getQuery("SELECT value FROM app_settings WHERE key = ?", ["mail_settings"]);
+  if (!row?.value) return {};
+  try {
+    const parsed = JSON.parse(row.value);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+async function getMailSettings() {
+  return mergeMailSettings(await getStoredMailSettings());
+}
+
+async function findValidReset(token) {
+  const value = String(token || "").trim();
+  if (value.length < 20) return null;
+  const tokenHash = crypto.createHash("sha256").update(value).digest("hex");
+  return getQuery(
+    `SELECT pr.id, pr.user_id, u.email, u.name
+     FROM password_resets pr
+     JOIN users u ON u.id = pr.user_id
+     WHERE pr.token_hash = ? AND pr.used_at IS NULL AND pr.expires_at > ?`,
+    [tokenHash, Date.now()]
+  );
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function resetEmailBody({ name, link }) {
+  const displayName = String(name || "Pelanggan").trim() || "Pelanggan";
+  const safeName = escapeHtml(displayName);
+  const safeLink = escapeHtml(link);
+  const text = [
+    `Halo ${displayName},`,
+    "",
+    "Kami menerima permintaan untuk mengatur ulang password akun SJS Anda.",
+    "Buka tautan berikut dalam 1 jam:",
+    link,
+    "",
+    "Jika Anda tidak meminta reset password, abaikan email ini.",
+    "",
+    "PT Sahabat Jaya Sukses",
+  ].join("\n");
+  const html = `
+    <div style="font-family:Arial,sans-serif;color:#3f2e24;line-height:1.5">
+      <p>Halo ${safeName},</p>
+      <p>Kami menerima permintaan untuk mengatur ulang password akun SJS Anda.</p>
+      <p><a href="${safeLink}" style="display:inline-block;background:#6b4b36;color:#fff;text-decoration:none;padding:10px 18px;border-radius:999px;font-weight:700">Atur ulang password</a></p>
+      <p>Tautan ini berlaku selama 1 jam. Jika tombol tidak terbuka, salin alamat berikut:</p>
+      <p><a href="${safeLink}">${safeLink}</a></p>
+      <p>Jika Anda tidak meminta reset password, abaikan email ini.</p>
+      <p>PT Sahabat Jaya Sukses</p>
+    </div>
+  `;
+  return { text, html };
+}
+
+app.post("/api/auth/forgot-password", async (req, res) => {
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    res.status(400).json({ message: "Masukkan email yang valid." });
+    return;
+  }
+  if (tooManyForgotAttempts(clientIp(req))) {
+    res.status(429).json({ message: "Terlalu banyak percobaan. Coba lagi dalam beberapa menit." });
+    return;
+  }
+
+  const generic = "Jika email terdaftar, tautan reset password sudah dikirim. Cek kotak masuk dan folder spam.";
+  try {
+    const settings = await getMailSettings();
+    if (!isMailConfigured(settings)) {
+      res.status(503).json({
+        message: "Layanan reset password belum aktif. Hubungi admin toko.",
+      });
+      return;
+    }
+
+    const user = await getQuery("SELECT id, name, email FROM users WHERE LOWER(email) = ?", [email]);
+    if (!user) {
+      res.json({ message: generic });
+      return;
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const expiresAt = Date.now() + RESET_TTL_MS;
+    await runQuery("DELETE FROM password_resets WHERE user_id = ? AND used_at IS NULL", [user.id]);
+    await runQuery(
+      "INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, ?)",
+      [user.id, tokenHash, expiresAt]
+    );
+
+    const link = `${appBaseUrl(req)}/reset-password.html?token=${encodeURIComponent(token)}`;
+    const body = resetEmailBody({ name: user.name, link });
+    await sendMail(settings, {
+      to: user.email,
+      subject: "Reset password akun SJS",
+      text: body.text,
+      html: body.html,
+    });
+    res.json({ message: generic });
+  } catch (error) {
+    console.error("Gagal kirim email reset password:", error);
+    res.status(500).json({ message: "Gagal mengirim email reset. Coba lagi nanti." });
+  }
+});
+
+app.get("/api/auth/reset-password", async (req, res) => {
+  try {
+    const row = await findValidReset(req.query?.token);
+    if (!row) {
+      res.status(400).json({ message: "Tautan reset tidak valid atau sudah kedaluwarsa." });
+      return;
+    }
+    res.json({ valid: true, email: maskEmail(row.email) });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal memeriksa tautan reset." });
+  }
+});
+
+app.post("/api/auth/reset-password", async (req, res) => {
+  const token = String(req.body?.token || "").trim();
+  const password = String(req.body?.password || "");
+  if (!token) {
+    res.status(400).json({ message: "Tautan reset tidak valid." });
+    return;
+  }
+  if (password.length < 6) {
+    res.status(400).json({ message: "Password minimal 6 karakter." });
+    return;
+  }
+
+  try {
+    const row = await findValidReset(token);
+    if (!row) {
+      res.status(400).json({ message: "Tautan reset tidak valid atau sudah kedaluwarsa." });
+      return;
+    }
+    const passwordHash = await bcrypt.hash(password, 10);
+    await runQuery("UPDATE users SET password_hash = ? WHERE id = ?", [passwordHash, row.user_id]);
+    await runQuery("UPDATE password_resets SET used_at = ? WHERE id = ?", [Date.now(), row.id]);
+    await runQuery("DELETE FROM password_resets WHERE user_id = ? AND id != ?", [row.user_id, row.id]);
+    res.json({ message: "Password berhasil diubah. Silakan masuk dengan password baru." });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal mengubah password." });
+  }
 });
 
 app.get("/api/auth/me", authMiddleware, async (req, res) => {
@@ -2419,6 +2629,67 @@ async function getTaxSettingsFromDb() {
     return normalizeTaxSettings({ mode: "none", percent: 11 });
   }
 }
+
+app.get("/api/admin/settings/mail", authMiddleware, requireRole(["admin"]), async (_req, res) => {
+  try {
+    const settings = await getMailSettings();
+    res.json({ settings: publicMailSettings(settings) });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal memuat pengaturan email." });
+  }
+});
+
+app.put("/api/admin/settings/mail", authMiddleware, requireRole(["admin"]), async (req, res) => {
+  try {
+    const current = await getStoredMailSettings();
+    const incoming = req.body?.settings || req.body || {};
+    const nextPass = String(incoming.pass || "");
+    const stored = {
+      host: String(incoming.host || "").trim(),
+      port: Number(incoming.port) || 587,
+      secure: Boolean(incoming.secure),
+      user: String(incoming.user || "").trim(),
+      pass: nextPass || String(current.pass || ""),
+      from: String(incoming.from || "").trim(),
+    };
+    await runQuery(
+      "INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+      ["mail_settings", JSON.stringify(stored)]
+    );
+    const settings = mergeMailSettings(stored);
+    res.json({
+      message: "Pengaturan email berhasil disimpan.",
+      settings: publicMailSettings(settings),
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal menyimpan pengaturan email." });
+  }
+});
+
+app.post("/api/admin/settings/mail/test", authMiddleware, requireRole(["admin"]), async (req, res) => {
+  const to = String(req.body?.to || req.user?.email || "").trim();
+  if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+    res.status(400).json({ message: "Masukkan email tujuan yang valid." });
+    return;
+  }
+  try {
+    const settings = await getMailSettings();
+    if (!isMailConfigured(settings)) {
+      res.status(400).json({ message: "SMTP belum lengkap. Isi host, pengirim, dan password." });
+      return;
+    }
+    await sendMail(settings, {
+      to,
+      subject: "Tes email SJS",
+      text: "Ini email percobaan dari panel admin PT Sahabat Jaya Sukses. Pengaturan SMTP sudah berjalan.",
+      html: "<p>Ini email percobaan dari panel admin PT Sahabat Jaya Sukses. Pengaturan SMTP sudah berjalan.</p>",
+    });
+    res.json({ message: `Email percobaan terkirim ke ${to}.` });
+  } catch (error) {
+    console.error("Gagal tes email:", error);
+    res.status(500).json({ message: "Gagal mengirim email percobaan. Periksa host, port, dan password SMTP." });
+  }
+});
 
 app.get("/api/admin/settings/tax", authMiddleware, requireRole(["admin"]), async (req, res) => {
   try {
@@ -4753,6 +5024,15 @@ app.get("/api/admin/points/history", authMiddleware, requireRole(["admin"]), asy
     res.json(history);
   } catch (error) {
     res.status(500).json({ message: "Gagal mengambil riwayat poin." });
+  }
+});
+
+app.get("/api/admin/points/rewards", authMiddleware, requireRole(["admin"]), async (_req, res) => {
+  try {
+    const rewards = await allQuery("SELECT * FROM point_rewards ORDER BY points_required ASC, id DESC");
+    res.json(rewards);
+  } catch (error) {
+    res.status(500).json({ message: "Gagal mengambil daftar hadiah." });
   }
 });
 

@@ -2550,6 +2550,88 @@ async function testShippingApi(provider) {
 document.getElementById("shipTestLalamoveBtn")?.addEventListener("click", () => testShippingApi("lalamove"));
 document.getElementById("shipTestGosendBtn")?.addEventListener("click", () => testShippingApi("gosend"));
 
+async function loadMailSettings() {
+  const form = document.getElementById("mailSettingsForm");
+  if (!form) return;
+  const msg = document.getElementById("mailSettingsMessage");
+  try {
+    const data = await apiFetch("/admin/settings/mail");
+    const s = data.settings || {};
+    const hostEl = document.getElementById("mailHost");
+    const portEl = document.getElementById("mailPort");
+    const secureEl = document.getElementById("mailSecure");
+    const userEl = document.getElementById("mailUser");
+    const fromEl = document.getElementById("mailFrom");
+    const passEl = document.getElementById("mailPass");
+    if (hostEl) hostEl.value = s.host || "";
+    if (portEl) portEl.value = s.port || 587;
+    if (secureEl) secureEl.checked = Boolean(s.secure);
+    if (userEl) userEl.value = s.user || "";
+    if (fromEl) fromEl.value = s.from || "";
+    if (passEl) {
+      passEl.value = "";
+      passEl.placeholder = s.hasPassword ? "Password tersimpan" : "Password SMTP";
+    }
+  } catch (error) {
+    if (msg) {
+      msg.classList.remove("success");
+      msg.textContent = error.message;
+    }
+  }
+}
+
+document.getElementById("mailSettingsForm")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById("mailSettingsMessage");
+  const setMsg = (ok, text) => {
+    if (!msg) return;
+    msg.classList.toggle("success", Boolean(ok));
+    msg.textContent = text;
+  };
+  setMsg(false, "Menyimpan pengaturan email...");
+  try {
+    const result = await apiFetch("/admin/settings/mail", {
+      method: "PUT",
+      body: JSON.stringify({
+        settings: {
+          host: document.getElementById("mailHost")?.value.trim() || "",
+          port: Number(document.getElementById("mailPort")?.value || 587),
+          secure: Boolean(document.getElementById("mailSecure")?.checked),
+          user: document.getElementById("mailUser")?.value.trim() || "",
+          pass: document.getElementById("mailPass")?.value || "",
+          from: document.getElementById("mailFrom")?.value.trim() || "",
+        },
+      }),
+    });
+    setMsg(true, result.message || "Pengaturan email tersimpan.");
+    const passEl = document.getElementById("mailPass");
+    if (passEl) passEl.value = "";
+    await loadMailSettings();
+  } catch (error) {
+    setMsg(false, error.message || "Gagal menyimpan email.");
+  }
+});
+
+document.getElementById("mailTestForm")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById("mailSettingsMessage");
+  const setMsg = (ok, text) => {
+    if (!msg) return;
+    msg.classList.toggle("success", Boolean(ok));
+    msg.textContent = text;
+  };
+  setMsg(false, "Mengirim email percobaan...");
+  try {
+    const result = await apiFetch("/admin/settings/mail/test", {
+      method: "POST",
+      body: JSON.stringify({ to: document.getElementById("mailTestTo")?.value.trim() || "" }),
+    });
+    setMsg(true, result.message || "Email percobaan terkirim.");
+  } catch (error) {
+    setMsg(false, error.message || "Gagal mengirim email percobaan.");
+  }
+});
+
 async function loadTaxSettings() {
   const form = document.getElementById("taxSettingsForm");
   if (!form) return;
@@ -4307,6 +4389,7 @@ if (guardAccess()) {
   loadAdminArticles();
   loadCompanyProfileSettings();
   loadShippingSettings();
+  loadMailSettings();
   loadTaxSettings();
   loadPaymentTimeoutSettings();
   loadBanks();
