@@ -896,7 +896,8 @@ function refreshHeaderCartBadge() {
   const cartButton = document.getElementById("cartButton");
   const cartBadge = document.getElementById("cartCountBadge");
   if (!cartButton) return;
-  const qty = getCartTotalQty();
+  const isLoggedIn = Boolean(getToken());
+  const qty = isLoggedIn ? getCartTotalQty() : 0;
   if (cartBadge) {
     cartBadge.textContent = qty;
     cartBadge.style.display = qty > 0 ? "flex" : "none";
