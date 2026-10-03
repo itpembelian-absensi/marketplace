@@ -1386,6 +1386,50 @@ function initLayananNav() {
   });
 }
 
+const VISITOR_ID_KEY = "sjs_visitor_id";
+
+function getOrCreateVisitorId() {
+  try {
+    const existing = localStorage.getItem(VISITOR_ID_KEY);
+    if (existing && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(existing)) {
+      return existing;
+    }
+    const created = crypto.randomUUID();
+    localStorage.setItem(VISITOR_ID_KEY, created);
+    return created;
+  } catch (_error) {
+    return "";
+  }
+}
+
+function trackSiteVisit() {
+  const path = window.location.pathname || "/";
+  if (path.endsWith("/admin.html")) return;
+  const role = getAuth()?.user?.role;
+  if (role === "admin" || role === "manager") return;
+  const visitorId = getOrCreateVisitorId();
+  if (!visitorId) return;
+
+  const payload = { visitorId, path };
+  if (path.endsWith("/product.html")) {
+    const productId = Number(new URLSearchParams(window.location.search).get("id"));
+    if (Number.isInteger(productId) && productId > 0) payload.productId = productId;
+  }
+
+  const body = JSON.stringify(payload);
+  if (navigator.sendBeacon) {
+    navigator.sendBeacon("/api/analytics/visit", new Blob([body], { type: "application/json" }));
+    return;
+  }
+  fetch("/api/analytics/visit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+    keepalive: true,
+  }).catch(() => {});
+}
+
+trackSiteVisit();
 renderBrandLogo();
 renderLandingHeader();
 renderUserArea();

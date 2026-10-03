@@ -1296,6 +1296,30 @@ async function setupDatabase() {
   `);
 
   await runQuery(`
+    CREATE TABLE IF NOT EXISTS site_visitor_days (
+      visitor_id TEXT NOT NULL,
+      day TEXT NOT NULL,
+      page_views INTEGER NOT NULL DEFAULT 1,
+      PRIMARY KEY (visitor_id, day)
+    )
+  `);
+  await runQuery(
+    "CREATE INDEX IF NOT EXISTS idx_site_visitor_days_day ON site_visitor_days(day)"
+  );
+  await runQuery(`
+    CREATE TABLE IF NOT EXISTS product_interest_days (
+      product_id INTEGER NOT NULL,
+      visitor_id TEXT NOT NULL,
+      day TEXT NOT NULL,
+      views INTEGER NOT NULL DEFAULT 1,
+      PRIMARY KEY (product_id, visitor_id, day)
+    )
+  `);
+  await runQuery(
+    "CREATE INDEX IF NOT EXISTS idx_product_interest_days_day ON product_interest_days(day)"
+  );
+
+  await runQuery(`
     CREATE TABLE IF NOT EXISTS order_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       order_id INTEGER NOT NULL,
@@ -1462,6 +1486,169 @@ function requireRole(allowedRoles) {
     next();
   };
 }
+
+function jakartaDay(date = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+function analyticsRangeStart(range) {
+  const today = jakartaDay();
+  if (range === "all") return null;
+  const days = range === "today" ? 0 : range === "7d" ? 6 : 29;
+  const [year, month, day] = today.split("-").map(Number);
+  const utc = Date.UTC(year, month - 1, day) - days * 86400000;
+  const shifted = new Date(utc);
+  const yyyy = shifted.getUTCFullYear();
+  const mm = String(shifted.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(shifted.getUTCDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function isAnalyticsDay(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
+function parseAnalyticsWindow(query) {
+  const fromRaw = String(query.from || "").trim();
+  const toRaw = String(query.to || "").trim();
+  if (fromRaw || toRaw) {
+    if (!isAnalyticsDay(fromRaw) || !isAnalyticsDay(toRaw)) {
+      return { error: "Isi tanggal dari dan sampai dengan format yang benar." };
+    }
+    if (fromRaw > toRaw) {
+      return { error: "Tanggal dari tidak boleh lebih besar dari tanggal sampai." };
+    }
+    return { range: "custom", startDay: fromRaw, endDay: toRaw };
+  }
+  const range = ["today", "7d", "30d", "all"].includes(String(query.range))
+    ? String(query.range)
+    : "30d";
+  return {
+    range,
+    startDay: analyticsRangeStart(range),
+    endDay: range === "all" ? null : jakartaDay(),
+  };
+}
+
+const analyticsHits = new Map();
+function allowAnalyticsWrite(ip) {
+  const now = Date.now();
+  const recent = (analyticsHits.get(ip) || []).filter((time) => now - time < 60000);
+  if (recent.length >= 40) {
+    analyticsHits.set(ip, recent);
+    return false;
+  }
+  recent.push(now);
+  analyticsHits.set(ip, recent);
+  if (analyticsHits.size > 5000) {
+    for (const [key, times] of analyticsHits) {
+      if (!times.some((time) => now - time < 60000)) analyticsHits.delete(key);
+    }
+  }
+  return true;
+}
+
+const VISITOR_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+app.post("/api/analytics/visit", async (req, res) => {
+  const visitorId = String(req.body?.visitorId || "").trim();
+  const rawPath = String(req.body?.path || "/").split("?")[0].slice(0, 200);
+  const productId = Number(req.body?.productId);
+  if (!VISITOR_ID_PATTERN.test(visitorId) || !rawPath.startsWith("/")) {
+    res.status(400).json({ message: "Data kunjungan tidak valid." });
+    return;
+  }
+  if (rawPath === "/admin.html") {
+    res.json({ ok: true });
+    return;
+  }
+  const ip = String(req.ip || req.socket?.remoteAddress || "unknown");
+  if (!allowAnalyticsWrite(ip)) {
+    res.status(429).json({ message: "Terlalu banyak permintaan." });
+    return;
+  }
+
+  try {
+    const day = jakartaDay();
+    await runQuery(
+      `INSERT INTO site_visitor_days (visitor_id, day, page_views)
+       VALUES (?, ?, 1)
+       ON CONFLICT(visitor_id, day) DO UPDATE SET page_views = page_views + 1`,
+      [visitorId, day]
+    );
+    if (Number.isInteger(productId) && productId > 0) {
+      const product = await getQuery("SELECT id FROM products WHERE id = ?", [productId]);
+      if (product) {
+        await runQuery(
+          `INSERT INTO product_interest_days (product_id, visitor_id, day, views)
+           VALUES (?, ?, ?, 1)
+           ON CONFLICT(product_id, visitor_id, day) DO UPDATE SET views = views + 1`,
+          [productId, visitorId, day]
+        );
+      }
+    }
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal mencatat kunjungan." });
+  }
+});
+
+app.get("/api/admin/analytics", authMiddleware, requireRole(["admin", "manager"]), async (req, res) => {
+  const window = parseAnalyticsWindow(req.query);
+  if (window.error) {
+    res.status(400).json({ message: window.error });
+    return;
+  }
+  const { range, startDay, endDay } = window;
+  try {
+    const summary = await getQuery(
+      `SELECT COUNT(DISTINCT visitor_id) AS people, COALESCE(SUM(page_views), 0) AS views
+       FROM site_visitor_days
+       WHERE (? IS NULL OR day >= ?) AND (? IS NULL OR day <= ?)`,
+      [startDay, startDay, endDay, endDay]
+    );
+    const products = await allQuery(
+      `SELECT
+         p.id,
+         p.name,
+         p.category,
+         COUNT(DISTINCT i.visitor_id) AS people,
+         COALESCE(SUM(i.views), 0) AS views
+       FROM products p
+       LEFT JOIN product_interest_days i
+         ON i.product_id = p.id
+        AND (? IS NULL OR i.day >= ?)
+        AND (? IS NULL OR i.day <= ?)
+       GROUP BY p.id
+       ORDER BY people DESC, views DESC, p.name COLLATE NOCASE ASC`,
+      [startDay, startDay, endDay, endDay]
+    );
+    res.json({
+      range,
+      from: startDay,
+      to: endDay,
+      uniqueVisitors: Number(summary?.people) || 0,
+      pageViews: Number(summary?.views) || 0,
+      products: products.map((row) => ({
+        id: row.id,
+        name: row.name,
+        category: row.category || "",
+        people: Number(row.people) || 0,
+        views: Number(row.views) || 0,
+      })),
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal memuat statistik pengunjung." });
+  }
+});
 
 app.post("/api/auth/register", async (req, res) => {
   const { name, email, password } = req.body;

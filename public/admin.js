@@ -483,17 +483,58 @@ if (logoForm) {
   });
 }
 
+function setNavGroupOpen(group, open) {
+  const toggle = group.querySelector(".admin-nav-parent-row");
+  const arrow = group.querySelector(".admin-nav-arrow");
+  const sub = group.querySelector(".admin-nav-sub");
+  const name = group.dataset.navName || "submenu";
+  if (!toggle || !sub) return;
+  sub.classList.toggle("hidden", !open);
+  toggle.classList.toggle("is-open", open);
+  arrow?.setAttribute("aria-expanded", open ? "true" : "false");
+  arrow?.setAttribute("aria-label", open ? `Sembunyikan submenu ${name}` : `Tampilkan submenu ${name}`);
+}
+
+function syncNavGroups(tabId) {
+  document.querySelectorAll(".admin-nav-group").forEach((group) => {
+    const ids = String(group.dataset.tabs || "").split(",").filter(Boolean);
+    const toggle = group.querySelector(".admin-nav-parent-row");
+    const isChild = ids.includes(tabId);
+    toggle?.classList.toggle("has-active", isChild);
+    if (isChild) setNavGroupOpen(group, true);
+  });
+}
+
+function initNavGroups() {
+  document.querySelectorAll(".admin-nav-group").forEach((group) => {
+    const row = group.querySelector(".admin-nav-parent-row");
+    const sub = group.querySelector(".admin-nav-sub");
+    row?.addEventListener("click", () => {
+      if (!sub) return;
+      const willOpen = sub.classList.contains("hidden");
+      setNavGroupOpen(group, willOpen);
+      if (willOpen && !sub.querySelector(".tab.active")) {
+        sub.querySelector(".tab:not(:disabled)")?.click();
+      }
+    });
+  });
+}
+
 function initTabs() {
+  initNavGroups();
+
   tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
       if (tab.disabled) {
         return;
       }
       const tabId = tab.dataset.tab;
+      if (!tabId) return;
       tabs.forEach((t) => t.classList.remove("active"));
       tab.classList.add("active");
+      syncNavGroups(tabId);
 
-      ["usersTab", "productsTab", "menuTab", "brandsTab", "articlesTab", "brandingTab", "settingsTab", "banksTab", "ordersTab", "layananTab", "salesTab", "inventoryTab", "pointsTab", "bannerTab", "whatsappTab", "backupTab"].forEach((id) => {
+      ["usersTab", "productsTab", "menuTab", "brandsTab", "articlesTab", "brandingTab", "settingsTab", "banksTab", "ordersTab", "layananTab", "salesTab", "insightsTab", "inventoryTab", "pointsTab", "bannerTab", "whatsappTab", "backupTab"].forEach((id) => {
         const el = document.getElementById(id);
         if (!el) return;
         el.classList.toggle("hidden", id !== tabId);
@@ -503,6 +544,7 @@ function initTabs() {
       if (tabId === "ordersTab") loadOrders();
       if (tabId === "layananTab") loadLayananRequests();
       if (tabId === "salesTab") loadSalesReport();
+      if (tabId === "insightsTab") loadInsights();
       if (tabId === "inventoryTab") loadInventoryReport();
       if (tabId === "bannerTab") loadHomePageSettings();
       if (tabId === "brandsTab") {
@@ -3321,6 +3363,154 @@ async function loadInventoryReport() {
       '<tr><td colspan="5" style="padding: 10px; text-align: center; color: red;">Gagal memuat laporan stok.</td></tr>';
   }
 }
+
+let insightsRange = "30d";
+let insightsDatesReady = false;
+
+function insightsToday() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function shiftInsightsDate(isoDate, daysBack) {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1, day) - daysBack * 86400000);
+  const yyyy = shifted.getUTCFullYear();
+  const mm = String(shifted.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(shifted.getUTCDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function applyInsightsPreset(range) {
+  const fromEl = document.getElementById("insightsFrom");
+  const toEl = document.getElementById("insightsTo");
+  if (!fromEl || !toEl) return;
+  if (range === "all") {
+    fromEl.value = "";
+    toEl.value = "";
+    return;
+  }
+  const today = insightsToday();
+  const daysBack = range === "today" ? 0 : range === "7d" ? 6 : 29;
+  fromEl.value = shiftInsightsDate(today, daysBack);
+  toEl.value = today;
+}
+
+function setInsightsRangeButtons() {
+  document.querySelectorAll(".insights-range").forEach((button) => {
+    const active = button.dataset.range === insightsRange;
+    button.classList.toggle("btn-primary", active);
+    button.classList.toggle("btn-secondary", !active);
+  });
+}
+
+async function loadInsights() {
+  const summary = document.getElementById("insightsSummary");
+  const tbody = document.getElementById("insightsProductsTbody");
+  const message = document.getElementById("insightsMessage");
+  if (!tbody || !summary) return;
+  if (!insightsDatesReady) {
+    applyInsightsPreset(insightsRange);
+    insightsDatesReady = true;
+  }
+  if (message) {
+    message.classList.remove("success");
+    message.textContent = "";
+  }
+
+  const from = document.getElementById("insightsFrom")?.value || "";
+  const to = document.getElementById("insightsTo")?.value || "";
+  const params = new URLSearchParams();
+  if (insightsRange === "all") {
+    params.set("range", "all");
+  } else {
+    if (!from || !to) {
+      if (message) message.textContent = "Isi tanggal dari dan sampai.";
+      return;
+    }
+    if (from > to) {
+      if (message) message.textContent = "Tanggal dari tidak boleh lebih besar dari tanggal sampai.";
+      return;
+    }
+    params.set("from", from);
+    params.set("to", to);
+  }
+
+  setInsightsRangeButtons();
+  tbody.innerHTML =
+    '<tr><td colspan="4" style="padding: 10px; text-align: center;">Memuat data...</td></tr>';
+
+  try {
+    const data = await apiFetch(`/admin/analytics?${params.toString()}`);
+    const people = Number(data.uniqueVisitors) || 0;
+    const views = Number(data.pageViews) || 0;
+    const products = data.products || [];
+    const top = products.find((row) => Number(row.people) > 0);
+    summary.innerHTML = `
+      <div style="padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: #f9fafb;">
+        <div style="font-size: 0.85rem; color: #6b7280;">Orang melihat website</div>
+        <strong style="font-size: 1.6rem;">${people.toLocaleString("id-ID")}</strong>
+      </div>
+      <div style="padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: #f9fafb;">
+        <div style="font-size: 0.85rem; color: #6b7280;">Halaman dibuka</div>
+        <strong style="font-size: 1.6rem;">${views.toLocaleString("id-ID")}</strong>
+      </div>
+      <div style="padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: #f9fafb;">
+        <div style="font-size: 0.85rem; color: #6b7280;">Produk paling diminati</div>
+        <strong style="font-size: 1.15rem;">${top ? escapeHtml(top.name) : "-"}</strong>
+        <div style="font-size: 0.85rem; color: #6b7280;">${top ? `${Number(top.people).toLocaleString("id-ID")} orang` : "Belum ada"}</div>
+      </div>
+    `;
+    tbody.innerHTML = products.length
+      ? products
+          .map(
+            (row) => `
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 10px;">${escapeHtml(row.name)}</td>
+            <td style="padding: 10px;">${escapeHtml(row.category || "-")}</td>
+            <td style="padding: 10px; text-align: right;">${Number(row.people || 0).toLocaleString("id-ID")}</td>
+            <td style="padding: 10px; text-align: right;">${Number(row.views || 0).toLocaleString("id-ID")}</td>
+          </tr>`
+          )
+          .join("")
+      : '<tr><td colspan="4" style="padding: 10px; text-align: center;">Belum ada produk.</td></tr>';
+  } catch (error) {
+    summary.innerHTML = "";
+    if (message) message.textContent = error.message;
+    tbody.innerHTML =
+      '<tr><td colspan="4" style="padding: 10px; text-align: center;">Gagal memuat data.</td></tr>';
+  }
+}
+
+document.querySelectorAll(".insights-range").forEach((button) => {
+  button.addEventListener("click", () => {
+    insightsRange = button.dataset.range || "30d";
+    insightsDatesReady = true;
+    applyInsightsPreset(insightsRange);
+    loadInsights();
+  });
+});
+
+document.getElementById("insightsFilterBtn")?.addEventListener("click", () => {
+  const from = document.getElementById("insightsFrom")?.value || "";
+  const to = document.getElementById("insightsTo")?.value || "";
+  const message = document.getElementById("insightsMessage");
+  if (!from || !to) {
+    if (message) message.textContent = "Isi tanggal dari dan sampai.";
+    return;
+  }
+  if (from > to) {
+    if (message) message.textContent = "Tanggal dari tidak boleh lebih besar dari tanggal sampai.";
+    return;
+  }
+  insightsRange = "custom";
+  insightsDatesReady = true;
+  loadInsights();
+});
 
 document.getElementById("salesFilterBtn")?.addEventListener("click", loadSalesReport);
 document.getElementById("salesExportBtn")?.addEventListener("click", exportSalesReportCsv);

@@ -6,7 +6,7 @@
     <link rel="icon" href="/logo-sjs.png" type="image/png" />
     <link rel="apple-touch-icon" href="/logo-sjs.png" />
     <title>Manajemen User - PT SAHABAT JAYA SUKSES</title>
-    <link rel="stylesheet" href="/style.css?v=35" />
+    <link rel="stylesheet" href="/style.css?v=40" />
   </head>
   <body class="admin-page">
     <header class="topbar">
@@ -42,22 +42,43 @@
       <aside class="admin-sidebar" aria-label="Menu admin">
         <p class="admin-sidebar-title">Menu Admin</p>
         <nav class="admin-nav">
-          <button type="button" class="tab active" data-tab="usersTab">User</button>
-          <button type="button" class="tab" data-tab="productsTab">Produk</button>
-          <button type="button" class="tab" data-tab="menuTab">Menu</button>
-          <button type="button" class="tab" data-tab="brandsTab">Merek</button>
-          <button type="button" class="tab" data-tab="articlesTab">Artikel</button>
-          <button type="button" class="tab" data-tab="brandingTab">Profil Perusahaan</button>
-          <button type="button" class="tab" data-tab="bannerTab">Slideshow &amp; Beranda</button>
           <button type="button" class="tab" data-tab="ordersTab">Pesanan</button>
           <button type="button" class="tab" data-tab="layananTab">Layanan</button>
-          <button type="button" class="tab" data-tab="salesTab">Laporan Penjualan</button>
-          <button type="button" class="tab" data-tab="inventoryTab">Laporan Stok</button>
           <button type="button" class="tab" data-tab="pointsTab">Poin Loyalitas</button>
-          <button type="button" class="tab" data-tab="settingsTab">Jasa kirim dan pembayaran</button>
-          <button type="button" class="tab" data-tab="banksTab">Master Bank</button>
+          <button type="button" class="tab" data-tab="articlesTab">Artikel</button>
+          <div class="admin-nav-group" data-nav-name="laporan" data-tabs="salesTab,inventoryTab,insightsTab">
+            <div class="admin-nav-parent-row">
+              <button type="button" class="admin-nav-parent">Laporan</button>
+              <button type="button" class="admin-nav-arrow" aria-expanded="false" aria-label="Tampilkan submenu laporan">
+                <span class="admin-nav-chevron" aria-hidden="true"></span>
+              </button>
+            </div>
+            <div class="admin-nav-sub hidden">
+              <button type="button" class="tab admin-nav-child" data-tab="salesTab">Laporan Penjualan</button>
+              <button type="button" class="tab admin-nav-child" data-tab="inventoryTab">Laporan Stok</button>
+              <button type="button" class="tab admin-nav-child" data-tab="insightsTab">Laporan Pengunjung</button>
+            </div>
+          </div>
+          <div class="admin-nav-group" data-nav-name="master data" data-tabs="menuTab,productsTab,brandsTab,banksTab,settingsTab,brandingTab">
+            <div class="admin-nav-parent-row">
+              <button type="button" class="admin-nav-parent">Master Data</button>
+              <button type="button" class="admin-nav-arrow" aria-expanded="false" aria-label="Tampilkan submenu master data">
+                <span class="admin-nav-chevron" aria-hidden="true"></span>
+              </button>
+            </div>
+            <div class="admin-nav-sub hidden">
+              <button type="button" class="tab admin-nav-child" data-tab="menuTab">Menu</button>
+              <button type="button" class="tab admin-nav-child" data-tab="productsTab">Produk</button>
+              <button type="button" class="tab admin-nav-child" data-tab="brandsTab">Merek</button>
+              <button type="button" class="tab admin-nav-child" data-tab="banksTab">Master Bank</button>
+              <button type="button" class="tab admin-nav-child" data-tab="settingsTab">Jasa kirim dan pembayaran</button>
+              <button type="button" class="tab admin-nav-child" data-tab="brandingTab">Profil Perusahaan</button>
+            </div>
+          </div>
+          <button type="button" class="tab" data-tab="bannerTab">Slideshow &amp; Beranda</button>
           <button type="button" class="tab" data-tab="backupTab">Backup</button>
           <button type="button" class="tab" data-tab="whatsappTab">WhatsApp Bot</button>
+          <button type="button" class="tab active" data-tab="usersTab">User</button>
         </nav>
       </aside>
 
@@ -255,6 +276,50 @@
             </thead>
             <tbody id="salesOrdersTbody">
               <tr><td colspan="7" style="padding: 10px; text-align: center;">-</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="insightsTab" class="auth-card admin-panel hidden">
+        <h2>Laporan Pengunjung</h2>
+        <p style="margin: 0 0 12px; color: var(--muted);">
+          Satu orang dihitung sekali meskipun membuka halaman berkali-kali.
+          Kunjungan dari akun admin dan manager tidak ikut dihitung.
+          Minat produk dihitung saat seseorang membuka halaman detail produk itu.
+        </p>
+        <div class="inventory-filters">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+            <button type="button" class="btn-secondary insights-range" data-range="today">Hari ini</button>
+            <button type="button" class="btn-secondary insights-range" data-range="7d">7 hari</button>
+            <button type="button" class="btn-primary insights-range" data-range="30d">30 hari</button>
+            <button type="button" class="btn-secondary insights-range" data-range="all">Semua</button>
+          </div>
+          <label>
+            Dari
+            <input type="date" id="insightsFrom" />
+          </label>
+          <label>
+            Sampai
+            <input type="date" id="insightsTo" />
+          </label>
+          <button type="button" id="insightsFilterBtn" class="btn-primary">Tampilkan</button>
+        </div>
+        <p id="insightsMessage" class="message"></p>
+        <div id="insightsSummary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px;"></div>
+        <h3 style="margin: 0 0 10px; font-size: 1.05rem;">Orang yang membuka tiap produk</h3>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border);">
+                <th style="padding: 10px;">Produk</th>
+                <th style="padding: 10px;">Kategori</th>
+                <th style="padding: 10px; text-align: right;">Orang tertarik</th>
+                <th style="padding: 10px; text-align: right;">Kali dibuka</th>
+              </tr>
+            </thead>
+            <tbody id="insightsProductsTbody">
+              <tr><td colspan="4" style="padding: 10px; text-align: center;">Memuat data...</td></tr>
             </tbody>
           </table>
         </div>
@@ -1252,8 +1317,8 @@
       </main>
     </div>
 
-    <script src="/common.js?v=24"></script>
-    <script src="/admin.js?v=61"></script>
+    <script src="/common.js?v=25"></script>
+    <script src="/admin.js?v=67"></script>
     <script src="/admin-points.js?v=4"></script>
   </body>
 </html>

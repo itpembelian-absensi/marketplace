@@ -1457,7 +1457,7 @@ a {
 }
 
 .admin-page .admin-sidebar {
-  width: 250px;
+  width: 270px;
   flex-shrink: 0;
   background: var(--card);
   border-right: 1px solid var(--border);
@@ -1470,12 +1470,12 @@ a {
 
 .admin-page .admin-sidebar-title {
   margin: 0;
-  padding: 16px 16px 8px;
-  font-size: 0.75rem;
-  font-weight: 700;
+  padding: 16px 16px 10px;
+  font-size: 1.15rem;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
+  letter-spacing: 0.04em;
+  color: #111827;
 }
 
 .admin-page .admin-nav {
@@ -1489,8 +1489,8 @@ a {
   width: 100%;
   text-align: left;
   border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 0.9rem;
+  padding: 12px 14px;
+  font-size: 1.05rem;
   font-weight: 500;
   border: none;
   background: transparent;
@@ -1510,6 +1510,87 @@ a {
 .admin-page .admin-sidebar .tab:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.admin-page .admin-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-page .admin-nav-parent-row {
+  display: flex;
+  align-items: stretch;
+  border-radius: 8px;
+  color: #374151;
+  cursor: pointer;
+}
+
+.admin-page .admin-nav-parent-row:hover {
+  background: #f3f4f6;
+}
+
+.admin-page .admin-nav-parent-row.has-active {
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.admin-page .admin-nav-parent {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 500;
+  padding: 12px 4px 12px 14px;
+  cursor: pointer;
+}
+
+.admin-page .admin-nav-arrow {
+  width: 42px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.admin-page .admin-nav-chevron {
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 8px solid currentColor;
+  transition: transform 0.15s ease;
+}
+
+.admin-page .admin-nav-parent-row.is-open .admin-nav-chevron {
+  transform: rotate(180deg);
+}
+
+.admin-page .admin-nav-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-left: 10px;
+  padding-left: 8px;
+  border-left: 1px solid var(--border);
+}
+
+.admin-page .admin-nav-sub.hidden {
+  display: none;
+}
+
+.admin-page .admin-sidebar .admin-nav-child {
+  font-size: 1rem;
+  padding: 10px 14px;
 }
 
 .admin-page .admin-main {
@@ -1562,6 +1643,10 @@ a {
 
   .admin-page .admin-sidebar .tab {
     width: auto;
+  }
+
+  .admin-page .admin-nav-group {
+    flex-basis: 100%;
   }
 }
 
