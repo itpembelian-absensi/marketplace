@@ -67,6 +67,35 @@ async function runTest() {
   });
   assert.strictEqual(resValid.status, 200, `Upload logo valid PNG harus berhasil (status: ${resValid.status})`);
   console.log("  [PASS] File gambar PNG valid berhasil diterima (200 OK).");
+
+  // 4. Uji File .png berisi teks HTML/Script (Spoofed extension & MIME, invalid magic bytes)
+  const fakePngContent = `<!DOCTYPE html><html><head><script>alert('pwned')</script></head><body>fake png</body></html>`;
+  const fakePngBlob = new Blob([fakePngContent], { type: "image/png" });
+  const formFakePng = new FormData();
+  formFakePng.append("logo", fakePngBlob, "shell.png");
+
+  const resFakePng = await api("/api/admin/logo", {
+    method: "POST",
+    headers: adminHeader,
+    body: formFakePng,
+  });
+
+  assert.strictEqual(
+    resFakePng.status,
+    400,
+    `VULNERABILITY DETECTED: File .png palsu berisi HTML/script berhasil diupload (status: ${resFakePng.status})! Magic bytes tidak divalidasi.`
+  );
+  console.log("  [PASS] File .png palsu berisi teks HTML/script berhasil ditolak (400 Bad Request).");
+
+  // 5. Uji Header X-Content-Type-Options: nosniff pada Static Files
+  const resStatic = await api("/logo-sjs.png", { method: "GET" });
+  const nosniffHeader = resStatic.headers.get("x-content-type-options");
+  assert.strictEqual(
+    nosniffHeader,
+    "nosniff",
+    `X-Content-Type-Options harus bernilai nosniff pada static file serving (didapat: ${nosniffHeader})`
+  );
+  console.log("  [PASS] Header X-Content-Type-Options: nosniff terpasang dengan benar pada folder public.");
 }
 
 module.exports = { runTest };

@@ -328,6 +328,7 @@ app.use(express.json());
 app.use(
   express.static(path.join(__dirname, "public"), {
     setHeaders(res, filePath) {
+      res.setHeader("X-Content-Type-Options", "nosniff");
       if (filePath.endsWith(".html") || filePath.endsWith(".js") || filePath.endsWith(".css")) {
         res.setHeader("Cache-Control", "no-store");
       }
@@ -392,12 +393,61 @@ const IMAGE_FILE_EXTS = new Set([".png", ".jpg", ".jpeg", ".webp"]);
 const BANNER_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "video/mp4", "video/webm"]);
 const BANNER_FILE_EXTS = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".mp4", ".webm"]);
 
+function validateFileMagicBytes(filePath, ext) {
+  let fd;
+  try {
+    fd = fs.openSync(filePath, "r");
+    const buf = Buffer.alloc(16);
+    const bytesRead = fs.readSync(fd, buf, 0, 16, 0);
+    if (bytesRead < 4) return false;
+
+    const normalizedExt = String(ext || "").toLowerCase();
+    if (normalizedExt === ".png") {
+      return buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
+    }
+    if (normalizedExt === ".jpg" || normalizedExt === ".jpeg") {
+      return buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
+    }
+    if (normalizedExt === ".webp") {
+      return bytesRead >= 12 && buf.toString("ascii", 0, 4) === "RIFF" && buf.toString("ascii", 8, 12) === "WEBP";
+    }
+    if (normalizedExt === ".gif") {
+      return bytesRead >= 6 && (buf.toString("ascii", 0, 6) === "GIF87a" || buf.toString("ascii", 0, 6) === "GIF89a");
+    }
+    if (normalizedExt === ".pdf") {
+      return buf.toString("ascii", 0, 4) === "%PDF";
+    }
+    if (normalizedExt === ".mp4") {
+      return bytesRead >= 8 && buf.toString("ascii", 4, 8) === "ftyp";
+    }
+    if (normalizedExt === ".webm") {
+      return buf[0] === 0x1a && buf[1] === 0x45 && buf[2] === 0xdf && buf[3] === 0xa3;
+    }
+    if (normalizedExt === ".doc" || normalizedExt === ".xls") {
+      // OLECF: D0 CF 11 E0 A1 B1 1A E1
+      return buf[0] === 0xd0 && buf[1] === 0xcf && buf[2] === 0x11 && buf[3] === 0xe0;
+    }
+    if (normalizedExt === ".docx" || normalizedExt === ".xlsx") {
+      // ZIP-based PK signature: 50 4B 03 04
+      return buf[0] === 0x50 && buf[1] === 0x4b && (buf[2] === 0x03 || buf[2] === 0x05 || buf[2] === 0x07);
+    }
+    return false;
+  } catch (e) {
+    return false;
+  } finally {
+    if (fd !== undefined) {
+      try { fs.closeSync(fd); } catch (_) {}
+    }
+  }
+}
+
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadDir),
     filename: (req, file, cb) => {
       const ext = path.extname(file.originalname || "").toLowerCase();
-      cb(null, `logo-${Date.now()}${ext || ".png"}`);
+      const safeExt = IMAGE_FILE_EXTS.has(ext) ? ext : ".png";
+      cb(null, `logo-${crypto.randomUUID()}${safeExt}`);
     },
   }),
   limits: { fileSize: 2 * 1024 * 1024 },
@@ -416,7 +466,8 @@ const productImageUpload = multer({
     destination: (req, file, cb) => cb(null, productUploadDir),
     filename: (req, file, cb) => {
       const ext = path.extname(file.originalname || "").toLowerCase();
-      cb(null, `product-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext || ".webp"}`);
+      const safeExt = IMAGE_FILE_EXTS.has(ext) ? ext : ".webp";
+      cb(null, `product-${crypto.randomUUID()}${safeExt}`);
     },
   }),
   limits: { fileSize: 2 * 1024 * 1024 },
@@ -435,7 +486,8 @@ const bannerImageUpload = multer({
     destination: (req, file, cb) => cb(null, bannerUploadDir),
     filename: (req, file, cb) => {
       const ext = path.extname(file.originalname || "").toLowerCase();
-      cb(null, `banner-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext || ".webp"}`);
+      const safeExt = BANNER_FILE_EXTS.has(ext) ? ext : ".webp";
+      cb(null, `banner-${crypto.randomUUID()}${safeExt}`);
     },
   }),
   limits: { fileSize: 20 * 1024 * 1024 },
@@ -454,7 +506,8 @@ const profileImageUpload = multer({
     destination: (req, file, cb) => cb(null, profileUploadDir),
     filename: (req, file, cb) => {
       const ext = path.extname(file.originalname || "").toLowerCase();
-      cb(null, `profile-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext || ".webp"}`);
+      const safeExt = IMAGE_FILE_EXTS.has(ext) ? ext : ".webp";
+      cb(null, `profile-${crypto.randomUUID()}${safeExt}`);
     },
   }),
   limits: { fileSize: 2 * 1024 * 1024 },
@@ -473,7 +526,8 @@ const qrisImageUpload = multer({
     destination: (req, file, cb) => cb(null, qrisUploadDir),
     filename: (req, file, cb) => {
       const ext = path.extname(file.originalname || "").toLowerCase();
-      cb(null, `qris-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext || ".webp"}`);
+      const safeExt = IMAGE_FILE_EXTS.has(ext) ? ext : ".webp";
+      cb(null, `qris-${crypto.randomUUID()}${safeExt}`);
     },
   }),
   limits: { fileSize: 5 * 1024 * 1024 },
@@ -504,7 +558,8 @@ const layananUpload = multer({
     destination: (req, file, cb) => cb(null, layananUploadDir),
     filename: (req, file, cb) => {
       const ext = path.extname(file.originalname || "").toLowerCase();
-      cb(null, `ly-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext || ""}`);
+      const safeExt = LAYANAN_FILE_EXTS.has(ext) ? ext : "";
+      cb(null, `ly-${crypto.randomUUID()}${safeExt}`);
     },
   }),
   limits: { fileSize: 10 * 1024 * 1024 },
@@ -520,14 +575,22 @@ const layananUpload = multer({
 
 function layananUploadMiddleware(req, res, next) {
   layananUpload.single("file")(req, res, (err) => {
-    if (!err) {
-      next();
+    if (err) {
+      const tooLarge = err.code === "LIMIT_FILE_SIZE";
+      res.status(400).json({
+        message: tooLarge ? "Ukuran berkas maksimal 10 MB." : err.message || "Gagal mengunggah berkas.",
+      });
       return;
     }
-    const tooLarge = err.code === "LIMIT_FILE_SIZE";
-    res.status(400).json({
-      message: tooLarge ? "Ukuran berkas maksimal 10 MB." : err.message || "Gagal mengunggah berkas.",
-    });
+    if (req.file) {
+      const ext = path.extname(req.file.path).toLowerCase();
+      if (!validateFileMagicBytes(req.file.path, ext)) {
+        try { fs.unlinkSync(req.file.path); } catch (_) {}
+        res.status(400).json({ message: "Isi file tidak sesuai dengan ekstensinya (magic byte mismatch)." });
+        return;
+      }
+    }
+    next();
   });
 }
 
@@ -539,7 +602,8 @@ const paymentProofUpload = multer({
     destination: (req, file, cb) => cb(null, paymentProofUploadDir),
     filename: (req, file, cb) => {
       const ext = path.extname(file.originalname || "").toLowerCase();
-      cb(null, `pay-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext || ".jpg"}`);
+      const safeExt = PAYMENT_PROOF_EXTS.has(ext) ? ext : ".jpg";
+      cb(null, `pay-${crypto.randomUUID()}${safeExt}`);
     },
   }),
   limits: { fileSize: 8 * 1024 * 1024 },
@@ -555,14 +619,22 @@ const paymentProofUpload = multer({
 
 function paymentProofUploadMiddleware(req, res, next) {
   paymentProofUpload.single("proof")(req, res, (err) => {
-    if (!err) {
-      next();
+    if (err) {
+      const tooLarge = err.code === "LIMIT_FILE_SIZE";
+      res.status(400).json({
+        message: tooLarge ? "Ukuran bukti bayar maksimal 8 MB." : err.message || "Gagal mengunggah bukti bayar.",
+      });
       return;
     }
-    const tooLarge = err.code === "LIMIT_FILE_SIZE";
-    res.status(400).json({
-      message: tooLarge ? "Ukuran bukti bayar maksimal 8 MB." : err.message || "Gagal mengunggah bukti bayar.",
-    });
+    if (req.file) {
+      const ext = path.extname(req.file.path).toLowerCase();
+      if (!validateFileMagicBytes(req.file.path, ext)) {
+        try { fs.unlinkSync(req.file.path); } catch (_) {}
+        res.status(400).json({ message: "Isi file tidak sesuai dengan ekstensinya (magic byte mismatch)." });
+        return;
+      }
+    }
+    next();
   });
 }
 
@@ -1994,6 +2066,12 @@ app.post("/api/auth/profile/upload-picture", authMiddleware, profileImageUpload.
     res.status(400).json({ message: "File gambar profil wajib diupload." });
     return;
   }
+  const ext = path.extname(req.file.path).toLowerCase();
+  if (!validateFileMagicBytes(req.file.path, ext)) {
+    try { fs.unlinkSync(req.file.path); } catch (_) {}
+    res.status(400).json({ message: "Isi file tidak sesuai dengan format gambar valid (magic byte mismatch)." });
+    return;
+  }
   res.json({ imageUrl: `/profile_pictures/${req.file.filename}` });
 });
 
@@ -2711,6 +2789,12 @@ app.post(
   async (req, res) => {
     if (!req.file) {
       res.status(400).json({ message: "File gambar QRIS wajib diupload." });
+      return;
+    }
+    const ext = path.extname(req.file.path).toLowerCase();
+    if (!validateFileMagicBytes(req.file.path, ext)) {
+      try { fs.unlinkSync(req.file.path); } catch (_) {}
+      res.status(400).json({ message: "Isi file tidak sesuai dengan format gambar valid (magic byte mismatch)." });
       return;
     }
     res.json({ imageUrl: `/qris/${req.file.filename}` });
