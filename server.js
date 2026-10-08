@@ -5538,8 +5538,12 @@ app.use("/api", (req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  if (err?.code === "LIMIT_FILE_SIZE") {
-    res.status(400).json({ message: "Ukuran file terlalu besar untuk diunggah." });
+  if (
+    err?.code === "LIMIT_FILE_SIZE" ||
+    err instanceof multer.MulterError ||
+    (err.message && err.message.toLowerCase().includes("file"))
+  ) {
+    res.status(400).json({ message: err.message || "File upload tidak valid." });
     return;
   }
   if (err) {
