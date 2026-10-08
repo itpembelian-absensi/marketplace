@@ -1,3 +1,13 @@
+function escapeHtml(str) {
+  if (str == null) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 const invoiceContainer = document.getElementById("invoiceContainer");
 const invoiceCloseBtn = document.getElementById("invoiceCloseBtn");
 const invoicePrintBtn = document.getElementById("invoicePrintBtn");
@@ -364,7 +374,7 @@ async function loadInvoice() {
       const unitPrice = Number(item.final_price ?? item.price) || 0;
       return `
       <tr>
-        <td>${item.product_name}${item.size ? ` <span style="color: #2563eb; font-size: 0.85rem;">(${item.size})</span>` : ""}</td>
+        <td>${escapeHtml(item.product_name)}${item.size ? ` <span style="color: #2563eb; font-size: 0.85rem;">(${escapeHtml(item.size)})</span>` : ""}</td>
         <td style="text-align: center;">${qty}</td>
         <td style="text-align: right;">${formatRupiah(unitPrice)}</td>
         <td style="text-align: right;">${Number(item.discount) || 0}%</td>
@@ -392,10 +402,10 @@ async function loadInvoice() {
       <div class="invoice-details">
         <div>
           <h3>Info Penagihan & Pengiriman</h3>
-          <p><strong>Nama:</strong> ${order.customer_name}</p>
-          <p><strong>Email:</strong> ${order.customer_email || '-'}</p>
-          <p><strong>Telepon:</strong> ${order.customer_phone}</p>
-          <p><strong>Alamat:</strong><br/>${order.customer_address.replace(/\n/g, '<br/>')}</p>
+          <p><strong>Nama:</strong> ${escapeHtml(order.customer_name)}</p>
+          <p><strong>Email:</strong> ${escapeHtml(order.customer_email || '-')}</p>
+          <p><strong>Telepon:</strong> ${escapeHtml(order.customer_phone)}</p>
+          <p><strong>Alamat:</strong><br/>${escapeHtml(order.customer_address || '').replace(/\n/g, '<br/>')}</p>
           <p style="margin-top: 10px;"><strong>Jasa kirim:</strong> ${shippingMethodLabel}${shippingMeta.estimated ? ' <span style="color:#6b7280;">(estimasi)</span>' : ''}</p>
           <p style="margin-top: 8px;"><strong>Status kirim:</strong> ${escapeHtml(order.shipmentStatusLabel || "Menunggu proses")}</p>
           ${

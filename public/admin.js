@@ -1,3 +1,13 @@
+function escapeHtml(str) {
+  if (str == null) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 const usersTable = document.getElementById("usersTable");
 const usersMessage = document.getElementById("usersMessage");
 const createUserForm = document.getElementById("createUserForm");
@@ -145,10 +155,10 @@ function renderTable(users) {
               (u) => `
               <tr>
                 <td style="padding:8px; border-bottom:1px solid #f3f4f6">${u.id}</td>
-                <td style="padding:8px; border-bottom:1px solid #f3f4f6">${u.name}</td>
-                <td style="padding:8px; border-bottom:1px solid #f3f4f6">${u.email}</td>
-                <td style="padding:8px; border-bottom:1px solid #f3f4f6">${u.role}</td>
-                <td style="padding:8px; border-bottom:1px solid #f3f4f6">${u.created_at || ""}</td>
+                <td style="padding:8px; border-bottom:1px solid #f3f4f6">${escapeHtml(u.name)}</td>
+                <td style="padding:8px; border-bottom:1px solid #f3f4f6">${escapeHtml(u.email)}</td>
+                <td style="padding:8px; border-bottom:1px solid #f3f4f6">${escapeHtml(u.role)}</td>
+                <td style="padding:8px; border-bottom:1px solid #f3f4f6">${escapeHtml(u.created_at || "")}</td>
                 <td style="padding:8px; border-bottom:1px solid #f3f4f6">
                   ${
                     currentRole === "admin"
@@ -870,11 +880,11 @@ function renderAdminProducts(products) {
             .map(
               (product) => `
             <tr>
-              <td style="padding:8px; border-bottom:1px solid #f3f4f6">${product.name}</td>
-              <td style="padding:8px; border-bottom:1px solid #f3f4f6">${product.category} / ${product.subcategory || "Umum"}</td>
+              <td style="padding:8px; border-bottom:1px solid #f3f4f6">${escapeHtml(product.name)}</td>
+              <td style="padding:8px; border-bottom:1px solid #f3f4f6">${escapeHtml(product.category)} / ${escapeHtml(product.subcategory || "Umum")}</td>
               <td style="padding:8px; border-bottom:1px solid #f3f4f6">${formatRupiah(product.price)}</td>
               <td style="padding:8px; border-bottom:1px solid #f3f4f6">${Number(product.discount || 0)}%</td>
-              <td style="padding:8px; border-bottom:1px solid #f3f4f6">${product.wa_phone || "-"}</td>
+              <td style="padding:8px; border-bottom:1px solid #f3f4f6">${escapeHtml(product.wa_phone || "-")}</td>
               <td style="padding:8px; border-bottom:1px solid #f3f4f6">
                 <button class="btn-secondary" data-action="edit-product" data-product='${encodeURIComponent(
                   JSON.stringify(product)
@@ -2845,8 +2855,8 @@ async function loadOrders() {
       <tr>
         <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">#${order.id}</td>
         <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
-          ${order.customer_name}<br/>
-          <span style="font-size: 0.85rem; color: #6b7280;">${order.customer_email || '-'}</span>
+          ${escapeHtml(order.customer_name)}<br/>
+          <span style="font-size: 0.85rem; color: #6b7280;">${escapeHtml(order.customer_email || '-')}</span>
         </td>
         <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${new Date(order.created_at).toLocaleString('id-ID')}</td>
         <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
