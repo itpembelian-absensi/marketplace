@@ -47,7 +47,17 @@ const {
 const app = express();
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-marketplace";
+const isProduction = process.env.NODE_ENV === "production";
+const JWT_SECRET = process.env.JWT_SECRET || (isProduction ? "" : "dev-secret-marketplace");
+
+if (isProduction) {
+  if (!JWT_SECRET || JWT_SECRET === "dev-secret-marketplace" || JWT_SECRET.includes("ganti-dengan-secret") || JWT_SECRET.length < 32) {
+    console.error("FATAL: JWT_SECRET wajib dikonfigurasi di environment production dengan secret aman minimal 32 karakter.");
+    process.exit(1);
+  }
+} else if (!process.env.JWT_SECRET || process.env.JWT_SECRET === "dev-secret-marketplace") {
+  console.warn("[PERINGATAN KEAMANAN] JWT_SECRET menggunakan default development. Wajib disetel dengan secret acak sebelum ke produksi.");
+}
 const SEED_ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || "";
 const SEED_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || "";
 const SEED_ADMIN_NAME = process.env.SEED_ADMIN_NAME || "Admin";
