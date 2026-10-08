@@ -175,7 +175,7 @@ Aplikasi menggunakan Vanilla JS dan banyak mengandalkan properti `.innerHTML` ta
   Date:   Fri Jul 3 14:47:40 2026 +0700
   ...
   +# WhatsApp Chatbot (Fonnte)
-  +FONNTE_API_TOKEN=1R8qHfa2CjWFuVt9dSgh
+  +FONNTE_API_TOKEN=1R8qHfa2************ (REDACTED)
   +WHATSAPP_BOT_NUMBER=628xxxxxxxxxx
   ```
 * **Mekanisme & Dampak**:
