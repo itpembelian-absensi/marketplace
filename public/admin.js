@@ -831,7 +831,7 @@ function updateProductCategoryOptions(categories) {
   if (!productCategoryInput) return;
   const options = ['<option value="">Pilih kategori</option>'];
   categories.forEach((category) => {
-    options.push(`<option value="${category.name}">${category.name}</option>`);
+    options.push(`<option value="${escapeHtml(category.name)}">${escapeHtml(category.name)}</option>`);
   });
   productCategoryInput.innerHTML = options.join("");
 }
@@ -842,13 +842,13 @@ function updateProductSubcategoryOptions(categoryName, selectedSubcategory = "")
   const subcategories = selectedCategory?.subcategories || [];
   const options = ['<option value="">Pilih sub-kategori</option>'];
   subcategories.forEach((sub) => {
-    options.push(`<option value="${sub.name}">${sub.name}</option>`);
+    options.push(`<option value="${escapeHtml(sub.name)}">${escapeHtml(sub.name)}</option>`);
   });
   if (
     selectedSubcategory &&
     !subcategories.some((sub) => sub.name === selectedSubcategory)
   ) {
-    options.push(`<option value="${selectedSubcategory}">${selectedSubcategory}</option>`);
+    options.push(`<option value="${escapeHtml(selectedSubcategory)}">${escapeHtml(selectedSubcategory)}</option>`);
   }
   productSubcategoryInput.innerHTML = options.join("");
   if (selectedSubcategory) {
@@ -946,7 +946,7 @@ function renderMenu(menu) {
         return `
           <div style="display:flex; gap:8px; align-items:center; padding:8px 0; border-bottom:1px solid #f3f4f6">
             <div style="flex:1">
-              <strong>${s.name}</strong> <span class="empty-state">(${s.count || 0})</span>
+              <strong>${escapeHtml(s.name)}</strong> <span class="empty-state">(${Number(s.count || 0)})</span>
             </div>
             <button class="btn-secondary" data-action="edit-sub" data-id="${s.id}" data-name="${encodeURIComponent(
           s.name
@@ -960,7 +960,7 @@ function renderMenu(menu) {
         <div class="info-card" style="margin-top: 12px">
           <div style="display:flex; gap:10px; align-items:center; justify-content:space-between">
             <div>
-              <h3 style="margin:0">${cat.name} <span class="empty-state">(${cat.count || 0})</span></h3>
+              <h3 style="margin:0">${escapeHtml(cat.name)} <span class="empty-state">(${Number(cat.count || 0)})</span></h3>
             </div>
             <div style="display:flex; gap:8px; flex-wrap:wrap">
               <button class="btn-secondary" data-action="edit-cat" data-id="${cat.id}" data-name="${encodeURIComponent(
@@ -996,7 +996,7 @@ async function loadMenu() {
     }
     // fill select
     if (categorySelectForSub) {
-      const options = menu.map((c) => `<option value="${c.id}">${c.name}</option>`).join("");
+      const options = menu.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
       categorySelectForSub.innerHTML = options;
     }
     updateProductCategoryOptions(cachedMenuCategories);
@@ -3125,9 +3125,9 @@ async function loadSalesReport() {
           .map(
             (row) => `
         <tr>
-          <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${row.product_name}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${row.size || "-"}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right;">${row.qty_sold}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${escapeHtml(row.product_name)}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${escapeHtml(row.size || "-")}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right;">${Number(row.qty_sold || 0)}</td>
           <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right;">${formatRupiah(row.revenue)}</td>
         </tr>`
           )
@@ -3140,8 +3140,8 @@ async function loadSalesReport() {
           .map(
             (row) => `
         <tr>
-          <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${paymentMethodLabel(row.payment_method)}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right;">${row.order_count}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${escapeHtml(paymentMethodLabel(row.payment_method))}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right;">${Number(row.order_count || 0)}</td>
           <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right;">${formatRupiah(row.revenue)}</td>
         </tr>`
           )
@@ -3156,11 +3156,11 @@ async function loadSalesReport() {
         <tr>
           <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">#${order.id}</td>
           <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
-            ${order.customer_name}<br/>
-            <span style="font-size: 0.85rem; color: #6b7280;">${order.customer_email || "-"}</span>
+            ${escapeHtml(order.customer_name)}<br/>
+            <span style="font-size: 0.85rem; color: #6b7280;">${escapeHtml(order.customer_email || "-")}</span>
           </td>
           <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${new Date(order.created_at).toLocaleString("id-ID")}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${paymentMethodLabel(order.payment_method)}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${escapeHtml(paymentMethodLabel(order.payment_method))}</td>
           <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
             <span style="background: ${String(order.status).toLowerCase() === "paid" ? "#d1fae5" : "#ffedd5"}; color: ${String(order.status).toLowerCase() === "paid" ? "#047857" : "#c2410c"}; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">${String(order.status).toLowerCase() === "paid" ? "Lunas" : "Belum dibayar"}</span>
           </td>
@@ -3291,11 +3291,11 @@ function renderInventoryRows(rows) {
     .map(
       (row) => `
       <tr>
-        <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${row.name}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right;">${row.opening_balance}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; color: var(--primary);">${row.in_qty}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; color: var(--danger);">${row.out_qty}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; font-weight: 600;">${row.ending_balance}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${escapeHtml(row.name)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right;">${Number(row.opening_balance || 0)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; color: var(--primary);">${Number(row.in_qty || 0)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; color: var(--danger);">${Number(row.out_qty || 0)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; font-weight: 600;">${Number(row.ending_balance || 0)}</td>
       </tr>`
     )
     .join("");
@@ -3702,7 +3702,7 @@ async function loadWaSessions() {
       `;
     }).join("");
   } catch (err) {
-    waSessionsTbody.innerHTML = `<tr><td colspan="4" style="padding: 10px; text-align: center; color: red;">Gagal memuat riwayat: ${err.message}</td></tr>`;
+    waSessionsTbody.innerHTML = `<tr><td colspan="4" style="padding: 10px; text-align: center; color: red;">Gagal memuat riwayat: ${escapeHtml(err.message)}</td></tr>`;
   }
 }
 

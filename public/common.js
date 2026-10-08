@@ -504,13 +504,13 @@ function renderUserArea() {
   if (!userArea) return;
 
   const profilePicOld = auth.user.profile_picture
-    ? `<img src="${auth.user.profile_picture}" alt="Profile" class="user-avatar-small" />`
-    : `<div class="user-avatar-placeholder">${auth.user.name.charAt(0).toUpperCase()}</div>`;
+    ? `<img src="${escapeHtml(auth.user.profile_picture)}" alt="Profile" class="user-avatar-small" />`
+    : `<div class="user-avatar-placeholder">${escapeHtml(auth.user.name ? auth.user.name.charAt(0).toUpperCase() : "?")}</div>`;
 
   userArea.innerHTML = `
     <a href="/profile.html" class="user-profile-link" title="Buka Profil">
       ${profilePicOld}
-      <span>Hi, ${auth.user.name}</span>
+      <span>Hi, ${escapeHtml(auth.user.name)}</span>
     </a>
     <a href="/addresses.html" class="btn-secondary" title="Master alamat kirim">Alamat</a>
     <button id="logoutButton" class="btn-danger">Logout</button>
@@ -1108,10 +1108,10 @@ function showAddToCartModal(product, callback) {
 
   let html = `
     <div style="display: flex; gap: 14px; align-items: flex-start; margin-bottom: 16px;">
-      <img src="${product.image}" alt="${product.name}" style="width: 90px; height: 90px; object-fit: cover; border-radius: 10px; border: 1px solid #e5e7eb; flex-shrink: 0;" />
+      <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" style="width: 90px; height: 90px; object-fit: cover; border-radius: 10px; border: 1px solid #e5e7eb; flex-shrink: 0;" />
       <div style="flex: 1; min-width: 0;">
         <h3 style="margin: 0 0 4px; font-size: 1.15rem; color: #111827;">Tambahkan ke Keranjang</h3>
-        <p class="modal-selected-size-text" style="margin: 0; font-size: 0.88rem; color: #6b7280; word-break: break-word;">${sizes.length > 0 && sizes[0] ? sizes[0].size : product.name}</p>
+        <p class="modal-selected-size-text" style="margin: 0; font-size: 0.88rem; color: #6b7280; word-break: break-word;">${escapeHtml(sizes.length > 0 && sizes[0] ? sizes[0].size : product.name)}</p>
       </div>
     </div>
   `;
@@ -1129,7 +1129,7 @@ function showAddToCartModal(product, callback) {
         <label style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: border-color 0.15s, background 0.15s;" class="size-option-label" data-index="${i}">
           <input type="radio" name="sizeSelection" value="${i}" style="accent-color: #2563eb; width: 18px; height: 18px;" ${i === 0 ? "checked" : ""} />
           <div style="flex: 1; min-width: 0;">
-            <div style="font-weight: 600; color: #111827; font-size: 0.95rem; word-break: break-word;">${s.size}</div>
+            <div style="font-weight: 600; color: #111827; font-size: 0.95rem; word-break: break-word;">${escapeHtml(s.size)}</div>
             <div style="font-size: 0.8rem; color: ${stockColor}; margin-top: 2px; font-weight: 500;">Stok: ${itemStock}</div>
           </div>
           <div style="text-align: right; color: #2563eb; font-weight: 700; font-size: 0.9rem; white-space: nowrap;">

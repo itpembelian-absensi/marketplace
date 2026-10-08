@@ -72,8 +72,8 @@ function renderBrandTiles(brands) {
         ? `<img class="sjs-brand-tile-cover" src="${escapeHtml(brand.coverUrl)}" alt="">`
         : "";
       const mark = hasLogo
-        ? `<img class="sjs-brand-tile-logo" src="${escapeHtml(brand.logoUrl)}" alt="${name}">`
-        : `<span class="sjs-brand-tile-name">${name}</span>`;
+        ? `<img class="sjs-brand-tile-logo" src="${escapeHtml(brand.logoUrl)}" alt="${escapeHtml(name)}">`
+        : `<span class="sjs-brand-tile-name">${escapeHtml(name)}</span>`;
       const classes = [
         "sjs-brand-tile",
         hasCover ? "has-cover" : "",
@@ -86,7 +86,7 @@ function renderBrandTiles(brands) {
         ? ""
         : ` style="${brandLogoStyle(brand.logoX, brand.logoY, brand.logoScale)}"`;
       return `
-          <a class="${classes}" href="/shop.html?q=${query}" title="${name}"${style}>
+          <a class="${classes}" href="/shop.html?q=${query}" title="${escapeHtml(name)}"${style}>
             ${cover}
             ${mark}
           </a>`;

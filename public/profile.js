@@ -19,10 +19,10 @@ function showMessage(msg, isSuccess = false) {
 
 function renderAvatar() {
   if (currentProfilePic) {
-    profileAvatarContainer.innerHTML = `<img src="${currentProfilePic}" alt="Profile" class="profile-avatar-large" />`;
+    profileAvatarContainer.innerHTML = `<img src="${escapeHtml(currentProfilePic)}" alt="Profile" class="profile-avatar-large" />`;
   } else {
     const initial = profileNameInput.value ? profileNameInput.value.charAt(0).toUpperCase() : "?";
-    profileAvatarContainer.innerHTML = `<div class="profile-avatar-placeholder-large">${initial}</div>`;
+    profileAvatarContainer.innerHTML = `<div class="profile-avatar-placeholder-large">${escapeHtml(initial)}</div>`;
   }
 }
 
@@ -38,9 +38,9 @@ async function loadProfileAddressSummary() {
     const def = addresses.find((a) => a.isDefault) || addresses[0];
     const extra = addresses.length > 1 ? ` (+${addresses.length - 1} alamat lain)` : "";
     el.innerHTML = `
-      <strong>Default:</strong> ${def.label ? `${def.label} — ` : ""}${def.recipientName}<br/>
-      <span style="color:#6b7280">${def.phone} · ${def.address}</span>
-      <span style="color:#6b7280">${extra}</span>`;
+      <strong>Default:</strong> ${def.label ? `${escapeHtml(def.label)} — ` : ""}${escapeHtml(def.recipientName)}<br/>
+      <span style="color:#6b7280">${escapeHtml(def.phone)} · ${escapeHtml(def.address)}</span>
+      <span style="color:#6b7280">${escapeHtml(extra)}</span>`;
     el.classList.remove("empty-state");
   } catch (error) {
     el.textContent = error.message;
@@ -182,14 +182,24 @@ async function loadRewards() {
 
     rewardsListEl.innerHTML = rewards.map(r => `
       <div style="border: 1px solid var(--border); border-radius: 8px; padding: 15px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column;">
-        <h4 style="margin: 0 0 5px;">${r.name}</h4>
-        <p style="font-size: 0.85rem; color: #6b7280; margin: 0 0 10px; flex: 1;">${r.description || 'Hadiah spesial untuk Anda!'}</p>
+        <h4 style="margin: 0 0 5px;">${escapeHtml(r.name)}</h4>
+        <p style="font-size: 0.85rem; color: #6b7280; margin: 0 0 10px; flex: 1;">${escapeHtml(r.description || 'Hadiah spesial untuk Anda!')}</p>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-          <span style="font-weight: bold; color: var(--primary); font-size: 1.1rem;">${r.points_required} Poin</span>
+          <span style="font-weight: bold; color: var(--primary); font-size: 1.1rem;">${Number(r.points_required)} Poin</span>
         </div>
-        <button class="btn-primary" onclick="redeemReward(${r.id}, '${r.name}', ${r.points_required})" style="width: 100%; padding: 8px; font-size: 0.9rem;">Tukar</button>
+        <button class="btn-primary btn-redeem-reward" data-reward-id="${r.id}" data-reward-name="${escapeHtml(r.name)}" data-points="${Number(r.points_required)}" style="width: 100%; padding: 8px; font-size: 0.9rem;">Tukar</button>
       </div>
     `).join('');
+
+    // Attach click listeners
+    rewardsListEl.querySelectorAll(".btn-redeem-reward").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = Number(btn.getAttribute("data-reward-id"));
+        const name = btn.getAttribute("data-reward-name");
+        const pts = Number(btn.getAttribute("data-points"));
+        redeemReward(id, name, pts);
+      });
+    });
   } catch (error) {
     rewardsListEl.innerHTML = '<p style="color: red;">Gagal memuat hadiah.</p>';
   }
@@ -207,8 +217,8 @@ async function loadPointsHistory() {
       <tr style="border-bottom: 1px solid var(--border);">
         <td style="padding: 10px;">${new Date(h.created_at).toLocaleDateString('id-ID')}</td>
         <td style="padding: 10px;">${h.type === 'earn' ? '<span style="color:green; font-weight:500;">Dapat Poin</span>' : '<span style="color:red; font-weight:500;">Tukar Hadiah</span>'}</td>
-        <td style="padding: 10px; text-align: right; font-weight: bold; ${h.type === 'earn' ? 'color:green' : 'color:red'}">${h.type === 'earn' ? '+' : '-'}${h.points}</td>
-        <td style="padding: 10px;">${h.description || '-'}</td>
+        <td style="padding: 10px; text-align: right; font-weight: bold; ${h.type === 'earn' ? 'color:green' : 'color:red'}">${h.type === 'earn' ? '+' : '-'}${Number(h.points)}</td>
+        <td style="padding: 10px;">${escapeHtml(h.description || '-')}</td>
       </tr>
     `).join('');
   } catch (error) {

@@ -1,0 +1,4 @@
+Semgrep Execution Status:
+--------------------------
+Status: Gagal dipasang (Docker daemon tidak aktif, Python/pip tidak tersedia di host Windows, paket winget tidak ditemukan).
+Alternatif: Pemindaian pola XSS (innerHTML, outerHTML, insertAdjacentHTML, document.write) dilakukan secara komprehensif menggunakan analisis statis berbasis Node.js/Regex pada seluruh berkas di direktori public/.

@@ -104,12 +104,12 @@ function renderSidebar() {
           const total = Number(cat.count || 0);
           return `
             <details class="cat-group" ${selected.category === cat.name ? "open" : ""}>
-              <summary class="cat-summary">${cat.name} <span style="color:#6b7280; font-weight:400">(${total})</span></summary>
+              <summary class="cat-summary">${escapeHtml(cat.name)} <span style="color:#6b7280; font-weight:400">(${total})</span></summary>
               <div class="cat-list">
                 <button class="cat-item ${
                   selected.category === cat.name && selected.subcategory === "all" ? "active" : ""
-                }" data-cat="${cat.name}" data-sub="all">
-                  Semua ${cat.name}
+                }" data-cat="${escapeHtml(cat.name)}" data-sub="all">
+                  Semua ${escapeHtml(cat.name)}
                   <small>${total} item</small>
                 </button>
                 ${subs
@@ -117,8 +117,8 @@ function renderSidebar() {
                     const count = Number(sub.count || 0);
                     const active = selected.category === cat.name && selected.subcategory === sub.name;
                     return `
-                      <button class="cat-item ${active ? "active" : ""}" data-cat="${cat.name}" data-sub="${sub.name}">
-                        ${sub.name}
+                      <button class="cat-item ${active ? "active" : ""}" data-cat="${escapeHtml(cat.name)}" data-sub="${escapeHtml(sub.name)}">
+                        ${escapeHtml(sub.name)}
                         <small>${count} item</small>
                       </button>
                     `;
@@ -151,12 +151,12 @@ function renderSidebar() {
           <details class="cat-group" ${
             selected.category === cat ? "open" : ""
           }>
-            <summary class="cat-summary">${cat} <span style="color:#6b7280; font-weight:400">(${total})</span></summary>
+            <summary class="cat-summary">${escapeHtml(cat)} <span style="color:#6b7280; font-weight:400">(${total})</span></summary>
             <div class="cat-list">
               <button class="cat-item ${
                 selected.category === cat && selected.subcategory === "all" ? "active" : ""
-              }" data-cat="${cat}" data-sub="all">
-                Semua ${cat}
+              }" data-cat="${escapeHtml(cat)}" data-sub="all">
+                Semua ${escapeHtml(cat)}
                 <small>${total} item</small>
               </button>
               ${subs
@@ -165,8 +165,8 @@ function renderSidebar() {
                   const active =
                     selected.category === cat && selected.subcategory === sub;
                   return `
-                    <button class="cat-item ${active ? "active" : ""}" data-cat="${cat}" data-sub="${sub}">
-                      ${sub}
+                    <button class="cat-item ${active ? "active" : ""}" data-cat="${escapeHtml(cat)}" data-sub="${escapeHtml(sub)}">
+                      ${escapeHtml(sub)}
                       <small>${count} item</small>
                     </button>
                   `;
@@ -248,12 +248,12 @@ function renderProducts() {
     .map(
       (product) => `
       <article class="product-card">
-        <img src="${product.image}" alt="${product.name}" />
+        <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" />
         <div class="product-content">
-          <h3 class="product-title">${product.name}</h3>
-          <p class="product-meta">${product.category} • ${product.subcategory || "Umum"} | Rating ${product.rating}</p>
+          <h3 class="product-title">${escapeHtml(product.name)}</h3>
+          <p class="product-meta">${escapeHtml(product.category)} • ${escapeHtml(product.subcategory || "Umum")} | Rating ${Number(product.rating || 0)}</p>
           <p class="product-meta" style="color: ${(product.stock || 0) > 0 ? 'var(--primary)' : 'var(--danger)'}; font-weight: 500;">
-            ${(product.stock || 0) > 0 ? `Stok: ${product.stock}` : 'Stok Habis'}
+            ${(product.stock || 0) > 0 ? `Stok: ${Number(product.stock)}` : 'Stok Habis'}
           </p>
           ${
             normalizeDiscount(product.discount) > 0
@@ -362,7 +362,7 @@ async function loadProducts() {
     refreshHeaderCartBadge();
   } catch (error) {
     products = [];
-    productGrid.innerHTML = `<p class="empty-state">${error.message}</p>`;
+    productGrid.innerHTML = `<p class="empty-state">${escapeHtml(error.message)}</p>`;
     categorySidebar.innerHTML = `<p class="empty-state">Gagal memuat kategori.</p>`;
   }
 }

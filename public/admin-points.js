@@ -167,9 +167,9 @@ async function loadRewards() {
     }
     rewardsTbody.innerHTML = data.map(r => `
       <tr style="border-bottom: 1px solid var(--border);">
-        <td style="padding: 10px;">${r.name}<br/><span style="font-size:0.8rem;color:#6b7280;">${r.description || '-'}</span></td>
-        <td style="padding: 10px; font-weight: bold; color: var(--primary);">${r.points_required}</td>
-        <td style="padding: 10px;">${r.reward_type === 'discount_percent' ? 'Diskon ' + r.reward_value + '%' : (r.reward_type === 'discount_fixed' ? 'Potongan Rp' + r.reward_value : 'Lainnya')}</td>
+        <td style="padding: 10px;">${escapeHtml(r.name)}<br/><span style="font-size:0.8rem;color:#6b7280;">${escapeHtml(r.description || '-')}</span></td>
+        <td style="padding: 10px; font-weight: bold; color: var(--primary);">${Number(r.points_required)}</td>
+        <td style="padding: 10px;">${escapeHtml(r.reward_type === 'discount_percent' ? 'Diskon ' + r.reward_value + '%' : (r.reward_type === 'discount_fixed' ? 'Potongan Rp' + r.reward_value : 'Lainnya'))}</td>
         <td style="padding: 10px;">${r.is_active ? '<span style="color:green;">Aktif</span>' : '<span style="color:red;">Nonaktif</span>'}</td>
         <td style="padding: 10px;">
           <button class="btn-secondary" data-action="edit-reward" data-reward='${encodeURIComponent(JSON.stringify(r))}'>Edit</button>
@@ -259,9 +259,9 @@ async function loadPointsUsers() {
     userPointsTbody.innerHTML = data.map(u => `
       <tr style="border-bottom: 1px solid var(--border);">
         <td style="padding: 10px;">#${u.id}</td>
-        <td style="padding: 10px;">${u.name}</td>
-        <td style="padding: 10px;">${u.email}</td>
-        <td style="padding: 10px; text-align: right; font-weight: bold; color: var(--primary);">${u.total_points}</td>
+        <td style="padding: 10px;">${escapeHtml(u.name)}</td>
+        <td style="padding: 10px;">${escapeHtml(u.email)}</td>
+        <td style="padding: 10px; text-align: right; font-weight: bold; color: var(--primary);">${Number(u.total_points || 0)}</td>
       </tr>
     `).join('');
     
@@ -314,10 +314,10 @@ async function loadPointsHistory() {
     pointsHistoryTbody.innerHTML = data.map(h => `
       <tr style="border-bottom: 1px solid var(--border);">
         <td style="padding: 10px;">${new Date(h.created_at).toLocaleString('id-ID')}</td>
-        <td style="padding: 10px;">${h.user_name} <br/><span style="font-size:0.8rem;color:#6b7280;">${h.user_email}</span></td>
+        <td style="padding: 10px;">${escapeHtml(h.user_name)} <br/><span style="font-size:0.8rem;color:#6b7280;">${escapeHtml(h.user_email)}</span></td>
         <td style="padding: 10px;">${h.type === 'earn' ? '<span style="color:green;">Earn</span>' : '<span style="color:red;">Redeem</span>'}</td>
-        <td style="padding: 10px; text-align: right; font-weight: bold; ${h.type === 'earn' ? 'color:green' : 'color:red'}">${h.type === 'earn' ? '+' : '-'}${h.points}</td>
-        <td style="padding: 10px;">${h.description || '-'}</td>
+        <td style="padding: 10px; text-align: right; font-weight: bold; ${h.type === 'earn' ? 'color:green' : 'color:red'}">${h.type === 'earn' ? '+' : '-'}${Number(h.points)}</td>
+        <td style="padding: 10px;">${escapeHtml(h.description || '-')}</td>
       </tr>
     `).join('');
   } catch (e) {

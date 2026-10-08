@@ -158,14 +158,14 @@ function renderCartTable() {
             <input type="checkbox" class="cart-item-check" data-line-index="${index}" ${checked} />
           </label>
           <div class="cart-col-image">
-            <img src="${imageSrc}" alt="${line.name || "Produk"}" class="cart-row-image" />
+            <img src="${escapeHtml(imageSrc)}" alt="${escapeHtml(line.name || "Produk")}" class="cart-row-image" />
           </div>
           <div class="cart-col-name">
-            <a href="/product.html?id=${line.id}" class="cart-row-name">${line.name || "Produk"}</a>
+            <a href="/product.html?id=${line.id}" class="cart-row-name">${escapeHtml(line.name || "Produk")}</a>
             <button type="button" class="cart-row-remove" data-line-index="${index}">Hapus</button>
           </div>
-          <div class="cart-col-sku">${formatSku(line)}</div>
-          <div class="cart-col-variant">${variant}</div>
+          <div class="cart-col-sku">${escapeHtml(formatSku(line))}</div>
+          <div class="cart-col-variant">${escapeHtml(variant)}</div>
           <div class="cart-col-unit">${formatRupiah(unitPrice)}</div>
           <div class="cart-col-qty">
             <div class="cart-qty-control">
@@ -231,9 +231,9 @@ function fillCheckoutAddressSelect(addresses) {
   if (checkoutAddressHint) checkoutAddressHint.classList.add("hidden");
   const options = cachedCheckoutAddresses
     .map((addr) => {
-      const label = addr.label ? `${addr.label} — ` : "";
+      const label = addr.label ? `${escapeHtml(addr.label)} — ` : "";
       const def = addr.isDefault ? " (Default)" : "";
-      return `<option value="${addr.id}">${label}${addr.recipientName}${def}</option>`;
+      return `<option value="${addr.id}">${label}${escapeHtml(addr.recipientName)}${def}</option>`;
     })
     .join("");
   checkoutAddressSelect.innerHTML =

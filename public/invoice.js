@@ -484,9 +484,7 @@ async function loadInvoice() {
     startInvoicePayCountdown(order);
 
   } catch (error) {
-    currentOrderId = null;
-    setInvoiceActionsEnabled(false);
-    invoiceContainer.innerHTML = `<div style="color:red; text-align:center;">Gagal memuat invoice: ${error.message}</div>`;
+    invoiceContainer.innerHTML = `<div style="color:red; text-align:center;">Gagal memuat invoice: ${escapeHtml(error.message)}</div>`;
   }
 }
 

@@ -11,6 +11,7 @@ const testSuites = [
   { name: "08. Pencegahan IDOR & Kebocoran PII Chatbot (SEC-15)", file: "./08-idor.test" },
   { name: "09. Kontrol Akses & Role-Based Access Control (RBAC)", file: "./09-access-control.test" },
   { name: "10. Pencegahan Mass Assignment & Privilege Escalation", file: "./10-mass-assignment.test" },
+  { name: "11. Pemindaian Statis DOM XSS Sinks (Anti-Regresi)", file: "./11-xss-static-scan.test" },
 ];
 
 async function main() {

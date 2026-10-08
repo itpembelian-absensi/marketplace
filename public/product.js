@@ -3,7 +3,7 @@ const params = new URLSearchParams(window.location.search);
 const productId = params.get("id");
 
 function renderError(message) {
-  detailCard.innerHTML = `<p class="empty-state">${message}</p>`;
+  detailCard.innerHTML = `<p class="empty-state">${escapeHtml(message)}</p>`;
 }
 
 function normalizeDiscount(discount) {
@@ -244,10 +244,10 @@ async function loadProductDetail() {
       <div class="detail-layout">
         ${renderProductGallery(images, product.name)}
         <div>
-          <h2 class="detail-product-title">${product.name}</h2>
-          <p class="product-meta">${product.category} | Rating ${product.rating}</p>
+          <h2 class="detail-product-title">${escapeHtml(product.name)}</h2>
+          <p class="product-meta">${escapeHtml(product.category)} | Rating ${Number(product.rating || 0)}</p>
           <p class="product-meta" style="color: ${(product.stock || 0) > 0 ? 'var(--primary)' : 'var(--danger)'}; font-weight: 500;">
-            ${(product.stock || 0) > 0 ? `Stok: ${product.stock}` : 'Stok Habis'}
+            ${(product.stock || 0) > 0 ? `Stok: ${Number(product.stock)}` : 'Stok Habis'}
           </p>
           ${
             normalizeDiscount(product.discount) > 0
