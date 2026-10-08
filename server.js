@@ -1230,6 +1230,7 @@ async function setupDatabase() {
       payment_method TEXT NOT NULL,
       total INTEGER NOT NULL,
       status TEXT NOT NULL DEFAULT 'unpaid',
+      points_reward INTEGER NOT NULL DEFAULT 0,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(user_id) REFERENCES users(id)
     )
@@ -1241,6 +1242,9 @@ async function setupDatabase() {
     await runQuery("ALTER TABLE orders ADD COLUMN fulfillment_entity TEXT DEFAULT ''");
   }
   const orderColNames = orderColumns.map((c) => c.name);
+  if (!orderColNames.includes("points_reward")) {
+    await runQuery("ALTER TABLE orders ADD COLUMN points_reward INTEGER NOT NULL DEFAULT 0");
+  }
   if (!orderColNames.includes("shipping_method")) {
     await runQuery("ALTER TABLE orders ADD COLUMN shipping_method TEXT DEFAULT ''");
   }
@@ -2730,7 +2734,7 @@ function mapBankAccountRow(row) {
 }
 
 const ORDER_SELECT_FIELDS =
-  "orders.id, orders.user_id, orders.customer_name, orders.customer_phone, orders.customer_address, orders.payment_method, orders.total, orders.status, orders.fulfillment_entity, orders.shipping_method, orders.shipping_fee, orders.products_subtotal, orders.shipping_meta, orders.tax_mode, orders.tax_percent, orders.tax_amount, orders.payment_proof_name, orders.payment_proof_at, orders.payment_due_at, orders.void_reason, orders.shipment_status, orders.tracking_number, orders.tracking_url, orders.shipment_note, orders.shipment_updated_at, orders.created_at, users.email AS customer_email";
+  "orders.id, orders.user_id, orders.customer_name, orders.customer_phone, orders.customer_address, orders.payment_method, orders.total, orders.status, orders.points_reward, orders.fulfillment_entity, orders.shipping_method, orders.shipping_fee, orders.products_subtotal, orders.shipping_meta, orders.tax_mode, orders.tax_percent, orders.tax_amount, orders.payment_proof_name, orders.payment_proof_at, orders.payment_due_at, orders.void_reason, orders.shipment_status, orders.tracking_number, orders.tracking_url, orders.shipment_note, orders.shipment_updated_at, orders.created_at, users.email AS customer_email";
 
 function mapOrderRow(row) {
   if (!row) return null;
@@ -4370,9 +4374,17 @@ app.post("/api/checkout", authMiddleware, async (req, res) => {
       : new Date(Date.now() + paymentTimeout.totalMinutes * 60 * 1000).toISOString();
 
     const checkoutResult = await withTransaction(async () => {
+      let totalPointsEarned = 0;
+      for (const group of itemGroupMap.values()) {
+        const row = foundMap.get(group.id);
+        if (row && row.points_per_purchase) {
+          totalPointsEarned += row.points_per_purchase * group.qty;
+        }
+      }
+
       const orderResult = await runQuery(
-        `INSERT INTO orders (user_id, customer_name, customer_phone, customer_address, payment_method, total, status, shipping_method, shipping_fee, products_subtotal, shipping_meta, tax_mode, tax_percent, tax_amount, payment_due_at)
-         VALUES (?, ?, ?, ?, ?, ?, 'unpaid', ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO orders (user_id, customer_name, customer_phone, customer_address, payment_method, total, status, points_reward, shipping_method, shipping_fee, products_subtotal, shipping_meta, tax_mode, tax_percent, tax_amount, payment_due_at)
+         VALUES (?, ?, ?, ?, ?, ?, 'unpaid', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           req.user.id,
           String(customerName).trim(),
@@ -4380,6 +4392,7 @@ app.post("/api/checkout", authMiddleware, async (req, res) => {
           String(customerAddress).trim(),
           String(paymentMethod).trim(),
           grandTotal,
+          totalPointsEarned,
           String(shippingMethod).trim(),
           shippingQuote.fee,
           productsSubtotal,
@@ -4412,25 +4425,6 @@ app.post("/api/checkout", authMiddleware, async (req, res) => {
         await runQuery(
           `INSERT INTO inventory_ledger (product_id, type, quantity, description) VALUES (?, ?, ?, ?)`,
           [item.productId, "OUT", item.qty, `Terjual${sizeLabel} - Order #${orderResult.lastID}`]
-        );
-      }
-
-      let totalPointsEarned = 0;
-      for (const group of itemGroupMap.values()) {
-        const row = foundMap.get(group.id);
-        if (row && row.points_per_purchase) {
-          totalPointsEarned += row.points_per_purchase * group.qty;
-        }
-      }
-
-      if (totalPointsEarned > 0) {
-        await runQuery(
-          "INSERT INTO user_points (user_id, total_points) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET total_points = total_points + ?",
-          [req.user.id, totalPointsEarned, totalPointsEarned]
-        );
-        await runQuery(
-          "INSERT INTO user_point_history (user_id, type, points, description, order_id) VALUES (?, 'earn', ?, ?, ?)",
-          [req.user.id, totalPointsEarned, `Pembelian Order #${orderResult.lastID}`, orderResult.lastID]
         );
       }
 
@@ -4946,7 +4940,7 @@ app.put("/api/admin/orders/:id/status", authMiddleware, requireRole(["admin", "m
   }
 
   try {
-    const existing = await getQuery("SELECT id, status FROM orders WHERE id = ?", [orderId]);
+    const existing = await getQuery("SELECT id, user_id, status, points_reward FROM orders WHERE id = ?", [orderId]);
     if (!existing) {
       res.status(404).json({ message: "Pesanan tidak ditemukan." });
       return;
@@ -4956,7 +4950,51 @@ app.put("/api/admin/orders/:id/status", authMiddleware, requireRole(["admin", "m
       return;
     }
 
-    await runQuery("UPDATE orders SET status = ? WHERE id = ?", [status, orderId]);
+    const previousStatus = String(existing.status || "").toLowerCase();
+    await withTransaction(async () => {
+      await runQuery("UPDATE orders SET status = ? WHERE id = ?", [status, orderId]);
+
+      // Jika berpindah ke 'paid' dan sebelumnya bukan 'paid', berikan poin
+      if (status === "paid" && previousStatus !== "paid" && existing.user_id) {
+        const pts = Number(existing.points_reward) || 0;
+        if (pts > 0) {
+          const alreadyEarned = await getQuery(
+            "SELECT id FROM user_point_history WHERE order_id = ? AND type = 'earn' LIMIT 1",
+            [orderId]
+          );
+          if (!alreadyEarned) {
+            await runQuery(
+              "INSERT INTO user_points (user_id, total_points) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET total_points = total_points + ?",
+              [existing.user_id, pts, pts]
+            );
+            await runQuery(
+              "INSERT INTO user_point_history (user_id, type, points, description, order_id) VALUES (?, 'earn', ?, ?, ?)",
+              [existing.user_id, pts, `Pembelian Order #${orderId} (Lunas)`, orderId]
+            );
+          }
+        }
+      }
+
+      // Jika dibatalkan dari 'paid' kembali ke 'unpaid', tarik kembali poin yang sudah diberikan
+      if (status === "unpaid" && previousStatus === "paid" && existing.user_id) {
+        const earned = await getQuery(
+          "SELECT COALESCE(SUM(points), 0) AS pts FROM user_point_history WHERE order_id = ? AND type = 'earn'",
+          [orderId]
+        );
+        const pts = Number(earned?.pts) || 0;
+        if (pts > 0) {
+          await runQuery(
+            "UPDATE user_points SET total_points = MAX(0, total_points - ?) WHERE user_id = ?",
+            [pts, existing.user_id]
+          );
+          await runQuery(
+            "INSERT INTO user_point_history (user_id, type, points, description, order_id) VALUES (?, 'adjust', ?, ?, ?)",
+            [existing.user_id, -pts, `Pembatalan status lunas Order #${orderId}`, orderId]
+          );
+        }
+      }
+    });
+
     res.json({
       message: status === "paid" ? "Pesanan ditandai lunas." : "Pesanan ditandai belum dibayar.",
       status,
@@ -5177,20 +5215,24 @@ app.post("/api/points/redeem", authMiddleware, async (req, res) => {
     const reward = await getQuery("SELECT * FROM point_rewards WHERE id = ? AND is_active = 1", [rewardId]);
     if (!reward) return res.status(404).json({ message: "Hadiah tidak ditemukan atau tidak aktif." });
 
-    const userPointsRow = await getQuery("SELECT total_points FROM user_points WHERE user_id = ?", [req.user.id]);
-    const currentPoints = userPointsRow ? userPointsRow.total_points : 0;
+    const updateResult = await runQuery(
+      "UPDATE user_points SET total_points = total_points - ? WHERE user_id = ? AND total_points >= ?",
+      [reward.points_required, req.user.id, reward.points_required]
+    );
 
-    if (currentPoints < reward.points_required) {
+    if (!updateResult.changes) {
       return res.status(400).json({ message: `Poin tidak mencukupi. Butuh ${reward.points_required} poin.` });
     }
 
-    await runQuery("UPDATE user_points SET total_points = total_points - ? WHERE user_id = ?", [reward.points_required, req.user.id]);
     await runQuery(
       "INSERT INTO user_point_history (user_id, type, points, description, reward_id) VALUES (?, 'redeem', ?, ?, ?)",
       [req.user.id, reward.points_required, `Klaim: ${reward.name}`, reward.id]
     );
 
-    res.json({ message: "Klaim berhasil. Hadiah telah dicatat di sistem.", remainingPoints: currentPoints - reward.points_required });
+    const userPointsRow = await getQuery("SELECT total_points FROM user_points WHERE user_id = ?", [req.user.id]);
+    const remainingPoints = userPointsRow ? userPointsRow.total_points : 0;
+
+    res.json({ message: "Klaim berhasil. Hadiah telah dicatat di sistem.", remainingPoints });
   } catch (error) {
     res.status(500).json({ message: "Gagal melakukan klaim hadiah." });
   }
