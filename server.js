@@ -806,6 +806,10 @@ async function applyStockDeduction(productId, productRow, qty, sizeName = "") {
     if (!matchedSize) {
       throw new Error(`Ukuran "${trimmedSize}" tidak tersedia untuk produk "${productRow.name}".`);
     }
+    const currentAvailable = (Number(matchedSize.stock_sjs) || 0) + (Number(matchedSize.stock_sjl) || 0);
+    if (currentAvailable < qty) {
+      throw new Error(`Stok ukuran "${trimmedSize}" untuk produk "${productRow.name}" tidak mencukupi saat proses checkout (sisa ${currentAvailable}).`);
+    }
     const deducted = deductFromStockPools(matchedSize.stock_sjs, matchedSize.stock_sjl, qty);
     matchedSize.stock_sjs = deducted.stockSjs;
     matchedSize.stock_sjl = deducted.stockSjl;
@@ -815,6 +819,11 @@ async function applyStockDeduction(productId, productRow, qty, sizeName = "") {
       [JSON.stringify(parsedSizes), totals.stock, totals.stockSjs, totals.stockSjl, productId]
     );
     return { deductSjs: deducted.deductSjs, deductSjl: deducted.deductSjl, totalStock: totals.stock };
+  }
+
+  const currentAvailable = (Number(productRow.stock_sjs) || 0) + (Number(productRow.stock_sjl) || 0);
+  if (currentAvailable < qty) {
+    throw new Error(`Stok produk "${productRow.name}" tidak mencukupi saat proses checkout (sisa ${currentAvailable}).`);
   }
 
   const deducted = deductFromStockPools(productRow.stock_sjs, productRow.stock_sjl, qty);
