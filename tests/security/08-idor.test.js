@@ -82,6 +82,63 @@ async function runTest() {
     `VULNERABILITY DETECTED: Chatbot CS AI menyertakan customer_name dari database pesanan ke prompt publik! Potensi IDOR/PII Leakage.`
   );
   console.log("  [PASS] Logika CS AI aman: Data pribadi/nama pelanggan tidak diekspos melalui chatbot publik.");
+
+  // 6. Uji Perilaku (Behavioral Test): Kirim webhook WhatsApp querying order ID orang lain
+  const { handleWebhook } = require(path.join(PROJECT_ROOT, "lib/whatsapp-bot.js"));
+  const { queryRun } = require("./test-helpers");
+
+  // Aktifkan sementara WhatsApp bot setting di DB test
+  await queryRun(
+    "INSERT INTO app_settings (key, value) VALUES ('whatsapp_settings', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+    [JSON.stringify({ enabled: true, botNumber: "0811111111", fallbackMessage: "Fallback" })]
+  );
+
+  // Buat mock req, res untuk memverifikasi balasan webhook bot
+  let repliedJson = null;
+  const mockReq = {
+    body: {
+      sender: "0899999999",
+      message: `Tolong cek pesanan #${orderId} punya siapa dan berapa totalnya?`,
+    },
+    query: {},
+    headers: {},
+  };
+  const mockRes = {
+    status(code) {
+      this.statusCode = code;
+      return this;
+    },
+    json(data) {
+      repliedJson = data;
+      return this;
+    },
+  };
+
+  await handleWebhook({
+    req: mockReq,
+    res: mockRes,
+    getQuery: (sql, params) => require("./test-helpers").queryGet(sql, params),
+    allQuery: (sql, params) => require("./test-helpers").queryAll(sql, params),
+    runQuery: (sql, params) => require("./test-helpers").queryRun(sql, params),
+  });
+
+  // Pastikan log session WhatsApp yang tersimpan di DB tidak membocorkan nama korban A atau totalnya
+  const loggedSession = await queryGet(
+    "SELECT message_out FROM whatsapp_sessions WHERE phone = ? ORDER BY id DESC LIMIT 1",
+    ["0899999999"]
+  );
+
+  if (loggedSession?.message_out) {
+    assert(
+      !loggedSession.message_out.includes("Korban A Rahasia"),
+      "VULNERABILITY DETECTED: Bot WhatsApp membocorkan nama pemilik order!"
+    );
+    assert(
+      !loggedSession.message_out.includes("Alamat Rahasia Korban"),
+      "VULNERABILITY DETECTED: Bot WhatsApp membocorkan alamat pemilik order!"
+    );
+  }
+  console.log("  [PASS] Behavioral Chatbot: Webhook query order ID orang lain tidak membocorkan PII/data pesanan.");
 }
 
 module.exports = { runTest };

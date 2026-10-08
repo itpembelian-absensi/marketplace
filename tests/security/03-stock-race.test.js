@@ -3,6 +3,12 @@ const { api, login, register, queryGet, queryAll } = require("./test-helpers");
 
 async function runTest() {
   console.log("\n--- [TEST 03] Checkout Stok Paralel / Anti Overselling (BIZ-06) ---");
+  // CATATAN ARSITEKTUR:
+  // Pada SQLite (single process/file), write transaction menggunakan BEGIN IMMEDIATE TRANSACTION
+  // sehingga transaksi dieksekusi secara serialized pada level DB engine. Jika 2 request paralel
+  // masuk bersamaan, request kedua akan tertolak oleh lock DB ("cannot start a transaction within a transaction"
+  // atau BUSY) sebelum sempat mengeksekusi logika pengurangan stok, atau menunggu antrean.
+  // Oleh karena itu, pengujian ini memvalidasi integritas state akhir (stok tidak menjadi minus & tidak oversold).
 
   // 1. Admin membuat produk dengan sisa stok tepat 1 unit
   const adminAuth = await login("admin@test.com", "adminpassword123");
