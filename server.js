@@ -387,6 +387,11 @@ const pictureMemoryUpload = multer({
   },
 });
 
+const IMAGE_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+const IMAGE_FILE_EXTS = new Set([".png", ".jpg", ".jpeg", ".webp"]);
+const BANNER_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "video/mp4", "video/webm"]);
+const BANNER_FILE_EXTS = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".mp4", ".webm"]);
+
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadDir),
@@ -397,9 +402,9 @@ const upload = multer({
   }),
   limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
-    if (!allowed.includes(file.mimetype)) {
-      cb(new Error("File harus berupa gambar (png/jpg/webp/svg)."));
+    const ext = path.extname(file.originalname || "").toLowerCase();
+    if (!IMAGE_MIME_TYPES.has(file.mimetype) || !IMAGE_FILE_EXTS.has(ext)) {
+      cb(new Error("File logo harus berupa gambar (png/jpg/webp)."));
       return;
     }
     cb(null, true);
@@ -416,9 +421,9 @@ const productImageUpload = multer({
   }),
   limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = ["image/png", "image/jpeg", "image/webp"];
-    if (!allowed.includes(file.mimetype)) {
-      cb(new Error("File produk harus berupa gambar png/jpg/webp."));
+    const ext = path.extname(file.originalname || "").toLowerCase();
+    if (!IMAGE_MIME_TYPES.has(file.mimetype) || !IMAGE_FILE_EXTS.has(ext)) {
+      cb(new Error("File produk harus berupa gambar (png/jpg/webp)."));
       return;
     }
     cb(null, true);
@@ -433,10 +438,10 @@ const bannerImageUpload = multer({
       cb(null, `banner-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext || ".webp"}`);
     },
   }),
-  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB limit for videos
+  limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = ["image/png", "image/jpeg", "image/webp", "image/gif", "video/mp4", "video/webm"];
-    if (!allowed.includes(file.mimetype)) {
+    const ext = path.extname(file.originalname || "").toLowerCase();
+    if (!BANNER_MIME_TYPES.has(file.mimetype) || !BANNER_FILE_EXTS.has(ext)) {
       cb(new Error("File banner harus berupa gambar (png/jpg/webp/gif) atau video (mp4/webm)."));
       return;
     }
@@ -454,8 +459,8 @@ const profileImageUpload = multer({
   }),
   limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = ["image/png", "image/jpeg", "image/webp"];
-    if (!allowed.includes(file.mimetype)) {
+    const ext = path.extname(file.originalname || "").toLowerCase();
+    if (!IMAGE_MIME_TYPES.has(file.mimetype) || !IMAGE_FILE_EXTS.has(ext)) {
       cb(new Error("File gambar profil harus berupa png/jpg/webp."));
       return;
     }
@@ -473,8 +478,8 @@ const qrisImageUpload = multer({
   }),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = ["image/png", "image/jpeg", "image/webp"];
-    if (!allowed.includes(file.mimetype)) {
+    const ext = path.extname(file.originalname || "").toLowerCase();
+    if (!IMAGE_MIME_TYPES.has(file.mimetype) || !IMAGE_FILE_EXTS.has(ext)) {
       cb(new Error("File gambar QRIS harus berupa png/jpg/webp."));
       return;
     }
@@ -505,7 +510,7 @@ const layananUpload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname || "").toLowerCase();
-    if (LAYANAN_FILE_TYPES.has(file.mimetype) || LAYANAN_FILE_EXTS.has(ext)) {
+    if (LAYANAN_FILE_TYPES.has(file.mimetype) && LAYANAN_FILE_EXTS.has(ext)) {
       cb(null, true);
       return;
     }
@@ -540,7 +545,7 @@ const paymentProofUpload = multer({
   limits: { fileSize: 8 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname || "").toLowerCase();
-    if (PAYMENT_PROOF_TYPES.has(file.mimetype) || PAYMENT_PROOF_EXTS.has(ext)) {
+    if (PAYMENT_PROOF_TYPES.has(file.mimetype) && PAYMENT_PROOF_EXTS.has(ext)) {
       cb(null, true);
       return;
     }
