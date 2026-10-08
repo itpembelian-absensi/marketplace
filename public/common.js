@@ -14,11 +14,13 @@ function formatRupiah(number) {
 }
 
 function escapeHtml(str) {
-  return String(str || "")
+  if (str == null) return "";
+  return String(str)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function formatInlineMarkdown(text) {

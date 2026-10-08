@@ -21,11 +21,13 @@ let editingAddressId = null;
 let allAddresses = [];
 
 function escapeHtml(text) {
-  return String(text || "")
+  if (text == null) return "";
+  return String(text)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function setAddressMessage(text, isSuccess = false) {

@@ -37,11 +37,13 @@ const DEFAULT_SLIDES = [
 const PLACEHOLDER_SVG = `<svg class="home-feature-placeholder" viewBox="0 0 100 80" xmlns="http://www.w3.org/2000/svg"><rect fill="#87CEEB" width="100" height="50"/><ellipse fill="#fff" cx="70" cy="15" rx="12" ry="8"/><path fill="#4CAF50" d="M0 50 Q25 35 50 50 T100 50 V80 H0Z"/></svg>`;
 
 function escapeHtml(str) {
-  return String(str || "")
+  if (str == null) return "";
+  return String(str)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function isVideoUrl(url) {
