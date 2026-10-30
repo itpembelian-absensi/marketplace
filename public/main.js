@@ -1,14 +1,15 @@
 let products = [];
 
 const productGrid = document.getElementById("productGrid");
-const searchInput = document.getElementById("searchInput");
+const searchInput = document.getElementById("headerSearchInput") || document.getElementById("searchInput");
 const sortSelect = document.getElementById("sortSelect");
-const categorySidebar = document.getElementById("categorySidebar");
-const clearCategoryButton = document.getElementById("clearCategory");
+const categoryRail = document.getElementById("categoryRail");
 const activeFilterText = document.getElementById("activeFilterText");
-const shopSectionTitle = document.getElementById("shopSectionTitle");
+const catalogPager = document.getElementById("catalogPager");
 
-const isShopPage = Boolean(productGrid && searchInput && sortSelect && categorySidebar);
+const isShopPage = Boolean(productGrid && sortSelect && categoryRail);
+const CATALOG_PAGE_SIZE = 16;
+let catalogPage = 1;
 
 const selected = {
   category: "all",
@@ -44,14 +45,15 @@ function clearPromoMode(updateUrl = true) {
 function updateShopNavState() {
   if (!isShopPage) return;
   const promoLink = document.querySelector(".sjs-nav-promo");
-  const allLink = document.querySelector(".sjs-nav-all");
+  const allLink = document.querySelector(".sjs-nav-produk, .sjs-nav-all");
   if (promoLink) promoLink.classList.toggle("sjs-nav-active", promoOnly);
   if (allLink) allLink.classList.toggle("sjs-nav-active", !promoOnly);
 }
 
 function updateShopSectionTitle() {
-  if (!shopSectionTitle) return;
-  shopSectionTitle.textContent = promoOnly ? "Promo Spesial" : "Daftar Produk";
+  const title = document.getElementById("catalogTitle");
+  if (!title) return;
+  title.textContent = promoOnly ? "Promo Spesial" : "Temukan Material yang Tepat";
 }
 
 function normalizeDiscount(discount) {
@@ -75,214 +77,212 @@ function getWhatsAppUrl(phone, productName) {
   return `https://wa.me/${cleaned}?text=${message}`;
 }
 
-function buildCategoryTree(items) {
-  const tree = new Map();
-  items.forEach((p) => {
-    const cat = p.category || "Lainnya";
-    const sub = p.subcategory || "Umum";
-    if (!tree.has(cat)) tree.set(cat, new Map());
-    const subMap = tree.get(cat);
-    subMap.set(sub, (subMap.get(sub) || 0) + 1);
-  });
-  return tree;
+const CATEGORY_THUMBS = [
+  [/plywood/i, "/home/cat-plywood.jpg"],
+  [/particle/i, "/home/cat-particle.jpg"],
+  [/mdf/i, "/home/cat-mdf.jpg"],
+  [/hmr/i, "/home/cat-hmr.jpg"],
+  [/block/i, "/home/banner-blockboard.jpg"],
+  [/hpl/i, "/home/show-hpl.jpg"],
+];
+
+function categoryThumb(name) {
+  const known = CATEGORY_THUMBS.find(([pattern]) => pattern.test(name));
+  if (known) return known[1];
+  const sample = products.find((item) => item.category === name && item.image);
+  return sample?.image || "";
 }
 
-function renderSidebar() {
+function renderCategoryRail() {
   if (!isShopPage) return;
-  // prefer menu from DB (api/categories) if available
-  const menu = window.__menuCategories || null;
-  if (menu && Array.isArray(menu) && menu.length) {
-    const totalAll = menu.reduce((sum, c) => sum + Number(c.count || 0), 0);
-    categorySidebar.innerHTML = `
-      <button class="cat-item ${selected.category === "all" ? "active" : ""}" data-cat="all" data-sub="all">
-        Semua Produk
-        <small>${totalAll} item</small>
-      </button>
-      ${menu
-        .map((cat) => {
-          const subs = (cat.subcategories || []).slice().sort((a, b) => a.name.localeCompare(b.name, "id"));
-          const total = Number(cat.count || 0);
-          return `
-            <details class="cat-group" ${selected.category === cat.name ? "open" : ""}>
-              <summary class="cat-summary">${cat.name} <span style="color:#6b7280; font-weight:400">(${total})</span></summary>
-              <div class="cat-list">
-                <button class="cat-item ${
-                  selected.category === cat.name && selected.subcategory === "all" ? "active" : ""
-                }" data-cat="${cat.name}" data-sub="all">
-                  Semua ${cat.name}
-                  <small>${total} item</small>
-                </button>
-                ${subs
-                  .map((sub) => {
-                    const count = Number(sub.count || 0);
-                    const active = selected.category === cat.name && selected.subcategory === sub.name;
-                    return `
-                      <button class="cat-item ${active ? "active" : ""}" data-cat="${cat.name}" data-sub="${sub.name}">
-                        ${sub.name}
-                        <small>${count} item</small>
-                      </button>
-                    `;
-                  })
-                  .join("")}
-              </div>
-            </details>
-          `;
-        })
-        .join("")}
-    `;
-    return;
-  }
+  const menu = Array.isArray(window.__menuCategories) ? window.__menuCategories : [];
+  const preferred = ["Plywood", "Particle Board", "MDF", "HMR", "Block Board", "HPL", "ACP", "A PANEL"];
+  const rank = (name) => {
+    const index = preferred.findIndex((item) => item.toLowerCase() === String(name).toLowerCase());
+    return index === -1 ? 99 : index;
+  };
+  const fromMenu = menu
+    .filter((cat) => Number(cat.count) > 0 || products.some((item) => item.category === cat.name))
+    .map((cat) => cat.name)
+    .filter(Boolean);
+  const names = (fromMenu.length
+    ? fromMenu
+    : Array.from(new Set(products.map((item) => item.category || "Lainnya")))
+  ).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b, "id"));
+  const allThumb = products.find((item) => item.image)?.image || "/home/cat-plywood.jpg";
+  const chips = [{ name: "Semua Produk", cat: "all", image: allThumb }].concat(
+    names.map((name) => ({ name, cat: name, image: categoryThumb(name) }))
+  );
 
-  // fallback: derive from products
-  const tree = buildCategoryTree(products);
-  const cats = Array.from(tree.keys()).sort((a, b) => a.localeCompare(b, "id"));
-
-  categorySidebar.innerHTML = `
-    <button class="cat-item ${selected.category === "all" ? "active" : ""}" data-cat="all" data-sub="all">
-      Semua Produk
-      <small>${products.length} item</small>
-    </button>
-    ${cats
-      .map((cat) => {
-        const subMap = tree.get(cat);
-        const subs = Array.from(subMap.keys()).sort((a, b) => a.localeCompare(b, "id"));
-        const total = Array.from(subMap.values()).reduce((a, b) => a + b, 0);
-        return `
-          <details class="cat-group" ${
-            selected.category === cat ? "open" : ""
-          }>
-            <summary class="cat-summary">${cat} <span style="color:#6b7280; font-weight:400">(${total})</span></summary>
-            <div class="cat-list">
-              <button class="cat-item ${
-                selected.category === cat && selected.subcategory === "all" ? "active" : ""
-              }" data-cat="${cat}" data-sub="all">
-                Semua ${cat}
-                <small>${total} item</small>
-              </button>
-              ${subs
-                .map((sub) => {
-                  const count = subMap.get(sub);
-                  const active =
-                    selected.category === cat && selected.subcategory === sub;
-                  return `
-                    <button class="cat-item ${active ? "active" : ""}" data-cat="${cat}" data-sub="${sub}">
-                      ${sub}
-                      <small>${count} item</small>
-                    </button>
-                  `;
-                })
-                .join("")}
-            </div>
-          </details>
-        `;
-      })
-      .join("")}
-  `;
+  const scrollLeft = categoryRail.scrollLeft;
+  categoryRail.innerHTML = chips
+    .map((chip) => {
+      const active = selected.category === chip.cat ? " is-active" : "";
+      const image = chip.image
+        ? `<img src="${escapeHtml(chip.image)}" alt="" />`
+        : `<span class="catalog-cat-fallback">${escapeHtml(chip.name.slice(0, 1))}</span>`;
+      return `
+        <button type="button" class="catalog-cat${active}" data-cat="${escapeHtml(chip.cat)}">
+          <span class="catalog-cat-thumb">${image}</span>
+          <span class="catalog-cat-name">${escapeHtml(chip.name)}</span>
+        </button>`;
+    })
+    .join("");
+  categoryRail.scrollLeft = scrollLeft;
 }
 
 function renderActiveFilterText() {
   if (!activeFilterText) return;
+  const keyword = searchInput?.value.trim() || "";
+  if (promoOnly && keyword) {
+    activeFilterText.textContent = `Promo Spesial untuk “${keyword}”`;
+    return;
+  }
   if (promoOnly) {
-    if (selected.category === "all") {
-      activeFilterText.textContent = "Menampilkan produk yang sedang promo saja.";
-      return;
-    }
-    if (selected.subcategory === "all") {
-      activeFilterText.textContent = `Promo Spesial • Kategori: ${selected.category}`;
-      return;
-    }
-    activeFilterText.textContent = `Promo Spesial • Kategori: ${selected.category} → ${selected.subcategory}`;
+    activeFilterText.textContent = "Menampilkan produk yang sedang promo.";
     return;
   }
-  if (selected.category === "all") {
-    activeFilterText.textContent = "Menampilkan semua produk.";
+  if (keyword) {
+    activeFilterText.textContent = `Hasil untuk “${keyword}”`;
     return;
   }
-  if (selected.subcategory === "all") {
-    activeFilterText.textContent = `Kategori: ${selected.category} (semua sub-kategori)`;
-    return;
-  }
-  activeFilterText.textContent = `Kategori: ${selected.category} → ${selected.subcategory}`;
+  activeFilterText.textContent = "";
 }
 
 function getFilteredProducts() {
   if (!isShopPage) return [];
-  const keyword = searchInput.value.toLowerCase().trim();
+  const keyword = (searchInput?.value || "").toLowerCase().trim();
   const selectedSort = sortSelect.value;
 
   let result = products.filter((product) => {
-    const matchesSearch = String(product.name || "")
-      .toLowerCase()
-      .includes(keyword);
-    const matchesCategory =
-      selected.category === "all" || product.category === selected.category;
+    const haystack = `${product.name || ""} ${product.category || ""} ${product.subcategory || ""}`.toLowerCase();
+    const matchesSearch = !keyword || haystack.includes(keyword);
+    const matchesCategory = selected.category === "all" || product.category === selected.category;
     const matchesSub =
-      selected.subcategory === "all" ||
-      (product.subcategory || "Umum") === selected.subcategory;
+      selected.subcategory === "all" || (product.subcategory || "Umum") === selected.subcategory;
     const matchesPromo = !promoOnly || isPromoProduct(product);
     return matchesSearch && matchesCategory && matchesSub && matchesPromo;
   });
 
   if (selectedSort === "priceAsc") {
-    result = [...result].sort((a, b) => a.price - b.price);
+    result = [...result].sort((a, b) => getFinalPrice(a) - getFinalPrice(b));
   } else if (selectedSort === "priceDesc") {
-    result = [...result].sort((a, b) => b.price - a.price);
+    result = [...result].sort((a, b) => getFinalPrice(b) - getFinalPrice(a));
   } else if (selectedSort === "ratingDesc") {
-    result = [...result].sort((a, b) => b.rating - a.rating);
+    result = [...result].sort((a, b) => Number(b.rating) - Number(a.rating));
   }
 
   return result;
+}
+
+function formatThickness(product) {
+  const nums = [];
+  const sources = parseSizes(product).map((item) => String(item.size || ""));
+  sources.push(String(product.name || ""));
+  sources.forEach((text) => {
+    const matches = text.match(/(\d+(?:[.,]\d+)?)\s*mm/gi) || [];
+    matches.forEach((match) => {
+      const value = Number(match.replace(/mm/i, "").replace(",", ".").trim());
+      if (value > 0 && value < 80) nums.push(value);
+    });
+  });
+  if (!nums.length) return "";
+  const min = Math.min(...nums);
+  const max = Math.max(...nums);
+  const label = (value) => (Number.isInteger(value) ? String(value) : String(value).replace(".", ","));
+  if (min === max) return `Tebal ${label(min)} mm`;
+  return `Tebal ${label(min)} – ${label(max)} mm`;
+}
+
+function productSpecLine(product) {
+  const thick = formatThickness(product);
+  const brand = product.subcategory && product.subcategory !== "Umum" ? product.subcategory : "";
+  if (thick && brand) return `${thick} · ${brand}`;
+  return thick || brand || product.category || "";
+}
+
+function renderCatalogCard(product) {
+  const discount = normalizeDiscount(product.discount);
+  const finalPrice = getFinalPrice(product);
+  const rating = Number(product.rating);
+  const ratingLabel = Number.isFinite(rating) && rating > 0 ? rating.toFixed(1) : "";
+  const outOfStock = (product.stock || 0) <= 0;
+  const spec = productSpecLine(product);
+  const wasPrice =
+    discount > 0
+      ? `<p class="catalog-was"><s>${formatRupiah(getProductBasePrice(product))}</s> Diskon ${discount}%</p>`
+      : "";
+
+  return `
+    <a class="catalog-card${outOfStock ? " is-out" : ""}" href="/product.html?id=${product.id}">
+      <span class="catalog-card-media">
+        <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" />
+        ${outOfStock ? `<span class="catalog-stock">Stok habis</span>` : ""}
+      </span>
+      <span class="catalog-card-body">
+        ${spec ? `<span class="catalog-spec">${escapeHtml(spec)}</span>` : ""}
+        <span class="catalog-name">${escapeHtml(product.name)}</span>
+        <span class="catalog-price">${formatRupiah(finalPrice)}</span>
+        ${wasPrice}
+        ${
+          ratingLabel
+            ? `<span class="catalog-rating"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M12 2.6l2.7 6.3 6.8.6-5.2 4.5 1.6 6.6L12 17.8 6.1 20.6l1.6-6.6L2.5 9.5l6.8-.6L12 2.6z"/></svg>${ratingLabel}</span>`
+            : ""
+        }
+      </span>
+    </a>`;
+}
+
+function renderPager(pageCount) {
+  if (!catalogPager) return;
+  if (pageCount <= 1) {
+    catalogPager.innerHTML = "";
+    catalogPager.hidden = true;
+    return;
+  }
+  catalogPager.hidden = false;
+  const pages = pageCount <= 7
+    ? Array.from({ length: pageCount }, (_, index) => index + 1)
+    : (() => {
+        const set = new Set([1, pageCount, catalogPage - 1, catalogPage, catalogPage + 1].filter((n) => n >= 1 && n <= pageCount));
+        const list = [...set].sort((a, b) => a - b);
+        const out = [];
+        list.forEach((page, index) => {
+          if (index && page - list[index - 1] > 1) out.push("…");
+          out.push(page);
+        });
+        return out;
+      })();
+  const prevDisabled = catalogPage <= 1 ? " disabled" : "";
+  const nextDisabled = catalogPage >= pageCount ? " disabled" : "";
+  catalogPager.innerHTML = `
+    <button type="button" data-page="prev" aria-label="Halaman sebelumnya"${prevDisabled}>‹</button>
+    ${pages
+      .map((page) =>
+        page === "…"
+          ? `<span class="catalog-ellipsis">…</span>`
+          : `<button type="button" data-page="${page}" class="${page === catalogPage ? "is-current" : ""}">${page}</button>`
+      )
+      .join("")}
+    <button type="button" data-page="next" aria-label="Halaman berikutnya"${nextDisabled}>›</button>`;
 }
 
 function renderProducts() {
   if (!isShopPage) return;
   renderActiveFilterText();
   const filtered = getFilteredProducts();
+  const pageCount = Math.max(1, Math.ceil(filtered.length / CATALOG_PAGE_SIZE));
+  if (catalogPage > pageCount) catalogPage = pageCount;
 
   if (!filtered.length) {
-    productGrid.innerHTML = `<p class="empty-state">${promoOnly ? "Tidak ada produk promo saat ini." : "Produk tidak ditemukan."}</p>`;
+    productGrid.innerHTML = `<p class="catalog-empty">${promoOnly ? "Tidak ada produk promo saat ini." : "Produk tidak ditemukan."}</p>`;
+    renderPager(0);
     return;
   }
 
-  productGrid.innerHTML = filtered
-    .map(
-      (product) => `
-      <article class="product-card">
-        <img src="${product.image}" alt="${product.name}" />
-        <div class="product-content">
-          <h3 class="product-title">${product.name}</h3>
-          <p class="product-meta">${product.category} • ${product.subcategory || "Umum"} | Rating ${product.rating}</p>
-          <p class="product-meta" style="color: ${(product.stock || 0) > 0 ? 'var(--primary)' : 'var(--danger)'}; font-weight: 500;">
-            ${(product.stock || 0) > 0 ? `Stok: ${product.stock}` : 'Stok Habis'}
-          </p>
-          ${
-            normalizeDiscount(product.discount) > 0
-              ? `<p class="product-meta" style="color:#047857">Diskon ${normalizeDiscount(product.discount)}%</p>`
-              : ""
-          }
-          ${
-            (product.points_per_purchase || 0) > 0
-              ? `<span style="display: inline-block; background: #fef3c7; color: #d97706; font-size: 0.75rem; font-weight: 600; padding: 2px 6px; border-radius: 4px; margin-bottom: 8px;">🏆 +${product.points_per_purchase} Poin</span>`
-              : ""
-          }
-          <p class="product-price">${formatRupiah(getFinalPrice(product))}</p>
-          <div class="product-card-footer">
-            ${
-              getWhatsAppUrl(product.wa_phone, product.name)
-                ? `<a class="btn-wa action-btn-wa-full" href="${getWhatsAppUrl(product.wa_phone, product.name)}" target="_blank" rel="noopener noreferrer"><span class="wa-icon">WA</span><span>Chat WhatsApp</span></a>`
-                : ""
-            }
-            <div class="product-actions">
-              <a href="/product.html?id=${product.id}" class="btn-secondary action-btn">Detail</a>
-              <button class="btn-primary action-btn add-to-cart" data-id="${product.id}" ${(product.stock || 0) <= 0 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>Keranjang</button>
-              <button class="btn-buy action-btn buy-now" data-id="${product.id}" ${(product.stock || 0) <= 0 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>Beli</button>
-            </div>
-          </div>
-        </div>
-      </article>
-    `
-    )
-    .join("");
+  const start = (catalogPage - 1) * CATALOG_PAGE_SIZE;
+  productGrid.innerHTML = filtered.slice(start, start + CATALOG_PAGE_SIZE).map(renderCatalogCard).join("");
+  renderPager(pageCount);
 }
 
 function refreshCartLineStocks() {
@@ -352,9 +352,9 @@ async function loadProducts() {
     products = Array.isArray(productData) ? productData : [];
 
     try {
-      renderSidebar();
+      renderCategoryRail();
     } catch (error) {
-      categorySidebar.innerHTML = `<p class="empty-state">Gagal memuat kategori.</p>`;
+      categoryRail.innerHTML = `<p class="catalog-empty">Gagal memuat kategori.</p>`;
     }
 
     refreshCartLineStocks();
@@ -362,8 +362,8 @@ async function loadProducts() {
     refreshHeaderCartBadge();
   } catch (error) {
     products = [];
-    productGrid.innerHTML = `<p class="empty-state">${error.message}</p>`;
-    categorySidebar.innerHTML = `<p class="empty-state">Gagal memuat kategori.</p>`;
+    productGrid.innerHTML = `<p class="catalog-empty">${error.message}</p>`;
+    categoryRail.innerHTML = "";
   }
 }
 
@@ -380,51 +380,48 @@ if (isShopPage) {
     }
   });
 
-  categorySidebar.addEventListener("click", (event) => {
+  categoryRail.addEventListener("click", (event) => {
     const btn = event.target.closest("button[data-cat]");
     if (!btn) return;
-    selected.category = btn.dataset.cat;
-    selected.subcategory = btn.dataset.sub;
-    renderSidebar();
+    selected.category = btn.dataset.cat || "all";
+    selected.subcategory = "all";
+    catalogPage = 1;
+    renderCategoryRail();
     renderProducts();
   });
 
-  if (clearCategoryButton) {
-    clearCategoryButton.addEventListener("click", () => {
-      selected.category = "all";
-      selected.subcategory = "all";
-      clearPromoMode();
-      renderSidebar();
-      renderProducts();
-    });
-  }
-
-  productGrid.addEventListener("click", (event) => {
-    const addToCartBtn = event.target.closest(".add-to-cart");
-    const buyNowBtn = event.target.closest(".buy-now");
-
-    if (addToCartBtn) {
-      const pId = addToCartBtn.dataset.id;
-      const product = products.find((p) => p.id === Number(pId));
-      showAddToCartModal(product, (chosenSize, qty) => {
-        const added = handleAddToCart(pId, chosenSize, qty);
-        if (added) alert(`${qty} produk ditambahkan ke keranjang.`);
-      });
-    } else if (buyNowBtn) {
-      const pId = buyNowBtn.dataset.id;
-      const product = products.find((p) => p.id === Number(pId));
-
-      showAddToCartModal(product, (chosenSize, qty) => {
-        const added = handleAddToCart(pId, chosenSize, qty);
-        if (added) {
-          window.location.href = "/cart.html";
-        }
-      });
-    }
+  document.getElementById("catPrev")?.addEventListener("click", () => {
+    categoryRail.scrollBy({ left: -320, behavior: "smooth" });
+  });
+  document.getElementById("catNext")?.addEventListener("click", () => {
+    categoryRail.scrollBy({ left: 320, behavior: "smooth" });
   });
 
-  searchInput.addEventListener("input", renderProducts);
-  sortSelect.addEventListener("change", renderProducts);
+  catalogPager?.addEventListener("click", (event) => {
+    const btn = event.target.closest("button[data-page]");
+    if (!btn || btn.disabled) return;
+    const target = btn.dataset.page;
+    const pageCount = Math.max(1, Math.ceil(getFilteredProducts().length / CATALOG_PAGE_SIZE));
+    if (target === "prev") catalogPage = Math.max(1, catalogPage - 1);
+    else if (target === "next") catalogPage = Math.min(pageCount, catalogPage + 1);
+    else catalogPage = Number(target) || 1;
+    renderProducts();
+    document.getElementById("catalogTitle")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  searchInput?.addEventListener("input", () => {
+    catalogPage = 1;
+    renderProducts();
+  });
+  document.getElementById("headerSearchForm")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    catalogPage = 1;
+    renderProducts();
+  });
+  sortSelect.addEventListener("change", () => {
+    catalogPage = 1;
+    renderProducts();
+  });
 
   const urlQuery = new URLSearchParams(window.location.search).get("q");
   if (urlQuery && searchInput) {

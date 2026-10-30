@@ -1,18 +1,3 @@
-function clampBrandLogoCoord(value, fallback) {
-  const number = Number(value);
-  if (!Number.isFinite(number)) return fallback;
-  return Math.min(92, Math.max(8, Math.round(number * 10) / 10));
-}
-
-function brandLogoStyle(x, y, scale) {
-  const clampScale = (value) => {
-    const number = Number(value);
-    if (!Number.isFinite(number)) return 30;
-    return Math.min(70, Math.max(8, Math.round(number * 10) / 10));
-  };
-  return `--logo-x:${clampBrandLogoCoord(x, 84)}%;--logo-y:${clampBrandLogoCoord(y, 84)}%;--logo-scale:${clampScale(scale)}%;`;
-}
-
 let publicBrands = [];
 let brandsLayout = "cover";
 let brandsCategory = "Semua";
@@ -38,15 +23,10 @@ function collectBrandTabs(brands) {
 function applyBrandsLayoutClass() {
   const grid = document.getElementById("brandsGrid");
   const cats = document.getElementById("brandsCats");
-  document.body.classList.toggle("brands-layout-logo", brandsLayout === "logo");
-  document.body.classList.toggle("brands-layout-cover", brandsLayout !== "logo");
-  if (grid) {
-    grid.classList.toggle("is-logo-grid", brandsLayout === "logo");
-  }
-  if (cats) {
-    const showTabs = brandsLayout === "logo" && collectBrandTabs(publicBrands).length > 1;
-    cats.classList.toggle("hidden", !showTabs);
-  }
+  document.body.classList.remove("brands-layout-logo");
+  document.body.classList.add("brands-layout-cover");
+  if (grid) grid.classList.remove("is-logo-grid");
+  if (cats) cats.classList.add("hidden");
 }
 
 function renderBrandTiles(brands) {
@@ -61,13 +41,12 @@ function renderBrandTiles(brands) {
       '<p class="empty-state" style="grid-column:1/-1;text-align:center;">Belum ada merek di kategori ini.</p>';
     return;
   }
-  const logoMode = brandsLayout === "logo";
   grid.innerHTML = visible
     .map((brand) => {
       const name = escapeHtml(brand.name || "");
       const query = encodeURIComponent(brand.name || "");
       const hasLogo = Boolean(brand.logoUrl);
-      const hasCover = !logoMode && Boolean(brand.coverUrl);
+      const hasCover = Boolean(brand.coverUrl);
       const cover = hasCover
         ? `<img class="sjs-brand-tile-cover" src="${escapeHtml(brand.coverUrl)}" alt="">`
         : "";
@@ -78,15 +57,11 @@ function renderBrandTiles(brands) {
         "sjs-brand-tile",
         hasCover ? "has-cover" : "",
         hasLogo ? "" : "is-text",
-        logoMode ? "is-logo-card" : "",
       ]
         .filter(Boolean)
         .join(" ");
-      const style = logoMode
-        ? ""
-        : ` style="${brandLogoStyle(brand.logoX, brand.logoY, brand.logoScale)}"`;
       return `
-          <a class="${classes}" href="/shop.html?q=${query}" title="${name}"${style}>
+          <a class="${classes}" href="/shop.html?q=${query}" title="${name}">
             ${cover}
             ${mark}
           </a>`;
@@ -128,8 +103,9 @@ async function loadBrandsIntro() {
     brandsLayout = page.layout === "logo" ? "logo" : "cover";
     document.documentElement.style.setProperty("--sjs-brand-card-bg", page.cardColor || "#ffffff");
     if (kickerEl && page.kicker) kickerEl.textContent = page.kicker;
-    if (titleEl && page.title) titleEl.textContent = page.title;
-    if (titleEl && page.titleColor) titleEl.style.color = page.titleColor;
+    if (titleEl && page.title && page.title !== "Mitra & Merek Terpercaya untuk Kualitas Terbaik") {
+      titleEl.textContent = page.title;
+    }
     if (descEl && page.description) descEl.textContent = page.description;
   } catch (error) {
     // keep default HTML copy

@@ -59,7 +59,9 @@ function startInvoicePayCountdown(order) {
   const tick = () => {
     const left = dueMs - Date.now();
     if (left <= 0) {
-      el.textContent = "Waktu pembayaran habis. Pesanan akan dibatalkan otomatis.";
+      const pill = el.closest(".inv-timer");
+      if (pill) pill.textContent = "Waktu pembayaran habis";
+      else el.textContent = "Waktu pembayaran habis. Pesanan akan dibatalkan otomatis.";
       if (invoicePayCountdownTimer) {
         clearInterval(invoicePayCountdownTimer);
         invoicePayCountdownTimer = null;
@@ -67,7 +69,7 @@ function startInvoicePayCountdown(order) {
       setTimeout(() => loadInvoice(), 1500);
       return;
     }
-    el.textContent = `Sisa waktu bayar: ${formatPayCountdown(left)}`;
+    el.textContent = formatPayCountdown(left);
   };
   tick();
   invoicePayCountdownTimer = setInterval(tick, 1000);
@@ -79,25 +81,27 @@ function paymentProofSectionHtml(order, isPaid, isVoid, paymentMethodRaw) {
   const hasProof = Boolean(order.hasPaymentProof);
   const proofName = typeof escapeHtml === "function" ? escapeHtml(order.paymentProofName || "bukti bayar") : order.paymentProofName || "bukti bayar";
   return `
-    <div class="no-print" style="margin-top: 14px; padding: 12px; background: #fff; border-radius: 8px; border: 1px solid #dbeafe;">
-      <p style="margin: 0 0 8px; font-weight: 600; color: #1f2937;">Bukti pembayaran</p>
+    <div class="inv-proof no-print">
+      <p>Bukti pembayaran</p>
       ${
         hasProof
-          ? `<p style="margin: 0 0 8px; font-size: 0.9rem; color: #047857;">Sudah diunggah: ${proofName}${
+          ? `<p class="inv-proof-ok">Sudah diunggah: ${proofName}${
               order.paymentProofAt ? ` · ${new Date(order.paymentProofAt).toLocaleString("id-ID")}` : ""
             }</p>
-            <div id="paymentProofPreview" style="margin-bottom: 8px;"></div>
-            <button type="button" id="paymentProofViewBtn" class="btn-secondary" style="font-size: 0.85rem; padding: 6px 10px;">Lihat bukti</button>`
-          : `<p style="margin: 0 0 8px; font-size: 0.9rem; color: #6b7280;">Unggah foto/screenshot atau PDF bukti transfer. Admin akan mendapat notifikasi.</p>`
+            <div id="paymentProofPreview" class="inv-proof-preview"></div>
+            <button type="button" id="paymentProofViewBtn" class="inv-link-btn">Lihat bukti</button>`
+          : ""
       }
       ${
         canUpload
-          ? `<form id="paymentProofForm" style="margin-top: 10px; display: grid; gap: 8px;">
-              <input type="file" id="paymentProofFile" accept="image/png,image/jpeg,image/webp,application/pdf" required />
-              <button type="submit" id="paymentProofSubmitBtn" class="btn-primary" style="font-size: 0.9rem; padding: 8px 12px;">${
-                hasProof ? "Unggah ulang bukti" : "Unggah bukti bayar"
-              }</button>
-              <p id="paymentProofMessage" class="message" style="margin: 0;"></p>
+          ? `<form id="paymentProofForm" class="inv-proof-form">
+              <input type="file" id="paymentProofFile" class="inv-file" accept="image/png,image/jpeg,image/webp,application/pdf" />
+              <button type="button" class="inv-drop" id="paymentProofDrop">
+                <span class="inv-drop-icon" aria-hidden="true">↑</span>
+                <span data-file-label>Seret file ke sini atau klik untuk mengunggah<br /><small>Format: JPG, PNG, PDF (maks. 10MB)</small></span>
+              </button>
+              <button type="submit" id="paymentProofSubmitBtn">${hasProof ? "Unggah ulang bukti" : "Unggah bukti pembayaran"}</button>
+              <p id="paymentProofMessage" class="message"></p>
             </form>`
           : ""
       }
@@ -195,6 +199,60 @@ function bindPaymentProofForm(order) {
   });
 }
 
+function itemSpecLine(item) {
+  const name = String(item.product_name || "");
+  const thick = name.match(/(\d+(?:[.,]\d+)?)\s*mm/i);
+  const brand = name.match(/^([A-Z][A-Z0-9]{1,})/);
+  const bits = [];
+  if (thick) bits.push(`${thick[1].replace(",", ".")} mm`);
+  else if (item.size) bits.push(String(item.size));
+  if (brand) bits.push(brand[1]);
+  return bits.join(" · ");
+}
+
+function bindInvoiceExtras() {
+  document.querySelectorAll("[data-copy-account]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const number = button.getAttribute("data-copy-account") || "";
+      const original = button.textContent;
+      try {
+        await navigator.clipboard.writeText(number);
+        button.textContent = "Tersalin";
+      } catch {
+        button.textContent = "Gagal menyalin";
+      }
+      setTimeout(() => {
+        button.textContent = original;
+      }, 1400);
+    });
+  });
+
+  const drop = document.getElementById("paymentProofDrop");
+  const fileInput = document.getElementById("paymentProofFile");
+  if (!drop || !fileInput) return;
+  const label = drop.querySelector("[data-file-label]");
+  const showFile = () => {
+    if (label && fileInput.files?.[0]) label.textContent = fileInput.files[0].name;
+  };
+  drop.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", showFile);
+  drop.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    drop.classList.add("is-over");
+  });
+  drop.addEventListener("dragleave", () => drop.classList.remove("is-over"));
+  drop.addEventListener("drop", (event) => {
+    event.preventDefault();
+    drop.classList.remove("is-over");
+    const file = event.dataTransfer?.files?.[0];
+    if (!file || typeof DataTransfer === "undefined") return;
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    fileInput.files = transfer.files;
+    showFile();
+  });
+}
+
 function setInvoiceActionsEnabled(enabled) {
   if (invoicePrintBtn) invoicePrintBtn.disabled = !enabled;
   if (invoicePdfBtn) invoicePdfBtn.disabled = !enabled;
@@ -259,21 +317,21 @@ async function loadInvoice() {
   try {
     const order = await apiFetch(`/orders/${orderId}`);
     
-    const settings = await apiFetch("/settings").catch(() => ({}));
-    const company = settings?.companyProfile || {};
-    const logoUrl = settings?.logoUrl || "";
-
-    const companyLogoHtml = logoUrl ? `<img src="${logoUrl}" class="company-logo" alt="Logo">` : "";
-    let companyName = company.name || "PT SAHABAT JAYA SUKSES"; 
-    if (order.fulfillment_entity === "SJL") {
-      companyName = "PT SUKSES JAYA LESTARI";
-    }
+    const [settings, products] = await Promise.all([
+      apiFetch("/settings").catch(() => ({})),
+      apiFetch("/products").catch(() => []),
+    ]);
+    const imageById = {};
+    (Array.isArray(products) ? products : []).forEach((product) => {
+      const images = getProductImages(product);
+      imageById[product.id] = images[0] || product.image || "";
+    });
     const orderStatus = String(order.status || "").toLowerCase();
     const isPaid = orderStatus === "paid";
     const isVoid = orderStatus === "void";
-    const statusLabel = isVoid ? "VOID / DIBATALKAN" : isPaid ? "LUNAS" : "BELUM DIBAYAR";
-    const statusColor = isVoid ? "#4b5563" : isPaid ? "#059669" : "#c2410c";
-    const dateStr = new Date(order.created_at).toLocaleString('id-ID');
+    const statusLabel = isVoid ? "DIBATALKAN" : isPaid ? "LUNAS" : "BELUM DIBAYAR";
+    const dateStr = new Date(order.created_at).toLocaleDateString("id-ID");
+    const statusClass = isVoid ? "is-void" : isPaid ? "is-paid" : "is-unpaid";
     let shippingMeta = {};
     try {
       shippingMeta = order.shipping_meta ? JSON.parse(order.shipping_meta) : {};
@@ -287,11 +345,9 @@ async function loadInvoice() {
     const taxPercent = Number(order.tax_percent) || 0;
     const taxLine =
       taxMode !== "none" && taxPercent > 0
-        ? `<p style="margin: 4px 0;">${
-            taxMode === "include"
-              ? `PPN ${taxPercent}% (include): termasuk ${formatRupiah(taxAmount)}`
-              : `PPN ${taxPercent}%: ${formatRupiah(taxAmount)}`
-          }</p>`
+        ? `<div class="inv-sum-row"><span>${
+            taxMode === "include" ? `PPN ${taxPercent}% (include)` : `PPN ${taxPercent}%`
+          }</span><span>${formatRupiah(taxAmount)}</span></div>`
         : "";
     const shippingMethodLabel =
       shippingMeta.label ||
@@ -305,26 +361,26 @@ async function loadInvoice() {
             ? "GoSend"
             : order.shipping_method || "-");
     const paymentMethodRaw = String(order.payment_method || "").toLowerCase();
+    const dueText = order.paymentDueAt ? new Date(order.paymentDueAt).toLocaleString("id-ID") : "-";
+    const durationText = order.paymentTimeoutLabel ? escapeHtml(order.paymentTimeoutLabel) : "";
+    const showTimer = paymentMethodRaw !== "cod" && order.paymentTimeoutEnabled && !isPaid && !isVoid && order.paymentDueAt;
     const paymentTimeoutHtml = (() => {
       if (paymentMethodRaw === "cod") return "";
       if (isVoid && String(order.voidReason || order.void_reason || "") === "timeout") {
-        return `<p style="margin-top: 10px; color: #4b5563;"><strong>Batas bayar:</strong> pesanan dibatalkan otomatis karena melewati durasi pembayaran${
-          order.paymentTimeoutLabel ? ` (${escapeHtml(order.paymentTimeoutLabel)})` : ""
-        }.</p>`;
+        return `<div class="inv-field"><span>Batas bayar</span><span>:</span><span>Dibatalkan otomatis${
+          durationText ? ` (durasi ${durationText})` : ""
+        }</span></div>`;
       }
       if (!order.paymentTimeoutEnabled || isPaid || isVoid) return "";
-      const dueText = order.paymentDueAt ? new Date(order.paymentDueAt).toLocaleString("id-ID") : "-";
-      const durationText = order.paymentTimeoutLabel ? escapeHtml(order.paymentTimeoutLabel) : "";
-      return `<p style="margin-top: 10px;"><strong>Batas bayar:</strong> ${dueText}${
-        durationText ? ` <span style="color:#6b7280;">(durasi ${durationText})</span>` : ""
-      }</p>
-      <p id="invoicePayCountdown" style="margin: 4px 0 0; font-weight: 700; color: #c2410c;">Menghitung sisa waktu...</p>`;
+      return `<div class="inv-field"><span>Batas bayar</span><span>:</span><span>${dueText}${
+        durationText ? ` <small>(durasi ${durationText})</small>` : ""
+      }</span></div>`;
     })();
     const paymentMethodLabel =
       paymentMethodRaw === "qris"
         ? "QRIS"
         : paymentMethodRaw === "transfer"
-          ? "Transfer Bank"
+          ? "Transfer bank"
           : paymentMethodRaw === "cod"
             ? "COD"
             : paymentMethodRaw === "ewallet"
@@ -334,142 +390,152 @@ async function loadInvoice() {
     const bankAccountsHtml =
       !isVoid && paymentMethodRaw === "transfer"
         ? banks.length
-          ? `<div style="margin-top: 12px; padding: 12px; background: #fff; border-radius: 8px; border: 1px solid #e5e7eb;">
-              <p style="margin: 0 0 8px 0; font-weight: 600; color: #1f2937;">${
-                isPaid ? "Rekening tujuan transfer:" : "Silakan transfer ke rekening berikut:"
-              }</p>
-              ${banks
-                .map((bank, index) => {
-                  const name = typeof escapeHtml === "function" ? escapeHtml(bank.bankName) : bank.bankName;
-                  const number =
-                    typeof escapeHtml === "function" ? escapeHtml(bank.accountNumber) : bank.accountNumber;
-                  const owner = bank.accountName
-                    ? typeof escapeHtml === "function"
-                      ? escapeHtml(bank.accountName)
-                      : bank.accountName
-                    : "";
-                  return `<div style="padding: 8px 0;${index ? " border-top: 1px solid #f3f4f6;" : ""}">
-                    <p style="margin: 0; font-weight: 600; color: #111827;">${name}</p>
-                    <p style="margin: 2px 0 0; font-size: 1.05rem; letter-spacing: 0.02em; color: #1f2937;">${number}</p>
-                    ${owner ? `<p style="margin: 2px 0 0; font-size: 0.85rem; color: #6b7280;">a.n. ${owner}</p>` : ""}
-                  </div>`;
-                })
-                .join("")}
-            </div>`
-          : `<p style="margin-top: 10px; font-size: 0.9rem; color: #c2410c;">Nomor rekening belum diatur. Hubungi admin.</p>`
+          ? `<p class="inv-transfer-title">${isPaid ? "Rekening tujuan transfer:" : "Silakan transfer ke rekening berikut:"}</p>
+            ${banks
+              .map((bank) => {
+                const number = escapeHtml(bank.accountNumber);
+                const owner = bank.accountName ? escapeHtml(bank.accountName) : "";
+                const mark = escapeHtml(String(bank.bankName || "BANK").slice(0, 4).toUpperCase());
+                return `<div class="inv-bank">
+                  <div class="inv-bank-mark">${mark}</div>
+                  <div>
+                    <p>Nomor rekening</p>
+                    <strong>${number}</strong>
+                    ${owner ? `<small>a.n. ${owner}</small>` : ""}
+                  </div>
+                  <button type="button" class="inv-copy" data-copy-account="${number}">Salin rekening</button>
+                </div>`;
+              })
+              .join("")}`
+          : `<p class="inv-warn-text">Nomor rekening belum diatur. Hubungi admin.</p>`
         : "";
 
-    let itemsHtml = order.items.map(item => {
-      const qty = Math.max(1, Number(item.qty) || 1);
-      const unitPrice = Number(item.final_price ?? item.price) || 0;
-      return `
-      <tr>
-        <td>${item.product_name}${item.size ? ` <span style="color: #2563eb; font-size: 0.85rem;">(${item.size})</span>` : ""}</td>
-        <td style="text-align: center;">${qty}</td>
-        <td style="text-align: right;">${formatRupiah(unitPrice)}</td>
-        <td style="text-align: right;">${Number(item.discount) || 0}%</td>
-        <td style="text-align: right;">${formatRupiah(item.subtotal)}</td>
-      </tr>
-    `;
-    }).join("");
+    const itemsHtml = order.items
+      .map((item) => {
+        const qty = Math.max(1, Number(item.qty) || 1);
+        const unitPrice = Number(item.final_price ?? item.price) || 0;
+        const image = imageById[item.product_id] || "";
+        const spec = itemSpecLine(item);
+        const sizeNote = item.size ? ` (${escapeHtml(item.size)})` : "";
+        return `
+        <tr>
+          <td>
+            <div class="inv-product">
+              ${image ? `<img src="${escapeHtml(image)}" alt="" />` : `<span class="inv-product-fallback"></span>`}
+              <span>
+                <strong>${escapeHtml(item.product_name)}${sizeNote}</strong>
+                ${spec ? `<small>${escapeHtml(spec)}</small>` : ""}
+              </span>
+            </div>
+          </td>
+          <td>${qty}</td>
+          <td>${formatRupiah(unitPrice)}</td>
+          <td>${Number(item.discount) || 0}%</td>
+          <td>${formatRupiah(item.subtotal)}</td>
+        </tr>`;
+      })
+      .join("");
+
+    const noticeText =
+      isVoid && String(order.voidReason || order.void_reason || "") === "timeout"
+        ? "Invoice ini dibatalkan otomatis karena melewati batas waktu pembayaran."
+        : isVoid
+          ? "Invoice ini dibatalkan (void)."
+          : isPaid
+            ? "Terima kasih atas pembayaran Anda."
+            : order.paymentTimeoutEnabled
+              ? `Invoice ini belum lunas. Selesaikan pembayaran sebelum batas waktu atau pesanan dibatalkan otomatis${
+                  order.paymentTimeoutLabel ? ` (durasi ${escapeHtml(order.paymentTimeoutLabel)})` : ""
+                }.`
+              : "Invoice ini belum lunas. Silakan selesaikan pembayaran.";
+    const payStateLabel = isVoid ? "Dibatalkan" : isPaid ? "Sudah diterima" : "Menunggu pembayaran";
 
     invoiceContainer.innerHTML = `
-      <div class="invoice-header">
-        <div class="company-info">
-          ${companyLogoHtml}
-          <div>
-            <h2 style="margin: 0 0 4px 0; color: #111827; font-size: 1.4rem;">${companyName}</h2>
-          </div>
+      <header class="inv-head">
+        <h1>Invoice</h1>
+        <div class="inv-head-meta">
+          <p>Order ID: ${order.id}</p>
+          <p>Tanggal: ${dateStr}</p>
         </div>
-        <div class="invoice-meta">
-          <h1>INVOICE</h1>
-          <p><strong>Order ID:</strong> #${order.id}</p>
-          <p><strong>Tanggal:</strong> ${dateStr}</p>
-          <p><strong>Status:</strong> <span style="color: ${statusColor}; font-weight: 600;">${statusLabel}</span></p>
-        </div>
-      </div>
+        <span class="inv-badge ${statusClass}">${statusLabel}</span>
+      </header>
 
-      <div class="invoice-details">
-        <div>
-          <h3>Info Penagihan & Pengiriman</h3>
-          <p><strong>Nama:</strong> ${order.customer_name}</p>
-          <p><strong>Email:</strong> ${order.customer_email || '-'}</p>
-          <p><strong>Telepon:</strong> ${order.customer_phone}</p>
-          <p><strong>Alamat:</strong><br/>${order.customer_address.replace(/\n/g, '<br/>')}</p>
-          <p style="margin-top: 10px;"><strong>Jasa kirim:</strong> ${shippingMethodLabel}${shippingMeta.estimated ? ' <span style="color:#6b7280;">(estimasi)</span>' : ''}</p>
-          <p style="margin-top: 8px;"><strong>Status kirim:</strong> ${escapeHtml(order.shipmentStatusLabel || "Menunggu proses")}</p>
+      <section class="inv-grid">
+        <article class="inv-card inv-bill">
+          <h2>Info Penagihan dan Pengiriman</h2>
+          <div class="inv-field"><span>Nama</span><span>:</span><span>${escapeHtml(order.customer_name)}</span></div>
+          <div class="inv-field"><span>Email</span><span>:</span><span>${escapeHtml(order.customer_email || "-")}</span></div>
+          <div class="inv-field"><span>Telepon</span><span>:</span><span>${escapeHtml(order.customer_phone)}</span></div>
+          <div class="inv-field"><span>Alamat</span><span>:</span><span>${escapeHtml(order.customer_address || "-").replace(/\n/g, "<br>")}</span></div>
+          <div class="inv-field"><span>Jasa kirim</span><span>:</span><span>${escapeHtml(shippingMethodLabel)}${shippingMeta.estimated ? " (estimasi)" : ""}</span></div>
+          <div class="inv-field"><span>Status kirim</span><span>:</span><span><em class="inv-pill">${escapeHtml(order.shipmentStatusLabel || "Menunggu proses")}</em></span></div>
           ${
             order.trackingNumber
-              ? `<p><strong>No. resi:</strong> ${escapeHtml(order.trackingNumber)}${
+              ? `<div class="inv-field"><span>No. resi</span><span>:</span><span>${escapeHtml(order.trackingNumber)}${
                   order.trackingUrl
                     ? ` · <a href="${escapeHtml(order.trackingUrl)}" target="_blank" rel="noopener">Cek resi</a>`
                     : ""
-                }</p>`
+                }</span></div>`
               : ""
           }
-          ${order.shipmentNote ? `<p><strong>Catatan kirim:</strong> ${escapeHtml(order.shipmentNote)}</p>` : ""}
-          <p class="no-print" style="margin-top: 8px;"><a href="/lacak.html?id=${order.id}" class="btn-secondary" style="font-size: 0.85rem; padding: 6px 10px; display: inline-block;">Lacak pengiriman</a></p>
-        </div>
-        <div>
-          <h3>Info Pembayaran</h3>
-          <p><strong>Metode Pembayaran:</strong> ${paymentMethodLabel}</p>
-          <p><strong>Pembayaran:</strong> ${isVoid ? "Dibatalkan (void)" : isPaid ? "Sudah diterima" : "Menunggu pembayaran"}</p>
+          ${order.shipmentNote ? `<div class="inv-field"><span>Catatan kirim</span><span>:</span><span>${escapeHtml(order.shipmentNote)}</span></div>` : ""}
+          <a class="inv-track no-print" href="/lacak.html?id=${order.id}">Lacak pengiriman</a>
+        </article>
+
+        <article class="inv-card inv-pay">
+          ${showTimer ? `<span class="inv-timer">Sisa waktu bayar <strong id="invoicePayCountdown">--:--:--</strong></span>` : ""}
+          <h2>Pembayaran</h2>
+          <div class="inv-field"><span>Metode pembayaran</span><span>:</span><span>${escapeHtml(paymentMethodLabel)}</span></div>
+          <div class="inv-field"><span>Status pembayaran</span><span>:</span><span class="${isPaid ? "is-paid" : isVoid ? "" : "is-wait"}">${payStateLabel}</span></div>
           ${paymentTimeoutHtml}
           ${bankAccountsHtml}
-          ${!isPaid && !isVoid && paymentMethodRaw === 'qris' && settings?.qrisImageUrl ? `
-            <div style="margin-top: 15px; padding: 15px; background: #fff; border-radius: 8px; border: 1px dashed #2563eb; text-align: center;">
-              <p style="margin: 0 0 10px 0; font-weight: 600; color: #1f2937;">Scan Barcode QRIS di bawah ini:</p>
-              <img src="${settings.qrisImageUrl}" alt="QRIS Barcode" style="max-width: 100%; max-height: 250px; border-radius: 8px; margin: 0 auto; display: block;">
-            </div>
-          ` : ''}
+          ${
+            !isPaid && !isVoid && paymentMethodRaw === "qris" && settings?.qrisImageUrl
+              ? `<div class="inv-qris">
+                  <p>Scan barcode QRIS di bawah ini:</p>
+                  <img src="${escapeHtml(settings.qrisImageUrl)}" alt="QRIS" />
+                </div>`
+              : ""
+          }
           ${paymentProofSectionHtml(order, isPaid, isVoid, paymentMethodRaw)}
-        </div>
-      </div>
+        </article>
+      </section>
 
-      <table class="invoice-items">
+      <table class="inv-items">
         <thead>
           <tr>
             <th>Produk</th>
-            <th style="text-align: center;">Qty</th>
-            <th style="text-align: right;">Harga Satuan</th>
-            <th style="text-align: right;">Diskon</th>
-            <th style="text-align: right;">Subtotal</th>
+            <th>Quantity</th>
+            <th>Harga satuan</th>
+            <th>Diskon</th>
+            <th>Subtotal</th>
           </tr>
         </thead>
-        <tbody>
-          ${itemsHtml}
-        </tbody>
+        <tbody>${itemsHtml}</tbody>
       </table>
 
-      <div class="invoice-total" style="text-align: right;">
-        <p style="margin: 4px 0;">Subtotal produk: ${formatRupiah(productsSubtotal)}</p>
-        ${taxLine}
-        <p style="margin: 4px 0;">Ongkir: ${formatRupiah(shippingFee)}</p>
-        <p style="margin: 12px 0 0; font-size: 1.15rem; font-weight: 700;">TOTAL KESELURUHAN: <span style="color: #2563eb;">${formatRupiah(order.total)}</span></p>
-      </div>
-      
-      <div style="margin-top: 40px; font-size: 0.85rem; color: #6b7280; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 15px;">
-        <p>${
-          isVoid && String(order.voidReason || order.void_reason || "") === "timeout"
-            ? "Invoice ini dibatalkan otomatis karena melewati batas waktu pembayaran."
-            : isVoid
-              ? "Invoice ini dibatalkan (void)."
-              : isPaid
-                ? "Terima kasih atas pembayaran Anda."
-                : order.paymentTimeoutEnabled
-                  ? `Invoice ini belum lunas. Selesaikan pembayaran sebelum batas waktu atau pesanan dibatalkan otomatis${
-                      order.paymentTimeoutLabel ? ` (durasi ${escapeHtml(order.paymentTimeoutLabel)})` : ""
-                    }.`
-                  : "Invoice ini belum lunas. Silakan selesaikan pembayaran."
-        }</p>
-        <p>Barang yang sudah dibeli tidak dapat ditukar atau dikembalikan.</p>
-      </div>
+      <section class="inv-bottom">
+        <div class="inv-notice">
+          <span aria-hidden="true">!</span>
+          <div>
+            <p>${noticeText}</p>
+            <p>Barang yang sudah dibeli tidak dapat ditukar atau dikembalikan</p>
+          </div>
+        </div>
+        <div class="inv-sum">
+          <div class="inv-sum-row"><span>Subtotal produk</span><span>${formatRupiah(productsSubtotal)}</span></div>
+          ${taxLine}
+          <div class="inv-sum-row"><span>Ongkir</span><span>${formatRupiah(shippingFee)}</span></div>
+          <div class="inv-sum-row inv-sum-total"><span>TOTAL KESELURUHAN</span><span>${formatRupiah(order.total)}</span></div>
+        </div>
+      </section>
     `;
 
     currentOrderId = order.id;
     document.title = `Invoice_Order_${order.id}`;
     setInvoiceActionsEnabled(true);
     bindPaymentProofForm(order);
+    bindInvoiceExtras();
     updateAdminStatusBar(order);
     startInvoicePayCountdown(order);
 

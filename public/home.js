@@ -2,19 +2,27 @@ const heroTrack = document.getElementById("heroTrack");
 const heroDots = document.getElementById("heroDots");
 const heroPrev = document.getElementById("heroPrev");
 const heroNext = document.getElementById("heroNext");
-const featuresGrid = document.getElementById("featuresGrid");
-const featuresSectionTitle = document.getElementById("featuresSectionTitle");
-const aboutStats = document.getElementById("aboutStats");
-const aboutTitle = document.getElementById("aboutTitle");
-const aboutSubtitle = document.getElementById("aboutSubtitle");
-const aboutGallery = document.getElementById("aboutGallery");
-const aboutGalleryInner = document.getElementById("aboutGalleryInner");
+const exploreTitle = document.getElementById("exploreTitle");
+const exploreTrack = document.getElementById("exploreTrack");
+const exploreCta = document.getElementById("exploreCta");
+const explorePrev = document.getElementById("explorePrev");
+const exploreNext = document.getElementById("exploreNext");
+const shipTitle = document.getElementById("shipTitle");
+const shipSubtitle = document.getElementById("shipSubtitle");
+const shipCta = document.getElementById("shipCta");
+const shipMap = document.getElementById("shipMap");
+const shipCards = document.getElementById("shipCards");
+const showcaseTiles = document.getElementById("showcaseTiles");
+const showcaseBanner = document.getElementById("showcaseBanner");
 const footerNewsletterTitle = document.getElementById("footerNewsletterTitle");
+const footerNewsletterText = document.getElementById("footerNewsletterText");
+const footerNewsletterLabel = document.getElementById("footerNewsletterLabel");
 const footerNewsletterEmail = document.getElementById("footerNewsletterEmail");
 const footerNewsletterBtn = document.getElementById("footerNewsletterBtn");
 const footerNewsletterForm = document.getElementById("footerNewsletterForm");
 const footerNewsletterMessage = document.getElementById("footerNewsletterMessage");
 const footerSocial = document.getElementById("footerSocial");
+const footerAddress = document.getElementById("footerAddress");
 const footerColumns = document.getElementById("footerColumns");
 const footerCopyright = document.getElementById("footerCopyright");
 
@@ -22,19 +30,138 @@ let currentSlide = 0;
 let slideCount = 0;
 let autoplayTimer = null;
 
+const ARROW_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`;
+
 const DEFAULT_SLIDES = [
   {
-    imageUrl: "",
-    title: "Registrasi Gratis Biaya Admin!",
-    subtitle:
-      "Pengguna akan mendapatkan gratis biaya admin pada 10 pembelian pertama selama periode promo member berlangsung.*",
-    ctaText: "Registrasi Member",
-    ctaLink: "/register.html",
-    footnote: "*Periode promo: ... - ... 2026",
+    imageUrl: "/home/hero.jpg",
+    title: "Beragam Material,\nBanyak Kemungkinan",
+    subtitle: "Temukan material untuk berbagai kebutuhan,\ndari konstruksi furnitur hingga detail interior",
+    ctaText: "Jelajahi Produk",
+    ctaLink: "/shop.html",
+    footnote: "",
   },
 ];
 
-const PLACEHOLDER_SVG = `<svg class="home-feature-placeholder" viewBox="0 0 100 80" xmlns="http://www.w3.org/2000/svg"><rect fill="#87CEEB" width="100" height="50"/><ellipse fill="#fff" cx="70" cy="15" rx="12" ry="8"/><path fill="#4CAF50" d="M0 50 Q25 35 50 50 T100 50 V80 H0Z"/></svg>`;
+const DEFAULT_EXPLORE = {
+  title: "Jelajahi Produk",
+  ctaText: "Lihat Semua Produk",
+  ctaLink: "/shop.html",
+  items: [
+    { imageUrl: "/home/cat-plywood.jpg", title: "Plywood", link: "/shop.html?q=plywood" },
+    { imageUrl: "/home/cat-particle.jpg", title: "Particle Board", link: "/shop.html?q=particle" },
+    { imageUrl: "/home/cat-mdf.jpg", title: "MDF", link: "/shop.html?q=mdf" },
+    { imageUrl: "/home/cat-hmr.jpg", title: "HMR Board", link: "/shop.html?q=hmr" },
+  ],
+};
+
+const DEFAULT_SHIPPING = {
+  title: "Pengiriman\nke Berbagai\nWilayah",
+  subtitle: "Menjangkau kebutuhan material untuk proyek di berbagai daerah Indonesia.",
+  ctaText: "Pelajari Layanan",
+  ctaLink: "/layanan.html",
+  mapImageUrl: "/home/map-indonesia.png",
+  cards: [
+    {
+      imageUrl: "/home/ship-stock.jpg",
+      title: "Stok Terjaga, Siap Dikirim",
+      description: "Ketersediaan material untuk membantu kebutuhan proyekmu tetap berjalan.",
+    },
+    {
+      imageUrl: "/home/ship-fleet.jpg",
+      title: "Dukungan Armada Pengiriman",
+      description: "Didukung armada pengiriman untuk menjangkau berbagai wilayah sesuai cakupan layanan.",
+    },
+    {
+      imageUrl: "/home/ship-coord.jpg",
+      title: "Pengiriman yang Terkoordinasi",
+      description: "Setiap pesanan dipersiapkan untuk mendukung proses pengiriman yang lebih teratur.",
+    },
+    {
+      imageUrl: "/home/ship-team.jpg",
+      title: "Tim Siap Membantu",
+      description: "Tim kami siap membantu menemukan material dan informasi yang sesuai kebutuhanmu.",
+    },
+  ],
+};
+
+const DEFAULT_SHOWCASE = {
+  tiles: [
+    { imageUrl: "/home/show-plywood.jpg", title: "PLYWOOD", link: "/shop.html?q=plywood" },
+    { imageUrl: "/home/show-hpl.jpg", title: "HPL", link: "/shop.html?q=hpl" },
+  ],
+  banner: {
+    imageUrl: "/home/banner-blockboard.jpg",
+    title: "Kenapa Blockboard Sering\nDigunakan untuk Pintu?",
+    link: "/artikel.html",
+  },
+};
+
+const SOCIAL_ICONS = {
+  instagram: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7zm11 1.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>`,
+  facebook: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 9h3V6h-3c-1.7 0-3 1.3-3 3v2H8v3h3v7h3v-7h3l1-3h-4V9c0-.6.4-1 1-1z"/></svg>`,
+  tiktok: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.5 3h-3.1v12.4a2.6 2.6 0 1 1-2.6-2.6c.2 0 .5 0 .7.1v-3.2a5.8 5.8 0 1 0 5.8 5.8V8.8c1.1.8 2.4 1.2 3.7 1.2V7c-2 0-3.7-.8-5-2.1V3z"/></svg>`,
+  linkedin: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.5 9H4V20h2.5V9zM5.2 4A1.6 1.6 0 1 0 5.2 7.2 1.6 1.6 0 0 0 5.2 4zM20 20h-2.5v-5.6c0-1.6-.6-2.6-2-2.6-1 0-1.6.7-1.9 1.4-.1.2-.1.6-.1.9V20H11V9h2.4v1.5c.4-.7 1.3-1.8 3.2-1.8 2.3 0 4 1.5 4 4.8V20z"/></svg>`,
+  tokopedia: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 7V6a4 4 0 1 1 8 0v1h2.2c.5 0 .9.4.9.9l-1.1 12.2c-.1 1-.9 1.9-1.9 1.9H8c-1 0-1.8-.8-1.9-1.9L5 7.9c0-.5.4-.9.9-.9H8zm2 0h4V6a2 2 0 1 0-4 0v1z"/></svg>`,
+};
+
+const DEFAULT_FOOTER_SECTION = {
+  newsletterTitle: "Ada yang Baru dari SJS",
+  newsletterText: "Dapatkan inspirasi material, informasi produk, dan penawaran terbaru langsung ke emailmu.",
+  emailLabel: "Alamat email",
+  emailPlaceholder: "Masukan email Anda",
+  buttonText: "Berlangganan",
+  addressTitle: "Alamat",
+  address:
+    "Komplek Blok M2 No. 24 RT.13/RW.15\nPejagalan Penjaringan, Jl. Taman Permata\nIndah 2, RT.9/RW.15, Pejagalan DKI,\nJkt Utara, Daerah Khusus Ibukota\nJakarta 14450",
+  socialLinks: [
+    { platform: "instagram", url: "https://www.instagram.com/sahabatjayasukses/" },
+    { platform: "facebook", url: "https://www.facebook.com/sahabatjayasukses" },
+    { platform: "tiktok", url: "https://www.tiktok.com/@sahabatjayasukses" },
+    { platform: "tokopedia", url: "" },
+  ],
+  columns: [
+    {
+      title: "Bantuan",
+      links: [
+        { label: "Cara Berbelanja", url: "#" },
+        { label: "Pertanyaan Umum", url: "#" },
+        { label: "Hubungi Kami", url: "/layanan-form.html?jenis=konsultasi" },
+      ],
+    },
+    {
+      title: "Kemitraan",
+      links: [
+        { label: "Pembelian Retail", url: "/layanan-form.html?jenis=custom" },
+        { label: "Kerja Sama Bisnis", url: "/layanan-form.html?jenis=kerjasama" },
+        { label: "Menjadi Mitra", url: "/layanan-form.html?jenis=kerjasama" },
+      ],
+    },
+    {
+      title: "Informasi",
+      links: [
+        { label: "Syarat & Ketentuan", url: "#" },
+        { label: "Kebijakan Privasi", url: "#" },
+        { label: "Pengembalian Produk", url: "/layanan-form.html?jenis=komplain" },
+        { label: "Pengiriman", url: "/layanan.html" },
+      ],
+    },
+  ],
+  copyright: "© 2026 Sahabat Jaya Sukses. Semua hak dilindungi.",
+};
+
+const SHIP_TO_CITIES = [
+  "Pancoran, Jakarta Selatan",
+  "Penjaringan, Jakarta Utara",
+  "Jakarta Pusat",
+  "Jakarta Barat",
+  "Jakarta Timur",
+  "Tangerang",
+  "Bekasi",
+  "Depok",
+  "Bandung",
+  "Surabaya",
+];
 
 function escapeHtml(str) {
   return String(str || "")
@@ -44,8 +171,19 @@ function escapeHtml(str) {
     .replace(/"/g, "&quot;");
 }
 
+function multilineHtml(str) {
+  return escapeHtml(str).replace(/\n/g, "<br />");
+}
+
 function isVideoUrl(url) {
   return /\.(mp4|webm|ogg)$/i.test(String(url || ""));
+}
+
+function waHref(phone) {
+  const digits = String(phone || "").replace(/\D/g, "");
+  if (!digits || digits.includes("x")) return "";
+  const normalized = digits.startsWith("0") ? `62${digits.slice(1)}` : digits;
+  return `https://wa.me/${normalized}`;
 }
 
 function renderSlides(slides) {
@@ -64,7 +202,7 @@ function renderSlides(slides) {
           ? `<video src="${escapeHtml(slide.imageUrl)}" autoplay loop muted playsinline></video>`
           : "";
       const ctaHtml = slide.ctaText
-        ? `<a href="${escapeHtml(slide.ctaLink || "/register.html")}" class="home-hero-cta">${escapeHtml(slide.ctaText)}</a>`
+        ? `<a href="${escapeHtml(slide.ctaLink || "/shop.html")}" class="home-hero-cta">${escapeHtml(slide.ctaText)} ${ARROW_ICON}</a>`
         : "";
       const footnoteHtml = slide.footnote
         ? `<p class="home-hero-footnote">${escapeHtml(slide.footnote)}</p>`
@@ -74,8 +212,8 @@ function renderSlides(slides) {
         <div class="home-hero-slide" style="${bgStyle}">
           ${videoHtml}
           <div class="home-hero-overlay">
-            ${slide.title ? `<h1 class="home-hero-title">${escapeHtml(slide.title)}</h1>` : ""}
-            ${slide.subtitle ? `<p class="home-hero-subtitle">${escapeHtml(slide.subtitle)}</p>` : ""}
+            ${slide.title ? `<h1 class="home-hero-title">${multilineHtml(slide.title)}</h1>` : ""}
+            ${slide.subtitle ? `<p class="home-hero-subtitle">${multilineHtml(slide.subtitle)}</p>` : ""}
             ${ctaHtml}
           </div>
           ${footnoteHtml}
@@ -119,129 +257,96 @@ function resetAutoplay() {
   autoplayTimer = setInterval(() => goToSlide(currentSlide + 1), 6000);
 }
 
-function renderFeatures(features, sectionTitle) {
-  if (featuresSectionTitle && sectionTitle) {
-    featuresSectionTitle.textContent = sectionTitle;
+function renderExplore(section) {
+  if (!exploreTrack && !exploreTitle) return;
+  const data = { ...DEFAULT_EXPLORE, ...(section || {}) };
+  const items = Array.isArray(data.items) && data.items.length ? data.items : DEFAULT_EXPLORE.items;
+  if (exploreTitle) exploreTitle.textContent = data.title || DEFAULT_EXPLORE.title;
+  if (exploreCta) {
+    exploreCta.textContent = data.ctaText || DEFAULT_EXPLORE.ctaText;
+    exploreCta.href = data.ctaLink || DEFAULT_EXPLORE.ctaLink;
   }
-
-  if (!featuresGrid) return;
-
-  const items = features.length ? features : Array(7).fill({ imageUrl: "", title: "", description: "" });
-
-  featuresGrid.innerHTML = items
+  if (!exploreTrack) return;
+  exploreTrack.innerHTML = items
     .map((item) => {
-      const imgContent = item.imageUrl
-        ? `<img src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.title || "Fitur")}" />`
-        : PLACEHOLDER_SVG;
-      const titleHtml = item.title ? `<p class="home-feature-title">${escapeHtml(item.title)}</p>` : "";
-      const descHtml = item.description ? `<p class="home-feature-desc">${escapeHtml(item.description)}</p>` : "";
-      const inner = `
-        <div class="home-feature-img">${imgContent}</div>
-        ${titleHtml}
-        ${descHtml}`;
-
-      if (item.link) {
-        return `<a href="${escapeHtml(item.link)}" class="home-feature-card">${inner}</a>`;
-      }
-      return `<div class="home-feature-card">${inner}</div>`;
+      const img = item.imageUrl
+        ? `<img src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.title || "Produk")}" />`
+        : `<span class="home-explore-empty"></span>`;
+      const inner = `${img}<span class="home-explore-name">${escapeHtml(item.title || "")}</span>`;
+      if (item.link) return `<a class="home-explore-card" href="${escapeHtml(item.link)}">${inner}</a>`;
+      return `<article class="home-explore-card">${inner}</article>`;
     })
     .join("");
 }
 
-const STAT_ICONS = {
-  box: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8.5 12 3 3 8.5v7L12 21l9-5.5v-7Z"/><path d="M3 8.5 12 14l9-5.5M12 14v7"/></svg>`,
-  tools: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76Z"/></svg>`,
-  people: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
-};
+function scrollExplore(direction) {
+  if (!exploreTrack) return;
+  const card = exploreTrack.querySelector(".home-explore-card");
+  const distance = card ? card.getBoundingClientRect().width + 18 : exploreTrack.clientWidth * 0.8;
+  exploreTrack.scrollBy({ left: direction * distance, behavior: "smooth" });
+}
 
-function renderAboutSection(about) {
-  const data = about || {};
-  const stats = Array.isArray(data.stats) && data.stats.length ? data.stats : [];
-  const gallery = Array.isArray(data.gallery) && data.gallery.length ? data.gallery : [];
-
-  if (aboutTitle) {
-    aboutTitle.textContent = data.title || "Pengiriman Multi-Wilayah";
+function renderShipping(section) {
+  if (!shipTitle && !shipCards) return;
+  const data = { ...DEFAULT_SHIPPING, ...(section || {}) };
+  const cards = Array.isArray(data.cards) && data.cards.length ? data.cards : DEFAULT_SHIPPING.cards;
+  if (shipTitle) shipTitle.innerHTML = multilineHtml(data.title || DEFAULT_SHIPPING.title);
+  if (shipSubtitle) shipSubtitle.textContent = data.subtitle || DEFAULT_SHIPPING.subtitle;
+  if (shipCta) {
+    shipCta.textContent = data.ctaText || DEFAULT_SHIPPING.ctaText;
+    shipCta.href = data.ctaLink || DEFAULT_SHIPPING.ctaLink;
   }
-  if (aboutSubtitle) {
-    aboutSubtitle.textContent = data.subtitle || "Menjangkau pengiriman ke berbagai daerah di Indonesia";
+  if (shipMap) {
+    const mapUrl = data.mapImageUrl || DEFAULT_SHIPPING.mapImageUrl;
+    shipMap.innerHTML = mapUrl
+      ? `<img src="${escapeHtml(mapUrl)}" alt="Peta jangkauan pengiriman" />`
+      : "";
   }
-
-  if (aboutStats) {
-    aboutStats.innerHTML = stats
-      .slice(0, 3)
-      .map((stat) => {
-        const styleClass = stat.style === "dark" ? "is-dark" : "is-light";
-        const iconKey = STAT_ICONS[stat.icon] ? stat.icon : "box";
-        return `
-          <div class="home-about-stat ${styleClass}">
-            <span class="home-about-stat-icon">${STAT_ICONS[iconKey]}</span>
-            <strong class="home-about-stat-value">${escapeHtml(stat.value || "")}</strong>
-            <span class="home-about-stat-label">${escapeHtml(stat.label || "")}</span>
-          </div>`;
-      })
-      .join("");
-  }
-
-  if (aboutGalleryInner || aboutGallery) {
-    const target = aboutGalleryInner || aboutGallery;
-    const photos = gallery.slice(0, 4);
-    while (photos.length < 4) photos.push({ imageUrl: "" });
-
-    target.innerHTML = photos
-      .map((item, index) => {
-        const url = String(item?.imageUrl || "").trim();
-        const style = url ? `background-image:url('${escapeHtml(url)}')` : "";
-        const emptyClass = url ? "" : " is-empty";
-        return `<div class="home-about-photo${emptyClass}" style="${style}" role="img" aria-label="Galeri ${index + 1}"></div>`;
-      })
+  if (shipCards) {
+    shipCards.innerHTML = cards
+      .slice(0, 4)
+      .map(
+        (card) => `
+        <article class="home-ship-card">
+          ${card.imageUrl ? `<img src="${escapeHtml(card.imageUrl)}" alt="" />` : ""}
+          <div class="home-ship-card-copy">
+            <h3>${escapeHtml(card.title || "")}</h3>
+            <p>${escapeHtml(card.description || "")}</p>
+          </div>
+        </article>`
+      )
       .join("");
   }
 }
 
-const SOCIAL_ICONS = {
-  instagram: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7zm11 1.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>`,
-  facebook: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 10V7.5c0-.8.7-1.5 1.5-1.5H16V3h-2.2C11.7 3 10 4.7 10 7v3H8v3.5h2V21h3v-7.5h2.5L16 10h-3z"/></svg>`,
-  tiktok: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.5 3h-3.1v12.4a2.6 2.6 0 1 1-2.6-2.6c.2 0 .5 0 .7.1v-3.2a5.8 5.8 0 1 0 5.8 5.8V8.8c1.1.8 2.4 1.2 3.7 1.2V7c-2 0-3.7-.8-5-2.1V3z"/></svg>`,
-  tokopedia: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 7V6a4 4 0 1 1 8 0v1h2.2c.5 0 .9.4.9.9l-1.1 12.2c-.1 1-.9 1.9-1.9 1.9H8c-1 0-1.8-.8-1.9-1.9L5 7.9c0-.5.4-.9.9-.9H8zm2 0h4V6a2 2 0 1 0-4 0v1zm1.1 5.2c-.8 0-1.4.5-1.6 1.2-.2.6.1 1.3.7 1.6.3.2.5.4.5.7 0 .3-.2.5-.5.5s-.5-.2-.5-.5h-1.6c.1 1.1 1 1.9 2.1 1.9 1.2 0 2.1-.9 2.1-2.1 0-.7-.4-1.3-1-1.6-.4-.2-.7-.5-.6-.8 0-.2.2-.4.5-.4s.5.2.5.5h1.6c-.1-1.1-1-1.9-2.2-1.9z"/></svg>`,
-};
-
-const DEFAULT_FOOTER_SECTION = {
-  newsletterTitle: "Jangan sampai ketinggalan informasi\n& promo dari kami!",
-  emailPlaceholder: "Masukkan e-mail...",
-  buttonText: "Kirim",
-  socialLinks: [
-    { platform: "instagram", url: "https://www.instagram.com/sahabatjayasukses/" },
-    { platform: "facebook", url: "https://www.facebook.com/sahabatjayasukses" },
-    { platform: "tiktok", url: "https://www.tiktok.com/@sahabatjayasukses" },
-    { platform: "tokopedia", url: "" },
-  ],
-  columns: [
-    {
-      title: "Bantuan Pengguna",
-      links: [
-        { label: "Cara Berbelanja", url: "#" },
-        { label: "Pertanyaan Umum", url: "#" },
-      ],
-    },
-    {
-      title: "Kerja Sama & Kolaborasi",
-      links: [
-          { label: "Pembelian Retail", url: "/layanan-form.html?jenis=custom" },
-          { label: "Kerja Sama Bisnis", url: "/layanan-form.html?jenis=kerjasama" },
-      ],
-    },
-    {
-      title: "Kebijakan Kami",
-      links: [
-        { label: "Ketentuan Pengguna", url: "#" },
-          { label: "Pengembalian Produk", url: "/layanan-form.html?jenis=komplain" },
-        { label: "Kebijakan Privasi", url: "#" },
-        { label: "Ketentuan Pengiriman", url: "#" },
-      ],
-    },
-  ],
-  copyright: "Copyright © 2026 - PT Sahabat Jaya Sukses",
-};
+function renderShowcase(section) {
+  if (!showcaseTiles && !showcaseBanner) return;
+  const data = {
+    tiles: section?.tiles?.length ? section.tiles : DEFAULT_SHOWCASE.tiles,
+    banner: { ...DEFAULT_SHOWCASE.banner, ...(section?.banner || {}) },
+  };
+  if (showcaseTiles) {
+    showcaseTiles.innerHTML = data.tiles
+      .slice(0, 2)
+      .map((tile) => {
+        const inner = `
+          ${tile.imageUrl ? `<img src="${escapeHtml(tile.imageUrl)}" alt="" />` : ""}
+          <span>${escapeHtml(tile.title || "")}</span>`;
+        if (tile.link) return `<a class="home-showcase-tile" href="${escapeHtml(tile.link)}">${inner}</a>`;
+        return `<article class="home-showcase-tile">${inner}</article>`;
+      })
+      .join("");
+  }
+  if (showcaseBanner) {
+    const banner = data.banner;
+    const inner = `
+      ${banner.imageUrl ? `<img src="${escapeHtml(banner.imageUrl)}" alt="" />` : ""}
+      <span>${multilineHtml(banner.title || "")}</span>`;
+    showcaseBanner.innerHTML = banner.link
+      ? `<a class="home-showcase-banner" href="${escapeHtml(banner.link)}">${inner}</a>`
+      : `<article class="home-showcase-banner">${inner}</article>`;
+  }
+}
 
 function renderFooterSection(footer) {
   const data = {
@@ -256,46 +361,47 @@ function renderFooterSection(footer) {
         ? footer.columns
         : DEFAULT_FOOTER_SECTION.columns,
   };
-  const titleText = data.newsletterTitle || DEFAULT_FOOTER_SECTION.newsletterTitle;
 
   if (footerNewsletterTitle) {
-    footerNewsletterTitle.innerHTML = escapeHtml(titleText)
-      .split("\n")
-      .join("<br />");
+    footerNewsletterTitle.innerHTML = multilineHtml(data.newsletterTitle || DEFAULT_FOOTER_SECTION.newsletterTitle);
+  }
+  if (footerNewsletterText) {
+    footerNewsletterText.textContent = data.newsletterText || DEFAULT_FOOTER_SECTION.newsletterText;
+  }
+  if (footerNewsletterLabel) {
+    footerNewsletterLabel.textContent = data.emailLabel || DEFAULT_FOOTER_SECTION.emailLabel;
   }
   if (footerNewsletterEmail) {
-    footerNewsletterEmail.placeholder = data.emailPlaceholder || "Masukkan e-mail...";
+    footerNewsletterEmail.placeholder = data.emailPlaceholder || DEFAULT_FOOTER_SECTION.emailPlaceholder;
   }
   if (footerNewsletterBtn) {
-    footerNewsletterBtn.textContent = data.buttonText || "Kirim";
+    footerNewsletterBtn.innerHTML = `${escapeHtml(data.buttonText || "Berlangganan")} ${ARROW_ICON}`;
   }
   if (footerCopyright) {
-    footerCopyright.textContent = data.copyright || "Copyright © 2026 - PT Sahabat Jaya Sukses";
+    footerCopyright.textContent = data.copyright || DEFAULT_FOOTER_SECTION.copyright;
   }
-
+  if (footerAddress) {
+    footerAddress.innerHTML = `
+      <h3>${escapeHtml(data.addressTitle || "Alamat")}</h3>
+      <p>${multilineHtml(data.address || "")}</p>`;
+  }
   if (footerSocial) {
-    const socials =
-      typeof getSjsSocialLinks === "function" ? getSjsSocialLinks({ homePage: { footerSection: data } }) : data.socialLinks.slice(0, 4);
+    const socials = data.socialLinks.filter((item) => item?.url && item.url !== "#");
     footerSocial.innerHTML = socials
       .map((item) => {
         const key = SOCIAL_ICONS[item.platform] ? item.platform : "instagram";
-        const label = item.label || key.charAt(0).toUpperCase() + key.slice(1);
-        const url = item.url || "#";
-        const extraClass = key === "tokopedia" ? " is-tokopedia" : "";
-        return `<a href="${escapeHtml(url)}" class="home-footer-social-link${extraClass}" target="_blank" rel="noopener noreferrer" aria-label="${label}">${SOCIAL_ICONS[key]}</a>`;
+        const label = key.charAt(0).toUpperCase() + key.slice(1);
+        return `<a href="${escapeHtml(item.url)}" class="home-footer-social-link" target="_blank" rel="noopener noreferrer" aria-label="${label}">${SOCIAL_ICONS[key]}</a>`;
       })
       .join("");
   }
-
   if (footerColumns) {
     footerColumns.innerHTML = data.columns
       .slice(0, 3)
       .map((col) => {
         const links = (col.links || [])
-          .map(
-            (link) =>
-              `<li><a href="${escapeHtml(link.url || "#")}">${escapeHtml(link.label || "")}</a></li>`
-          )
+          .filter((link) => link?.label)
+          .map((link) => `<li><a href="${escapeHtml(link.url || "#")}">${escapeHtml(link.label || "")}</a></li>`)
           .join("");
         return `
           <div class="home-footer-col">
@@ -309,7 +415,6 @@ function renderFooterSection(footer) {
 
 function bindNewsletterForm() {
   if (!footerNewsletterForm) return;
-
   footerNewsletterForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const email = footerNewsletterEmail?.value.trim() || "";
@@ -329,7 +434,6 @@ function bindNewsletterForm() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || "Gagal mendaftarkan e-mail.");
-
       if (footerNewsletterMessage) {
         footerNewsletterMessage.classList.add("is-success");
         footerNewsletterMessage.textContent = data.message || "Terima kasih! E-mail berhasil didaftarkan.";
@@ -347,9 +451,64 @@ function bindNewsletterForm() {
   });
 }
 
+function bindShipTo() {
+  const button = document.getElementById("shipToButton");
+  const menu = document.getElementById("shipToMenu");
+  const label = document.getElementById("shipToLabel");
+  const list = document.getElementById("shipToList");
+  const input = document.getElementById("shipToInput");
+  if (!button || !menu || !label) return;
+
+  const saved = localStorage.getItem("sjs_ship_city") || "Pancoran, Jakarta Selatan";
+  label.textContent = saved;
+
+  if (list) {
+    list.innerHTML = SHIP_TO_CITIES.map(
+      (city) => `<button type="button" data-city="${escapeHtml(city)}">${escapeHtml(city)}</button>`
+    ).join("");
+    list.addEventListener("click", (event) => {
+      const city = event.target?.dataset?.city;
+      if (!city) return;
+      label.textContent = city;
+      localStorage.setItem("sjs_ship_city", city);
+      menu.classList.add("hidden");
+    });
+  }
+
+  button.addEventListener("click", () => {
+    menu.classList.toggle("hidden");
+    if (input) input.value = label.textContent;
+  });
+
+  input?.form?.addEventListener("submit", (event) => event.preventDefault());
+  document.getElementById("shipToSave")?.addEventListener("click", () => {
+    const city = input?.value.trim();
+    if (!city) return;
+    label.textContent = city;
+    localStorage.setItem("sjs_ship_city", city);
+    menu.classList.add("hidden");
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest("#shipToWrap")) menu.classList.add("hidden");
+  });
+}
+
+function applyHeaderContact(settings) {
+  const wa = document.getElementById("headerWaLink");
+  if (!wa) return;
+  const phone = settings?.whatsappBotNumber || settings?.companyProfile?.phone || "";
+  const href = waHref(phone);
+  if (href) {
+    wa.href = href;
+    wa.target = "_blank";
+    wa.rel = "noopener noreferrer";
+  }
+}
+
 async function loadHomePage() {
   try {
-    const settings = await loadSettings();
+    const settings = await loadSettings({ fresh: true });
     const home = settings?.homePage || {};
     const profile = settings?.companyProfile || {};
 
@@ -359,29 +518,28 @@ async function loadHomePage() {
     if (taglineEl) taglineEl.textContent = home.tagline || profile.tagline || taglineEl.textContent;
 
     renderSlides(home.slides || DEFAULT_SLIDES);
-    renderFeatures(home.features || [], home.sectionTitle || "Satu tempat yang bikin #SemuaJadiSimple");
-    renderAboutSection(home.aboutSection);
+    renderExplore(home.exploreSection);
+    renderShipping(home.shippingSection);
+    renderShowcase(home.showcaseSection);
     renderFooterSection(home.footerSection);
-    
-    // Bind WhatsApp Chatbot Widget
+    applyHeaderContact(settings);
+
     const waWidget = document.getElementById("whatsappChatWidget");
-    if (waWidget) {
-      waWidget.style.display = "none";
-    }
+    if (waWidget) waWidget.style.display = "none";
   } catch (error) {
     renderSlides(DEFAULT_SLIDES);
-    renderFeatures([], "Satu tempat yang bikin #SemuaJadiSimple");
-    renderAboutSection(null);
+    renderExplore(null);
+    renderShipping(null);
+    renderShowcase(null);
     renderFooterSection(null);
-    const waWidget = document.getElementById("whatsappChatWidget");
-    if (waWidget) {
-      waWidget.style.display = "none"; // Sembunyikan jika error
-    }
   }
 }
 
 if (heroPrev) heroPrev.addEventListener("click", () => goToSlide(currentSlide - 1));
 if (heroNext) heroNext.addEventListener("click", () => goToSlide(currentSlide + 1));
+if (explorePrev) explorePrev.addEventListener("click", () => scrollExplore(-1));
+if (exploreNext) exploreNext.addEventListener("click", () => scrollExplore(1));
 
 bindNewsletterForm();
+bindShipTo();
 loadHomePage();

@@ -111,20 +111,73 @@ function normalizeBrandsPage(raw) {
   };
 }
 
+const HOME_LAYOUT_VERSION = 2;
+
 const DEFAULT_HOME_PAGE = {
+  layoutVersion: HOME_LAYOUT_VERSION,
   tagline: "Your Board Solusions",
-  sectionTitle: "Satu tempat yang bikin #SemuaJadiSimple",
+  sectionTitle: "Jelajahi Produk",
   slides: [
     {
-      imageUrl: "",
-      title: "Registrasi Gratis Biaya Admin!",
-      subtitle:
-        "Pengguna akan mendapatkan gratis biaya admin pada 10 pembelian pertama selama periode promo member berlangsung.*",
-      ctaText: "Registrasi Member",
-      ctaLink: "/register.html",
-      footnote: "*Periode promo: ... - ... 2026",
+      imageUrl: "/home/hero.jpg",
+      title: "Beragam Material,\nBanyak Kemungkinan",
+      subtitle: "Temukan material untuk berbagai kebutuhan,\ndari konstruksi furnitur hingga detail interior",
+      ctaText: "Jelajahi Produk",
+      ctaLink: "/shop.html",
+      footnote: "",
     },
   ],
+  exploreSection: {
+    title: "Jelajahi Produk",
+    ctaText: "Lihat Semua Produk",
+    ctaLink: "/shop.html",
+    items: [
+      { imageUrl: "/home/cat-plywood.jpg", title: "Plywood", link: "/shop.html?q=plywood" },
+      { imageUrl: "/home/cat-particle.jpg", title: "Particle Board", link: "/shop.html?q=particle" },
+      { imageUrl: "/home/cat-mdf.jpg", title: "MDF", link: "/shop.html?q=mdf" },
+      { imageUrl: "/home/cat-hmr.jpg", title: "HMR Board", link: "/shop.html?q=hmr" },
+    ],
+  },
+  shippingSection: {
+    title: "Pengiriman\nke Berbagai\nWilayah",
+    subtitle: "Menjangkau kebutuhan material untuk proyek di berbagai daerah Indonesia.",
+    ctaText: "Pelajari Layanan",
+    ctaLink: "/layanan.html",
+    mapImageUrl: "/home/map-indonesia.png",
+    cards: [
+      {
+        imageUrl: "/home/ship-stock.jpg",
+        title: "Stok Terjaga, Siap Dikirim",
+        description: "Ketersediaan material untuk membantu kebutuhan proyekmu tetap berjalan.",
+      },
+      {
+        imageUrl: "/home/ship-fleet.jpg",
+        title: "Dukungan Armada Pengiriman",
+        description: "Didukung armada pengiriman untuk menjangkau berbagai wilayah sesuai cakupan layanan.",
+      },
+      {
+        imageUrl: "/home/ship-coord.jpg",
+        title: "Pengiriman yang Terkoordinasi",
+        description: "Setiap pesanan dipersiapkan untuk mendukung proses pengiriman yang lebih teratur.",
+      },
+      {
+        imageUrl: "/home/ship-team.jpg",
+        title: "Tim Siap Membantu",
+        description: "Tim kami siap membantu menemukan material dan informasi yang sesuai kebutuhanmu.",
+      },
+    ],
+  },
+  showcaseSection: {
+    tiles: [
+      { imageUrl: "/home/show-plywood.jpg", title: "PLYWOOD", link: "/shop.html?q=plywood" },
+      { imageUrl: "/home/show-hpl.jpg", title: "HPL", link: "/shop.html?q=hpl" },
+    ],
+    banner: {
+      imageUrl: "/home/banner-blockboard.jpg",
+      title: "Kenapa Blockboard Sering\nDigunakan untuk Pintu?",
+      link: "/artikel.html",
+    },
+  },
   features: Array.from({ length: 7 }, () => ({
     imageUrl: "",
     title: "",
@@ -142,9 +195,14 @@ const DEFAULT_HOME_PAGE = {
     gallery: Array.from({ length: 4 }, () => ({ imageUrl: "" })),
   },
   footerSection: {
-    newsletterTitle: "Jangan sampai ketinggalan informasi\n& promo dari kami!",
-    emailPlaceholder: "Masukkan e-mail...",
-    buttonText: "Kirim",
+    newsletterTitle: "Ada yang Baru dari SJS",
+    newsletterText: "Dapatkan inspirasi material, informasi produk, dan penawaran terbaru langsung ke emailmu.",
+    emailLabel: "Alamat email",
+    emailPlaceholder: "Masukan email Anda",
+    buttonText: "Berlangganan",
+    addressTitle: "Alamat",
+    address:
+      "Komplek Blok M2 No. 24 RT.13/RW.15\nPejagalan Penjaringan, Jl. Taman Permata\nIndah 2, RT.9/RW.15, Pejagalan DKI,\nJkt Utara, Daerah Khusus Ibukota\nJakarta 14450",
     socialLinks: [
       { platform: "instagram", url: "https://www.instagram.com/sahabatjayasukses/" },
       { platform: "facebook", url: "https://www.facebook.com/sahabatjayasukses" },
@@ -153,30 +211,32 @@ const DEFAULT_HOME_PAGE = {
     ],
     columns: [
       {
-        title: "Bantuan Pengguna",
+        title: "Bantuan",
         links: [
           { label: "Cara Berbelanja", url: "#" },
           { label: "Pertanyaan Umum", url: "#" },
+          { label: "Hubungi Kami", url: "/layanan-form.html?jenis=konsultasi" },
         ],
       },
       {
-        title: "Kerja Sama & Kolaborasi",
+        title: "Kemitraan",
         links: [
           { label: "Pembelian Retail", url: "/layanan-form.html?jenis=custom" },
           { label: "Kerja Sama Bisnis", url: "/layanan-form.html?jenis=kerjasama" },
+          { label: "Menjadi Mitra", url: "/layanan-form.html?jenis=kerjasama" },
         ],
       },
       {
-        title: "Kebijakan Kami",
+        title: "Informasi",
         links: [
-          { label: "Ketentuan Pengguna", url: "#" },
-          { label: "Pengembalian Produk", url: "/layanan-form.html?jenis=komplain" },
+          { label: "Syarat & Ketentuan", url: "#" },
           { label: "Kebijakan Privasi", url: "#" },
-          { label: "Ketentuan Pengiriman", url: "#" },
+          { label: "Pengembalian Produk", url: "/layanan-form.html?jenis=komplain" },
+          { label: "Pengiriman", url: "/layanan.html" },
         ],
       },
     ],
-    copyright: "Copyright © 2026 - PT Sahabat Jaya Sukses",
+    copyright: "© 2026 Sahabat Jaya Sukses. Semua hak dilindungi.",
   },
 };
 
@@ -209,11 +269,14 @@ function normalizeAboutSection(raw) {
   return base;
 }
 
-const FOOTER_COLUMN_LINK_COUNTS = [2, 2, 4];
+const FOOTER_COLUMN_LINK_COUNTS = [3, 3, 4];
 const FOOTER_LINK_FALLBACKS = {
   "Pembelian Retail": "/layanan-form.html?jenis=custom",
   "Kerja Sama Bisnis": "/layanan-form.html?jenis=kerjasama",
+  "Menjadi Mitra": "/layanan-form.html?jenis=kerjasama",
   "Pengembalian Produk": "/layanan-form.html?jenis=komplain",
+  "Hubungi Kami": "/layanan-form.html?jenis=konsultasi",
+  Pengiriman: "/layanan.html",
 };
 
 function resolveFooterLinkUrl(label, url) {
@@ -225,10 +288,14 @@ function resolveFooterLinkUrl(label, url) {
 function normalizeFooterSection(raw) {
   const defaults = DEFAULT_HOME_PAGE.footerSection;
   const base = { ...defaults, ...(raw || {}) };
-  base.newsletterTitle = String(base.newsletterTitle || defaults.newsletterTitle).trim();
-  base.emailPlaceholder = String(base.emailPlaceholder || defaults.emailPlaceholder).trim();
-  base.buttonText = String(base.buttonText || defaults.buttonText).trim();
-  base.copyright = String(base.copyright || defaults.copyright).trim();
+  base.newsletterTitle = String(base.newsletterTitle ?? defaults.newsletterTitle).trim();
+  base.newsletterText = String(base.newsletterText ?? defaults.newsletterText).trim();
+  base.emailLabel = String(base.emailLabel ?? defaults.emailLabel).trim();
+  base.emailPlaceholder = String(base.emailPlaceholder ?? defaults.emailPlaceholder).trim();
+  base.buttonText = String(base.buttonText ?? defaults.buttonText).trim();
+  base.addressTitle = String(base.addressTitle ?? defaults.addressTitle).trim();
+  base.address = String(base.address ?? defaults.address).trim();
+  base.copyright = String(base.copyright ?? defaults.copyright).trim();
 
   const socialDefaults = defaults.socialLinks || [];
   const socialRaw = Array.isArray(base.socialLinks) && base.socialLinks.length ? base.socialLinks : socialDefaults;
@@ -283,13 +350,82 @@ function normalizeFooterSection(raw) {
   return base;
 }
 
+function normalizeExploreSection(raw) {
+  const defaults = DEFAULT_HOME_PAGE.exploreSection;
+  const base = { ...defaults, ...(raw || {}) };
+  base.title = String(base.title ?? defaults.title).trim();
+  base.ctaText = String(base.ctaText ?? defaults.ctaText).trim();
+  base.ctaLink = String(base.ctaLink ?? defaults.ctaLink).trim();
+  const source = Array.isArray(raw?.items) ? raw.items : defaults.items;
+  base.items = source.slice(0, 12).map((item) => ({
+    imageUrl: String(item?.imageUrl || "").trim(),
+    title: String(item?.title || "").trim(),
+    link: String(item?.link || "").trim(),
+  }));
+  if (!base.items.length) base.items = defaults.items.map((item) => ({ ...item }));
+  return base;
+}
+
+function normalizeShippingSection(raw) {
+  const defaults = DEFAULT_HOME_PAGE.shippingSection;
+  const base = { ...defaults, ...(raw || {}) };
+  base.title = String(base.title ?? defaults.title).trim();
+  base.subtitle = String(base.subtitle ?? defaults.subtitle).trim();
+  base.ctaText = String(base.ctaText ?? defaults.ctaText).trim();
+  base.ctaLink = String(base.ctaLink ?? defaults.ctaLink).trim();
+  base.mapImageUrl = String(base.mapImageUrl ?? defaults.mapImageUrl).trim();
+  const cards = Array.isArray(raw?.cards) ? raw.cards : defaults.cards;
+  base.cards = defaults.cards.map((fallback, index) => ({
+    imageUrl: String(cards[index]?.imageUrl ?? fallback.imageUrl).trim(),
+    title: String(cards[index]?.title ?? fallback.title).trim(),
+    description: String(cards[index]?.description ?? fallback.description).trim(),
+  }));
+  return base;
+}
+
+function normalizeShowcaseSection(raw) {
+  const defaults = DEFAULT_HOME_PAGE.showcaseSection;
+  const tiles = Array.isArray(raw?.tiles) ? raw.tiles : defaults.tiles;
+  const banner = raw?.banner || {};
+  return {
+    tiles: defaults.tiles.map((fallback, index) => ({
+      imageUrl: String(tiles[index]?.imageUrl ?? fallback.imageUrl).trim(),
+      title: String(tiles[index]?.title ?? fallback.title).trim(),
+      link: String(tiles[index]?.link ?? fallback.link).trim(),
+    })),
+    banner: {
+      imageUrl: String(banner.imageUrl ?? defaults.banner.imageUrl).trim(),
+      title: String(banner.title ?? defaults.banner.title).trim(),
+      link: String(banner.link ?? defaults.banner.link).trim(),
+    },
+  };
+}
+
 function normalizeHomePage(raw, heroBanners) {
-  const base = { ...DEFAULT_HOME_PAGE, ...(raw || {}) };
-  if (!Array.isArray(base.slides) || !base.slides.length) {
+  const incoming = raw && typeof raw === "object" ? raw : {};
+  const upgraded = Number(incoming.layoutVersion) === HOME_LAYOUT_VERSION;
+  const source = upgraded ? incoming : {};
+  const preservedSocial = !upgraded && Array.isArray(incoming.footerSection?.socialLinks)
+    ? incoming.footerSection.socialLinks
+    : null;
+  const base = { ...DEFAULT_HOME_PAGE, ...source, layoutVersion: HOME_LAYOUT_VERSION };
+
+  if (!upgraded || !Array.isArray(source.slides) || !source.slides.length) {
     const migrated = [];
-    if (heroBanners?.main?.imageUrl) migrated.push({ ...DEFAULT_HOME_PAGE.slides[0], ...heroBanners.main });
-    base.slides = migrated.length ? migrated : DEFAULT_HOME_PAGE.slides;
+    if (heroBanners?.main?.imageUrl && !DEFAULT_HOME_PAGE.slides[0].imageUrl) {
+      migrated.push({ ...DEFAULT_HOME_PAGE.slides[0], ...heroBanners.main });
+    }
+    base.slides = migrated.length ? migrated : DEFAULT_HOME_PAGE.slides.map((slide) => ({ ...slide }));
   }
+  base.slides = base.slides.map((slide) => ({
+    imageUrl: String(slide?.imageUrl || "").trim(),
+    title: String(slide?.title || "").trim(),
+    subtitle: String(slide?.subtitle || "").trim(),
+    ctaText: String(slide?.ctaText || "").trim(),
+    ctaLink: String(slide?.ctaLink || "").trim(),
+    footnote: String(slide?.footnote || "").trim(),
+  }));
+
   if (!Array.isArray(base.features) || !base.features.length) {
     base.features = DEFAULT_HOME_PAGE.features;
   }
@@ -300,16 +436,19 @@ function normalizeHomePage(raw, heroBanners) {
     description: String(item?.description || "").trim(),
     link: String(item?.link || "").trim(),
   }));
-  base.slides = base.slides.map((slide) => ({
-    imageUrl: String(slide?.imageUrl || "").trim(),
-    title: String(slide?.title || "").trim(),
-    subtitle: String(slide?.subtitle || "").trim(),
-    ctaText: String(slide?.ctaText || "").trim(),
-    ctaLink: String(slide?.ctaLink || "").trim(),
-    footnote: String(slide?.footnote || "").trim(),
-  }));
-  base.aboutSection = normalizeAboutSection(base.aboutSection);
-  base.footerSection = normalizeFooterSection(base.footerSection);
+
+  base.exploreSection = normalizeExploreSection(upgraded ? incoming.exploreSection : null);
+  base.shippingSection = normalizeShippingSection(upgraded ? incoming.shippingSection : null);
+  base.showcaseSection = normalizeShowcaseSection(upgraded ? incoming.showcaseSection : null);
+  base.aboutSection = normalizeAboutSection(upgraded ? incoming.aboutSection : null);
+  base.footerSection = normalizeFooterSection(upgraded ? incoming.footerSection : null);
+  if (preservedSocial) {
+    base.footerSection.socialLinks = base.footerSection.socialLinks.map((item, index) => {
+      const old = preservedSocial.find((row) => row?.platform === item.platform) || preservedSocial[index];
+      const url = String(old?.url || "").trim();
+      return { ...item, url: url && url !== "#" ? url : item.url };
+    });
+  }
   return base;
 }
 
@@ -2426,10 +2565,14 @@ app.put(
   async (req, res) => {
     const payload = req.body || {};
     const homePage = normalizeHomePage({
+      layoutVersion: payload.layoutVersion || HOME_LAYOUT_VERSION,
       tagline: payload.tagline,
       sectionTitle: payload.sectionTitle,
       slides: payload.slides,
       features: payload.features,
+      exploreSection: payload.exploreSection,
+      shippingSection: payload.shippingSection,
+      showcaseSection: payload.showcaseSection,
       aboutSection: payload.aboutSection,
       footerSection: payload.footerSection,
     });
@@ -3671,6 +3814,8 @@ async function uniqueArticleSlug(base, excludeId) {
   return `${slug}-${Date.now()}`;
 }
 
+const ARTICLE_CATEGORIES = ["berita", "tips", "inspirasi", "tren"];
+
 function parseArticlePayload(body) {
   const title = String(body?.title || "").trim();
   const category = String(body?.category || "").trim();
@@ -3688,7 +3833,7 @@ app.get("/api/articles", async (req, res) => {
     const params = [];
     let sql =
       "SELECT id, title, slug, category, excerpt, cover_url, published, published_at, created_at FROM articles WHERE published = 1";
-    if (category === "berita" || category === "tips") {
+    if (ARTICLE_CATEGORIES.includes(category)) {
       sql += " AND category = ?";
       params.push(category);
     }
@@ -3733,8 +3878,8 @@ app.post("/api/admin/articles", authMiddleware, requireRole(["admin"]), async (r
     res.status(400).json({ message: "Judul dan isi artikel wajib diisi." });
     return;
   }
-  if (data.category !== "berita" && data.category !== "tips") {
-    res.status(400).json({ message: "Kategori harus Berita atau Tips." });
+  if (!ARTICLE_CATEGORIES.includes(data.category)) {
+    res.status(400).json({ message: "Kategori artikel tidak valid." });
     return;
   }
   try {
@@ -3762,8 +3907,8 @@ app.put("/api/admin/articles/:id", authMiddleware, requireRole(["admin"]), async
     res.status(400).json({ message: "Judul dan isi artikel wajib diisi." });
     return;
   }
-  if (data.category !== "berita" && data.category !== "tips") {
-    res.status(400).json({ message: "Kategori harus Berita atau Tips." });
+  if (!ARTICLE_CATEGORIES.includes(data.category)) {
+    res.status(400).json({ message: "Kategori artikel tidak valid." });
     return;
   }
   try {

@@ -1,97 +1,120 @@
 <!DOCTYPE html>
 <html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="/logo-sjs.png" type="image/png" />
-  <link rel="apple-touch-icon" href="/logo-sjs.png" />
-  <title>Invoice Pesanan</title>
-  <link rel="stylesheet" href="/style.css">
-  <style>
-    body { background: #f3f4f6; color: #111827; font-family: 'Inter', sans-serif; padding: 20px; }
-    .invoice-container { max-width: 800px; margin: 0 auto; padding: 40px; background: #fff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-    .invoice-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e5e7eb; padding-bottom: 20px; margin-bottom: 20px; }
-    .invoice-header h1 { margin: 0; font-size: 2.5rem; color: #1f2937; font-weight: 800; letter-spacing: -0.025em; }
-    .invoice-meta { text-align: right; }
-    .invoice-meta p { margin: 4px 0; font-size: 0.95rem; color: #4b5563; }
-    .company-info { display: flex; align-items: center; gap: 15px; }
-    .company-logo { max-height: 60px; object-fit: contain; }
-    .invoice-details { display: flex; justify-content: space-between; margin-bottom: 30px; gap: 20px; }
-    .invoice-details div { flex: 1; background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #f3f4f6; }
-    .invoice-details h3 { border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-top: 0; margin-bottom: 12px; font-size: 1rem; color: #374151; }
-    .invoice-details p { margin: 6px 0; font-size: 0.95rem; color: #4b5563; line-height: 1.5; }
-    table.invoice-items { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-    table.invoice-items th, table.invoice-items td { padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: left; font-size: 0.95rem; }
-    table.invoice-items th { background: #f9fafb; font-weight: 600; color: #374151; }
-    table.invoice-items td { color: #4b5563; }
-    .invoice-total { text-align: right; font-size: 1.3rem; font-weight: 700; margin-top: 20px; padding-top: 15px; border-top: 2px solid #e5e7eb; color: #111827; }
-    .invoice-actions {
-      max-width: 800px;
-      margin: 0 auto 16px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: center;
-      align-items: center;
-    }
-    .invoice-actions .btn-primary,
-    .invoice-actions .btn-secondary,
-    .invoice-admin-actions .btn-primary,
-    .invoice-admin-actions .btn-danger {
-      font-size: 0.95rem;
-      padding: 10px 20px;
-      min-width: 120px;
-    }
-    .invoice-admin-actions {
-      max-width: 800px;
-      margin: 0 auto 16px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: center;
-      align-items: center;
-      padding: 12px;
-      background: #fff7ed;
-      border: 1px solid #fdba74;
-      border-radius: 8px;
-    }
-    .invoice-admin-actions.hidden {
-      display: none !important;
-    }
-    .invoice-admin-actions .admin-label {
-      font-weight: 700;
-      color: #9a3412;
-      width: 100%;
-      text-align: center;
-      font-size: 0.85rem;
-    }
-    @media print {
-      .no-print { display: none !important; }
-      .invoice-container { border: none; padding: 0; box-shadow: none; max-width: 100%; }
-      body { padding: 0; background: #fff; }
-      @page { margin: 1cm; }
-    }
-  </style>
-</head>
-<body>
-  <div class="no-print invoice-actions">
-    <button type="button" id="invoiceCloseBtn" class="btn-secondary">Tutup</button>
-    <button type="button" id="invoicePrintBtn" class="btn-primary">Cetak</button>
-    <button type="button" id="invoicePdfBtn" class="btn-primary">Export PDF</button>
-  </div>
-  <div id="invoiceAdminActions" class="no-print invoice-admin-actions hidden">
-    <span class="admin-label">Aksi admin</span>
-    <button type="button" id="invoiceMarkPaidBtn" class="btn-primary">Tandai Lunas</button>
-    <button type="button" id="invoiceVoidBtn" class="btn-danger">Batalkan</button>
-    <span id="invoiceAdminMessage" class="message" style="width:100%; text-align:center; margin:0;"></span>
-  </div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/logo-sjs.png" type="image/png" />
+    <link rel="apple-touch-icon" href="/logo-sjs.png" />
+    <title>Invoice Pesanan</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/style.css?v=21" />
+    <link rel="stylesheet" href="/home.css?v=97" />
+  </head>
+  <body class="shop-page invoice-page">
+    <div class="sjs-header-sticky no-print">
+    <header class="sjs-header">
+      <div class="sjs-header-inner">
+        <a class="sjs-brand" href="/">
+          <img id="brandLogo" class="sjs-brand-logo" src="/logo-sjs.png" alt="Logo SJS" />
+          <span class="sjs-brand-fallback hidden" id="brandFallback">SJS</span>
+          <span class="sjs-brand-text">
+            <strong id="companyNameText">PT Sahabat Jaya Sukses</strong>
+            <small id="companyTaglineText">Your Board Solusions</small>
+          </span>
+        </a>
+        <div class="sjs-header-spacer" aria-hidden="true"></div>
+        <div class="sjs-header-right">
+        <form class="sjs-search" id="headerSearchForm" action="/shop.html" method="get">
+          <button type="submit" aria-label="Cari">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3-3"/></svg>
+          </button>
+          <input type="search" name="q" id="headerSearchInput" placeholder="Cari material yang kamu butuhkan" autocomplete="off" />
+        </form>
+        <div class="sjs-header-actions">
+          <button type="button" id="cartButton" class="sjs-cart-btn" aria-label="Keranjang">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h2l2.5 12h11l2.5-9H6"/></svg>
+            <span id="cartCountBadge" class="sjs-cart-badge">0</span>
+          </button>
+          <span class="sjs-cart-btn" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20s-7-4.4-7-9a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 4.6-7 9-7 9z"/></svg>
+          </span>
+          <div id="userArea" class="sjs-user-area"></div>
+          <button type="button" id="topLoginLink" class="sjs-auth-btn">Masuk / Daftar</button>
+          <div class="sjs-profile-wrap hidden" id="profileWrap">
+            <button type="button" id="topProfileLink" class="sjs-profile-icon" aria-label="Menu profil">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v1.2h19.2v-1.2c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+            </button>
+            <div id="profileDropdown" class="sjs-profile-dropdown hidden">
+              <p class="sjs-profile-name" id="profileDropdownName"></p>
+              <a href="/profile.html">Profil Saya</a>
+              <a href="/orders.html">Pesanan Saya</a>
+              <a href="/addresses.html">Alamat Kirim</a>
+              <a href="/admin.html" id="profileAdminLink" class="hidden">Panel Admin</a>
+              <button type="button" id="headerLogoutBtn">Keluar</button>
+            </div>
+          </div>
+        </div>
+        </div>
+      </div>
+    </header>
 
-  <div class="invoice-container" id="invoiceContainer">
-    <div style="text-align:center; padding: 50px; color: #6b7280;">Memuat Invoice...</div>
-  </div>
+    <nav class="sjs-navbar">
+      <div class="sjs-navbar-inner">
+        <div class="sjs-nav-links">
+          <a href="/" class="sjs-nav-item">Beranda</a>
+          <a href="/shop.html" class="sjs-nav-item">Produk</a>
+          <a href="/shop.html?promo=1" class="sjs-nav-item">Promo Spesial</a>
+          <a href="/layanan.html" class="sjs-nav-item">Layanan</a>
+          <a href="/brands.html" class="sjs-nav-item">Merek</a>
+          <a href="/artikel.html" class="sjs-nav-item">Artikel</a>
+        </div>
+        <div class="sjs-navbar-end">
+          <div class="sjs-shipto" id="shipToWrap">
+            <button type="button" class="sjs-shipto-btn" id="shipToButton">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>
+              <span>kirim ke</span>
+              <strong id="shipToLabel">Pancoran, Jakarta Selatan</strong>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="sjs-shipto-menu hidden" id="shipToMenu">
+              <p>Pilih kota tujuan</p>
+              <div id="shipToList" class="sjs-shipto-list"></div>
+              <label for="shipToInput">Atau tulis kota lain</label>
+              <input type="text" id="shipToInput" placeholder="Nama kota" />
+              <button type="button" id="shipToSave">Simpan</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+    </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
-  <script src="/common.js?v=24"></script>
-  <script src="/invoice.js?v=19"></script>
-</body>
+    <main class="inv-page">
+      <div class="no-print inv-toolbar">
+        <button type="button" id="invoiceCloseBtn" class="btn-secondary">Tutup</button>
+        <button type="button" id="invoicePrintBtn" class="btn-secondary">Cetak</button>
+        <button type="button" id="invoicePdfBtn" class="btn-secondary">Export PDF</button>
+      </div>
+      <div id="invoiceAdminActions" class="no-print invoice-admin-actions hidden">
+        <span class="admin-label">Aksi admin</span>
+        <button type="button" id="invoiceMarkPaidBtn" class="btn-primary">Tandai Lunas</button>
+        <button type="button" id="invoiceVoidBtn" class="btn-danger">Batalkan</button>
+        <span id="invoiceAdminMessage" class="message"></span>
+      </div>
+      <div id="invoiceContainer">
+        <p class="inv-loading">Memuat invoice...</p>
+      </div>
+    </main>
+
+    <footer class="auth-foot no-print">
+      <p>© 2026 Sahabat Jaya Sukses. Semua hak dilindungi.</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
+    <script src="/common.js?v=24"></script>
+    <script src="/home.js?v=12"></script>
+    <script src="/invoice.js?v=20"></script>
+  </body>
 </html>

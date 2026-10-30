@@ -7,7 +7,7 @@
     <link rel="apple-touch-icon" href="/logo-sjs.png" />
     <title>Layanan - PT Sahabat Jaya Sukses</title>
     <link rel="stylesheet" href="/style.css?v=21" />
-    <link rel="stylesheet" href="/home.css?v=83" />
+    <link rel="stylesheet" href="/home.css?v=86" />
     <link rel="stylesheet" href="/layanan.css?v=1" />
     <script src="https://accounts.google.com/gsi/client" async></script>
   </head>
@@ -102,25 +102,32 @@
     <footer class="home-footer" id="homeFooter">
       <section class="home-footer-newsletter">
         <div class="home-footer-newsletter-inner">
-          <h2 class="home-footer-newsletter-title" id="footerNewsletterTitle">Jangan sampai ketinggalan informasi &amp; promo dari kami!</h2>
+          <div class="home-news-copy">
+            <h2 class="home-footer-newsletter-title" id="footerNewsletterTitle">Ada yang Baru dari SJS</h2>
+            <p id="footerNewsletterText">Dapatkan inspirasi material, informasi produk, dan penawaran terbaru langsung ke emailmu.</p>
+          </div>
           <form class="home-footer-newsletter-form" id="footerNewsletterForm" novalidate>
+            <label id="footerNewsletterLabel" for="footerNewsletterEmail">Alamat email</label>
             <div class="home-footer-newsletter-row">
-              <input type="email" id="footerNewsletterEmail" placeholder="Masukkan e-mail..." autocomplete="email" required />
-              <button type="submit" id="footerNewsletterBtn">Kirim</button>
+              <input type="email" id="footerNewsletterEmail" placeholder="Masukan email Anda" autocomplete="email" required />
+              <button type="submit" id="footerNewsletterBtn">Berlangganan</button>
             </div>
-            <div class="home-footer-social" id="footerSocial" aria-label="Media sosial"></div>
             <p class="home-footer-msg hidden" id="footerNewsletterMessage"></p>
           </form>
+        </div>
+        <div class="home-footer-social-bar">
+          <div class="home-footer-social" id="footerSocial" aria-label="Media sosial"></div>
         </div>
       </section>
       <section class="home-footer-main">
         <div class="home-footer-main-inner">
+          <div class="home-footer-address" id="footerAddress"></div>
           <div class="home-footer-columns" id="footerColumns"></div>
         </div>
       </section>
       <section class="home-footer-copy">
         <div class="home-footer-copy-inner">
-          <p id="footerCopyright">Copyright © 2026 - PT Sahabat Jaya Sukses</p>
+          <p id="footerCopyright">© 2026 Sahabat Jaya Sukses. Semua hak dilindungi.</p>
         </div>
       </section>
     </footer>
@@ -149,7 +156,7 @@
     </div>
 
     <script src="/common.js?v=24"></script>
-    <script src="/home.js?v=11"></script>
+    <script src="/home.js?v=12"></script>
     <script src="/layanan.js?v=2"></script>
     <script src="/cs-chat.js?v=6"></script>
   </body>

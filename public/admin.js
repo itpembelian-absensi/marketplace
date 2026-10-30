@@ -57,6 +57,9 @@ const homePageForm = document.getElementById("homePageForm");
 const homePageMessage = document.getElementById("homePageMessage");
 const homeSlidesContainer = document.getElementById("homeSlidesContainer");
 const homeFeaturesContainer = document.getElementById("homeFeaturesContainer");
+const homeExploreContainer = document.getElementById("homeExploreContainer");
+const homeShippingContainer = document.getElementById("homeShippingContainer");
+const homeShowcaseContainer = document.getElementById("homeShowcaseContainer");
 const homeAboutContainer = document.getElementById("homeAboutContainer");
 const homeFooterContainer = document.getElementById("homeFooterContainer");
 const addHomeSlideBtn = document.getElementById("addHomeSlideBtn");
@@ -68,6 +71,9 @@ let editingProductId = null;
 let editingProductImages = [];
 let editingUserId = null;
 let cachedMenuCategories = [];
+const USERS_PAGE_SIZE = 10;
+let usersPage = 1;
+let cachedUsers = [];
 
 function setPasswordVisibility(visible) {
   if (!passwordInput || !togglePasswordBtn) return;
@@ -118,12 +124,58 @@ function fillUserForm(user) {
   createUserForm.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+function getUsersPageWindow(total, page, pageSize) {
+  const pageCount = Math.max(1, Math.ceil(total / pageSize) || 1);
+  const current = Math.min(Math.max(1, page), pageCount);
+  const start = (current - 1) * pageSize;
+  return { pageCount, current, start, end: Math.min(start + pageSize, total) };
+}
+
+function renderUsersPager(total, page, pageCount, start, end) {
+  if (pageCount <= 1) return "";
+  const atStart = page <= 1;
+  const atEnd = page >= pageCount;
+  const btn = (target, label, glyph, caption, disabled, glyphFirst) => `
+    <button
+      type="button"
+      class="btn-secondary users-pager-btn"
+      data-action="users-page"
+      data-page="${target}"
+      aria-label="${label}"
+      title="${label}"
+      ${disabled ? "disabled" : ""}
+    >${
+      glyphFirst
+        ? `<span class="users-pager-glyph" aria-hidden="true">${glyph}</span><span>${caption}</span>`
+        : `<span>${caption}</span><span class="users-pager-glyph" aria-hidden="true">${glyph}</span>`
+    }</button>`;
+  return `
+    <nav class="users-pager" aria-label="Halaman daftar user">
+      <span class="users-pager-status">Menampilkan ${start + 1}–${end} dari ${total}</span>
+      ${btn(1, "Halaman awal", "«", "Awal", atStart, true)}
+      ${btn(page - 1, "Halaman sebelumnya", "‹", "Sebelumnya", atStart, true)}
+      <span class="users-pager-status">Halaman ${page} dari ${pageCount}</span>
+      ${btn(page + 1, "Halaman berikutnya", "›", "Berikutnya", atEnd, false)}
+      ${btn(pageCount, "Halaman akhir", "»", "Akhir", atEnd, false)}
+    </nav>
+  `;
+}
+
 function renderTable(users) {
-  if (!users.length) {
+  cachedUsers = Array.isArray(users) ? users : [];
+  if (!cachedUsers.length) {
+    usersPage = 1;
+    const usersHeading = document.querySelector("#usersTab > h2");
+    if (usersHeading) usersHeading.textContent = "Setting User & Role";
     usersTable.innerHTML = '<p class="empty-state">Belum ada user.</p>';
     return;
   }
 
+  const windowInfo = getUsersPageWindow(cachedUsers.length, usersPage, USERS_PAGE_SIZE);
+  usersPage = windowInfo.current;
+  const pageUsers = cachedUsers.slice(windowInfo.start, windowInfo.end);
+  const usersHeading = document.querySelector("#usersTab > h2");
+  if (usersHeading) usersHeading.textContent = `Setting User & Role (${cachedUsers.length})`;
   const currentRole = getAuth()?.user?.role || "user";
 
   usersTable.innerHTML = `
@@ -140,7 +192,7 @@ function renderTable(users) {
           </tr>
         </thead>
         <tbody>
-          ${users
+          ${pageUsers
             .map(
               (u) => `
               <tr>
@@ -177,10 +229,18 @@ function renderTable(users) {
         </tbody>
       </table>
     </div>
+    ${renderUsersPager(
+      cachedUsers.length,
+      windowInfo.current,
+      windowInfo.pageCount,
+      windowInfo.start,
+      windowInfo.end
+    )}
   `;
 }
 
-async function loadUsers() {
+async function loadUsers({ resetPage = false } = {}) {
+  if (resetPage) usersPage = 1;
   usersMessage.textContent = "";
   try {
     const users = await apiFetch("/users");
@@ -294,6 +354,8 @@ createUserForm.addEventListener("submit", async (event) => {
       createMessage.classList.add("success");
       createMessage.textContent = "User berhasil dibuat.";
       resetUserForm();
+      loadUsers({ resetPage: true });
+      return;
     }
     loadUsers();
   } catch (error) {
@@ -316,8 +378,17 @@ if (togglePasswordBtn && passwordInput) {
 
 usersTable.addEventListener("click", async (event) => {
   const btn = event.target.closest("button[data-action]");
-  if (!btn) return;
+  if (!btn || btn.disabled) return;
   const action = btn.dataset.action;
+
+  if (action === "users-page") {
+    const nextPage = Number(btn.dataset.page);
+    if (!Number.isFinite(nextPage) || nextPage === usersPage) return;
+    usersPage = nextPage;
+    renderTable(cachedUsers);
+    usersTable.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
 
   if (action === "edit-user") {
     const user = JSON.parse(decodeURIComponent(btn.dataset.user || ""));
@@ -1470,10 +1541,53 @@ function cloneAboutSection(about) {
   return base;
 }
 
+const DEFAULT_EXPLORE_SECTION = {
+  title: "Jelajahi Produk",
+  ctaText: "Lihat Semua Produk",
+  ctaLink: "/shop.html",
+  items: [
+    { imageUrl: "/home/cat-plywood.jpg", title: "Plywood", link: "/shop.html?q=plywood" },
+    { imageUrl: "/home/cat-particle.jpg", title: "Particle Board", link: "/shop.html?q=particle" },
+    { imageUrl: "/home/cat-mdf.jpg", title: "MDF", link: "/shop.html?q=mdf" },
+    { imageUrl: "/home/cat-hmr.jpg", title: "HMR Board", link: "/shop.html?q=hmr" },
+  ],
+};
+
+const DEFAULT_SHIPPING_SECTION = {
+  title: "Pengiriman\nke Berbagai\nWilayah",
+  subtitle: "Menjangkau kebutuhan material untuk proyek di berbagai daerah Indonesia.",
+  ctaText: "Pelajari Layanan",
+  ctaLink: "/layanan.html",
+  mapImageUrl: "/home/map-indonesia.png",
+  cards: [
+    { imageUrl: "/home/ship-stock.jpg", title: "Stok Terjaga, Siap Dikirim", description: "Ketersediaan material untuk membantu kebutuhan proyekmu tetap berjalan." },
+    { imageUrl: "/home/ship-fleet.jpg", title: "Dukungan Armada Pengiriman", description: "Didukung armada pengiriman untuk menjangkau berbagai wilayah sesuai cakupan layanan." },
+    { imageUrl: "/home/ship-coord.jpg", title: "Pengiriman yang Terkoordinasi", description: "Setiap pesanan dipersiapkan untuk mendukung proses pengiriman yang lebih teratur." },
+    { imageUrl: "/home/ship-team.jpg", title: "Tim Siap Membantu", description: "Tim kami siap membantu menemukan material dan informasi yang sesuai kebutuhanmu." },
+  ],
+};
+
+const DEFAULT_SHOWCASE_SECTION = {
+  tiles: [
+    { imageUrl: "/home/show-plywood.jpg", title: "PLYWOOD", link: "/shop.html?q=plywood" },
+    { imageUrl: "/home/show-hpl.jpg", title: "HPL", link: "/shop.html?q=hpl" },
+  ],
+  banner: {
+    imageUrl: "/home/banner-blockboard.jpg",
+    title: "Kenapa Blockboard Sering\nDigunakan untuk Pintu?",
+    link: "/artikel.html",
+  },
+};
+
 const DEFAULT_FOOTER_SECTION = {
-  newsletterTitle: "Jangan sampai ketinggalan informasi\n& promo dari kami!",
-  emailPlaceholder: "Masukkan e-mail...",
-  buttonText: "Kirim",
+  newsletterTitle: "Ada yang Baru dari SJS",
+  newsletterText: "Dapatkan inspirasi material, informasi produk, dan penawaran terbaru langsung ke emailmu.",
+  emailLabel: "Alamat email",
+  emailPlaceholder: "Masukan email Anda",
+  buttonText: "Berlangganan",
+  addressTitle: "Alamat",
+  address:
+    "Komplek Blok M2 No. 24 RT.13/RW.15\nPejagalan Penjaringan, Jl. Taman Permata\nIndah 2, RT.9/RW.15, Pejagalan DKI,\nJkt Utara, Daerah Khusus Ibukota\nJakarta 14450",
   socialLinks: [
     { platform: "instagram", url: "https://www.instagram.com/sahabatjayasukses/" },
     { platform: "facebook", url: "https://www.facebook.com/sahabatjayasukses" },
@@ -1482,33 +1596,35 @@ const DEFAULT_FOOTER_SECTION = {
   ],
   columns: [
     {
-      title: "Bantuan Pengguna",
+      title: "Bantuan",
       links: [
         { label: "Cara Berbelanja", url: "#" },
         { label: "Pertanyaan Umum", url: "#" },
+        { label: "Hubungi Kami", url: "/layanan-form.html?jenis=konsultasi" },
       ],
     },
     {
-      title: "Kerja Sama & Kolaborasi",
+      title: "Kemitraan",
       links: [
-          { label: "Pembelian Retail", url: "/layanan-form.html?jenis=custom" },
-          { label: "Kerja Sama Bisnis", url: "/layanan-form.html?jenis=kerjasama" },
+        { label: "Pembelian Retail", url: "/layanan-form.html?jenis=custom" },
+        { label: "Kerja Sama Bisnis", url: "/layanan-form.html?jenis=kerjasama" },
+        { label: "Menjadi Mitra", url: "/layanan-form.html?jenis=kerjasama" },
       ],
     },
     {
-      title: "Kebijakan Kami",
+      title: "Informasi",
       links: [
-        { label: "Ketentuan Pengguna", url: "#" },
-          { label: "Pengembalian Produk", url: "/layanan-form.html?jenis=komplain" },
+        { label: "Syarat & Ketentuan", url: "#" },
         { label: "Kebijakan Privasi", url: "#" },
-        { label: "Ketentuan Pengiriman", url: "#" },
+        { label: "Pengembalian Produk", url: "/layanan-form.html?jenis=komplain" },
+        { label: "Pengiriman", url: "/layanan.html" },
       ],
     },
   ],
-  copyright: "Copyright © 2026 - PT Sahabat Jaya Sukses",
+  copyright: "© 2026 Sahabat Jaya Sukses. Semua hak dilindungi.",
 };
 
-const FOOTER_COLUMN_LINK_COUNTS = [2, 2, 4];
+const FOOTER_COLUMN_LINK_COUNTS = [3, 3, 4];
 
 function renderMediaPreview(url) {
   if (!url) return "";
@@ -1537,8 +1653,8 @@ function renderHomeSlideRow(slide, index) {
       </label>
       <div style="margin-top:12px; display:grid; gap:8px;">
         <div>
-          <label style="font-size:0.85rem;color:#6b7280;">Judul di atas foto:</label>
-          <input type="text" class="home-slide-title" data-index="${index}" value="${(slide.title || "").replace(/"/g, "&quot;")}" placeholder="Registrasi Gratis Biaya Admin!" style="width:100%;box-sizing:border-box;" />
+          <label style="font-size:0.85rem;color:#6b7280;">Judul di atas foto (Enter = baris baru):</label>
+          <textarea class="home-slide-title" data-index="${index}" rows="2" placeholder="Beragam Material,&#10;Banyak Kemungkinan" style="width:100%;box-sizing:border-box;">${slide.title || ""}</textarea>
         </div>
         <div>
           <label style="font-size:0.85rem;color:#6b7280;">Subjudul / deskripsi:</label>
@@ -1887,9 +2003,15 @@ function renderHomeFooterForm(footer) {
 
   return `
     <div style="margin-bottom: 12px;">
-      <label style="font-size:0.9rem;color:#6b7280;">Judul newsletter (Enter = baris baru):</label>
-      <textarea id="homeFooterNewsletterTitle" rows="2" placeholder="Jangan sampai ketinggalan informasi..." style="width:100%;box-sizing:border-box;">${data.newsletterTitle || ""}</textarea>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
+      <label style="font-size:0.9rem;color:#6b7280;">Judul newsletter:</label>
+      <input type="text" id="homeFooterNewsletterTitle" value="${(data.newsletterTitle || "").replace(/"/g, "&quot;")}" style="width:100%;box-sizing:border-box;" />
+      <label style="font-size:0.9rem;color:#6b7280;margin-top:8px;display:block;">Deskripsi newsletter:</label>
+      <textarea id="homeFooterNewsletterText" rows="2" style="width:100%;box-sizing:border-box;">${data.newsletterText || ""}</textarea>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:8px;">
+        <div>
+          <label style="font-size:0.85rem;color:#6b7280;">Label e-mail:</label>
+          <input type="text" id="homeFooterEmailLabel" value="${(data.emailLabel || "").replace(/"/g, "&quot;")}" style="width:100%;box-sizing:border-box;" />
+        </div>
         <div>
           <label style="font-size:0.85rem;color:#6b7280;">Placeholder e-mail:</label>
           <input type="text" id="homeFooterEmailPlaceholder" value="${(data.emailPlaceholder || "").replace(/"/g, "&quot;")}" style="width:100%;box-sizing:border-box;" />
@@ -1899,6 +2021,10 @@ function renderHomeFooterForm(footer) {
           <input type="text" id="homeFooterButtonText" value="${(data.buttonText || "").replace(/"/g, "&quot;")}" style="width:100%;box-sizing:border-box;" />
         </div>
       </div>
+      <label style="font-size:0.9rem;color:#6b7280;margin-top:8px;display:block;">Judul alamat:</label>
+      <input type="text" id="homeFooterAddressTitle" value="${(data.addressTitle || "").replace(/"/g, "&quot;")}" style="width:100%;box-sizing:border-box;" />
+      <label style="font-size:0.9rem;color:#6b7280;margin-top:8px;display:block;">Alamat (Enter = baris baru):</label>
+      <textarea id="homeFooterAddress" rows="4" style="width:100%;box-sizing:border-box;">${data.address || ""}</textarea>
     </div>
     <h4 style="margin:12px 0 8px; color:#5a3e32;">Link Media Sosial &amp; Tokopedia</h4>
     <p style="margin:0 0 8px;font-size:0.85rem;color:#6b7280;">Isi URL Tokopedia supaya ikon toko muncul di header dan footer. Kosongkan jika belum ingin ditampilkan.</p>
@@ -1914,8 +2040,12 @@ function renderHomeFooterForm(footer) {
 function collectFooterSectionFromForm() {
   const footerSection = currentHomePage.footerSection || { ...DEFAULT_FOOTER_SECTION };
   footerSection.newsletterTitle = document.getElementById("homeFooterNewsletterTitle")?.value.trim() || "";
+  footerSection.newsletterText = document.getElementById("homeFooterNewsletterText")?.value.trim() || "";
+  footerSection.emailLabel = document.getElementById("homeFooterEmailLabel")?.value.trim() || "";
   footerSection.emailPlaceholder = document.getElementById("homeFooterEmailPlaceholder")?.value.trim() || "";
   footerSection.buttonText = document.getElementById("homeFooterButtonText")?.value.trim() || "";
+  footerSection.addressTitle = document.getElementById("homeFooterAddressTitle")?.value.trim() || "";
+  footerSection.address = document.getElementById("homeFooterAddress")?.value.trim() || "";
   footerSection.copyright = document.getElementById("homeFooterCopyright")?.value.trim() || "";
   footerSection.socialLinks = [0, 1, 2, 3].map((index) => ({
     platform: DEFAULT_FOOTER_SECTION.socialLinks[index]?.platform || "instagram",
@@ -1938,6 +2068,177 @@ function collectFooterSectionFromForm() {
   return footerSection;
 }
 
+function quoteAttr(value) {
+  return String(value || "").replace(/"/g, "&quot;");
+}
+
+function homePhotoField(cls, index, url) {
+  const preview = url ? `<div class="slide-preview-large-wrap">${renderMediaPreview(url)}</div>` : "";
+  return `
+    <input type="hidden" class="${cls}-url" data-index="${index}" value="${quoteAttr(url)}" />
+    <input type="file" class="${cls}-file" data-index="${index}" accept="image/png,image/jpeg,image/webp,image/gif" />
+    <div class="${cls}-preview" data-index="${index}">${preview}</div>`;
+}
+
+function bindHomePhotoPreview(cls) {
+  homePageForm?.querySelectorAll(`.${cls}-file`).forEach((input) => {
+    input.addEventListener("change", () => {
+      const file = input.files?.[0];
+      const preview = homePageForm.querySelector(`.${cls}-preview[data-index="${input.dataset.index}"]`);
+      if (!file || !preview) return;
+      preview.innerHTML = `<img src="${URL.createObjectURL(file)}" class="slide-preview-large" alt="Preview" />`;
+    });
+  });
+}
+
+function renderExploreForm(section) {
+  const data = { ...DEFAULT_EXPLORE_SECTION, ...(section || {}) };
+  const items = Array.isArray(data.items) && data.items.length ? data.items : DEFAULT_EXPLORE_SECTION.items;
+  const rows = items.map((item, index) => `
+    <div class="info-card home-explore-row" data-index="${index}" style="margin-bottom:10px;background:#fafafa;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h4 style="margin:0;color:#5a3e32;">Kartu ${index + 1}</h4>
+        <button type="button" class="btn-danger btn-remove-explore" data-index="${index}">Hapus</button>
+      </div>
+      ${homePhotoField("home-explore", index, item.imageUrl)}
+      <label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Nama:</label>
+      <input type="text" class="home-explore-title" data-index="${index}" value="${quoteAttr(item.title)}" style="width:100%;box-sizing:border-box;" />
+      <label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Tautan:</label>
+      <input type="text" class="home-explore-link" data-index="${index}" value="${quoteAttr(item.link)}" placeholder="/shop.html?q=plywood" style="width:100%;box-sizing:border-box;" />
+    </div>`).join("");
+  return `
+    <label style="font-size:0.9rem;color:#6b7280;">Judul bagian:</label>
+    <input type="text" id="homeExploreTitle" value="${quoteAttr(data.title)}" style="width:100%;box-sizing:border-box;" />
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 12px;">
+      <div>
+        <label style="font-size:0.85rem;color:#6b7280;">Teks tombol:</label>
+        <input type="text" id="homeExploreCtaText" value="${quoteAttr(data.ctaText)}" style="width:100%;box-sizing:border-box;" />
+      </div>
+      <div>
+        <label style="font-size:0.85rem;color:#6b7280;">Tautan tombol:</label>
+        <input type="text" id="homeExploreCtaLink" value="${quoteAttr(data.ctaLink)}" style="width:100%;box-sizing:border-box;" />
+      </div>
+    </div>
+    ${rows}
+    <button type="button" id="addExploreItemBtn" class="btn-secondary">+ Tambah Kartu</button>`;
+}
+
+function renderShippingForm(section) {
+  const data = { ...DEFAULT_SHIPPING_SECTION, ...(section || {}), cards: section?.cards?.length ? section.cards : DEFAULT_SHIPPING_SECTION.cards };
+  const cards = [0, 1, 2, 3].map((index) => {
+    const card = data.cards[index] || { imageUrl: "", title: "", description: "" };
+    return `
+      <div class="info-card" style="margin-bottom:10px;background:#fafafa;">
+        <h4 style="margin:0 0 8px;color:#5a3e32;">Kartu ${index + 1}</h4>
+        ${homePhotoField("home-ship", index, card.imageUrl)}
+        <label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Judul:</label>
+        <input type="text" class="home-ship-title" data-index="${index}" value="${quoteAttr(card.title)}" style="width:100%;box-sizing:border-box;" />
+        <label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Keterangan:</label>
+        <textarea class="home-ship-desc" data-index="${index}" rows="2" style="width:100%;box-sizing:border-box;">${card.description || ""}</textarea>
+      </div>`;
+  }).join("");
+  return `
+    <label style="font-size:0.9rem;color:#6b7280;">Judul (Enter = baris baru):</label>
+    <textarea id="homeShipTitle" rows="3" style="width:100%;box-sizing:border-box;">${data.title || ""}</textarea>
+    <label style="font-size:0.9rem;color:#6b7280;margin-top:8px;display:block;">Subjudul:</label>
+    <textarea id="homeShipSubtitle" rows="2" style="width:100%;box-sizing:border-box;">${data.subtitle || ""}</textarea>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+      <div>
+        <label style="font-size:0.85rem;color:#6b7280;">Teks tombol:</label>
+        <input type="text" id="homeShipCtaText" value="${quoteAttr(data.ctaText)}" style="width:100%;box-sizing:border-box;" />
+      </div>
+      <div>
+        <label style="font-size:0.85rem;color:#6b7280;">Tautan tombol:</label>
+        <input type="text" id="homeShipCtaLink" value="${quoteAttr(data.ctaLink)}" style="width:100%;box-sizing:border-box;" />
+      </div>
+    </div>
+    <h4 style="margin:16px 0 8px;color:#5a3e32;">Peta</h4>
+    ${homePhotoField("home-ship-map", 0, data.mapImageUrl)}
+    <h4 style="margin:16px 0 8px;color:#5a3e32;">Empat kartu foto</h4>
+    ${cards}`;
+}
+
+function renderShowcaseForm(section) {
+  const data = {
+    tiles: section?.tiles?.length ? section.tiles : DEFAULT_SHOWCASE_SECTION.tiles,
+    banner: { ...DEFAULT_SHOWCASE_SECTION.banner, ...(section?.banner || {}) },
+  };
+  const tiles = [0, 1].map((index) => {
+    const tile = data.tiles[index] || { imageUrl: "", title: "", link: "" };
+    return `
+      <div class="info-card" style="margin-bottom:10px;background:#fafafa;">
+        <h4 style="margin:0 0 8px;color:#5a3e32;">Foto besar ${index + 1}</h4>
+        ${homePhotoField("home-show", index, tile.imageUrl)}
+        <label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Teks di foto:</label>
+        <input type="text" class="home-show-title" data-index="${index}" value="${quoteAttr(tile.title)}" style="width:100%;box-sizing:border-box;" />
+        <label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Tautan:</label>
+        <input type="text" class="home-show-link" data-index="${index}" value="${quoteAttr(tile.link)}" style="width:100%;box-sizing:border-box;" />
+      </div>`;
+  }).join("");
+  return `
+    ${tiles}
+    <div class="info-card" style="margin-bottom:10px;background:#fafafa;">
+      <h4 style="margin:0 0 8px;color:#5a3e32;">Banner lebar</h4>
+      ${homePhotoField("home-banner", 0, data.banner.imageUrl)}
+      <label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Judul (Enter = baris baru):</label>
+      <textarea id="homeBannerTitle" rows="2" style="width:100%;box-sizing:border-box;">${data.banner.title || ""}</textarea>
+      <label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Tautan:</label>
+      <input type="text" id="homeBannerLink" value="${quoteAttr(data.banner.link)}" style="width:100%;box-sizing:border-box;" />
+    </div>`;
+}
+
+function collectExploreFromForm() {
+  const items = [];
+  homePageForm.querySelectorAll(".home-explore-row").forEach((row) => {
+    const index = row.dataset.index;
+    items.push({
+      imageUrl: row.querySelector(".home-explore-url")?.value.trim() || "",
+      title: row.querySelector(".home-explore-title")?.value.trim() || "",
+      link: row.querySelector(".home-explore-link")?.value.trim() || "",
+    });
+  });
+  return {
+    title: document.getElementById("homeExploreTitle")?.value.trim() || "",
+    ctaText: document.getElementById("homeExploreCtaText")?.value.trim() || "",
+    ctaLink: document.getElementById("homeExploreCtaLink")?.value.trim() || "",
+    items,
+  };
+}
+
+function collectShippingFromForm() {
+  return {
+    title: document.getElementById("homeShipTitle")?.value.trim() || "",
+    subtitle: document.getElementById("homeShipSubtitle")?.value.trim() || "",
+    ctaText: document.getElementById("homeShipCtaText")?.value.trim() || "",
+    ctaLink: document.getElementById("homeShipCtaLink")?.value.trim() || "",
+    mapImageUrl: homePageForm.querySelector(".home-ship-map-url")?.value.trim() || "",
+    cards: [0, 1, 2, 3].map((index) => ({
+      imageUrl: homePageForm.querySelector(`.home-ship-url[data-index="${index}"]`)?.value.trim() || "",
+      title: homePageForm.querySelector(`.home-ship-title[data-index="${index}"]`)?.value.trim() || "",
+      description: homePageForm.querySelector(`.home-ship-desc[data-index="${index}"]`)?.value.trim() || "",
+    })),
+  };
+}
+
+function collectShowcaseFromForm() {
+  return {
+    tiles: [0, 1].map((index) => ({
+      imageUrl: homePageForm.querySelector(`.home-show-url[data-index="${index}"]`)?.value.trim() || "",
+      title: homePageForm.querySelector(`.home-show-title[data-index="${index}"]`)?.value.trim() || "",
+      link: homePageForm.querySelector(`.home-show-link[data-index="${index}"]`)?.value.trim() || "",
+    })),
+    banner: {
+      imageUrl: homePageForm.querySelector(".home-banner-url")?.value.trim() || "",
+      title: document.getElementById("homeBannerTitle")?.value.trim() || "",
+      link: document.getElementById("homeBannerLink")?.value.trim() || "",
+    },
+  };
+}
+
+async function uploadHomePhoto(file) {
+  return uploadPictureImage(file, "home");
+}
+
 function renderHomePageForms() {
   if (homeSlidesContainer) {
     homeSlidesContainer.innerHTML = (currentHomePage.slides || [])
@@ -1951,6 +2252,32 @@ function renderHomePageForms() {
       });
     });
     bindSlideUploadHandlers();
+  }
+  if (homeExploreContainer) {
+    homeExploreContainer.innerHTML = renderExploreForm(currentHomePage.exploreSection);
+    bindHomePhotoPreview("home-explore");
+    homeExploreContainer.querySelectorAll(".btn-remove-explore").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        currentHomePage.exploreSection = collectExploreFromForm();
+        currentHomePage.exploreSection.items.splice(Number(btn.dataset.index), 1);
+        renderHomePageForms();
+      });
+    });
+    document.getElementById("addExploreItemBtn")?.addEventListener("click", () => {
+      currentHomePage.exploreSection = collectExploreFromForm();
+      currentHomePage.exploreSection.items.push({ imageUrl: "", title: "", link: "/shop.html" });
+      renderHomePageForms();
+    });
+  }
+  if (homeShippingContainer) {
+    homeShippingContainer.innerHTML = renderShippingForm(currentHomePage.shippingSection);
+    bindHomePhotoPreview("home-ship");
+    bindHomePhotoPreview("home-ship-map");
+  }
+  if (homeShowcaseContainer) {
+    homeShowcaseContainer.innerHTML = renderShowcaseForm(currentHomePage.showcaseSection);
+    bindHomePhotoPreview("home-show");
+    bindHomePhotoPreview("home-banner");
   }
   if (homeFeaturesContainer) {
     homeFeaturesContainer.innerHTML = (currentHomePage.features || [])
@@ -1988,8 +2315,12 @@ async function loadHomePageSettings() {
     if (!currentHomePage.footerSection) {
       currentHomePage.footerSection = { ...DEFAULT_FOOTER_SECTION };
     }
+    if (!currentHomePage.exploreSection) currentHomePage.exploreSection = { ...DEFAULT_EXPLORE_SECTION, items: DEFAULT_EXPLORE_SECTION.items.map((item) => ({ ...item })) };
+    if (!currentHomePage.shippingSection) currentHomePage.shippingSection = { ...DEFAULT_SHIPPING_SECTION, cards: DEFAULT_SHIPPING_SECTION.cards.map((item) => ({ ...item })) };
+    if (!currentHomePage.showcaseSection) currentHomePage.showcaseSection = { tiles: DEFAULT_SHOWCASE_SECTION.tiles.map((item) => ({ ...item })), banner: { ...DEFAULT_SHOWCASE_SECTION.banner } };
     document.getElementById("homeTagline").value = currentHomePage.tagline || "";
-    document.getElementById("homeSectionTitle").value = currentHomePage.sectionTitle || "";
+    const sectionTitleInput = document.getElementById("homeSectionTitle");
+    if (sectionTitleInput) sectionTitleInput.value = currentHomePage.sectionTitle || "";
     renderHomePageForms();
   } catch (err) {}
 }
@@ -2061,28 +2392,67 @@ if (homePageForm) {
         }
       }
 
-      currentHomePage.features.forEach((feature, idx) => {
-        feature.title = homePageForm.querySelector(`.home-feature-title[data-index="${idx}"]`)?.value.trim() || "";
-        feature.description = homePageForm.querySelector(`.home-feature-desc[data-index="${idx}"]`)?.value.trim() || "";
-        feature.link = homePageForm.querySelector(`.home-feature-link[data-index="${idx}"]`)?.value.trim() || "";
-      });
-
-      for (let idx = 0; idx < currentHomePage.features.length; idx++) {
-        const fileInput = homePageForm.querySelector(`.home-feature-file[data-index="${idx}"]`);
-        if (fileInput?.files[0]) {
-          currentHomePage.features[idx].imageUrl = await uploadFeatureImage(fileInput.files[0]);
+      if (homeFeaturesContainer) {
+        currentHomePage.features.forEach((feature, idx) => {
+          feature.title = homePageForm.querySelector(`.home-feature-title[data-index="${idx}"]`)?.value.trim() || "";
+          feature.description = homePageForm.querySelector(`.home-feature-desc[data-index="${idx}"]`)?.value.trim() || "";
+          feature.link = homePageForm.querySelector(`.home-feature-link[data-index="${idx}"]`)?.value.trim() || "";
+        });
+        for (let idx = 0; idx < currentHomePage.features.length; idx++) {
+          const fileInput = homePageForm.querySelector(`.home-feature-file[data-index="${idx}"]`);
+          if (fileInput?.files[0]) {
+            currentHomePage.features[idx].imageUrl = await uploadFeatureImage(fileInput.files[0]);
+          }
         }
       }
 
-      const aboutSection = await collectAboutSectionFromForm();
-      currentHomePage.aboutSection = aboutSection;
+      if (homeAboutContainer) {
+        currentHomePage.aboutSection = await collectAboutSectionFromForm();
+      }
+
+      currentHomePage.exploreSection = collectExploreFromForm();
+      for (let idx = 0; idx < currentHomePage.exploreSection.items.length; idx++) {
+        const fileInput = homePageForm.querySelector(`.home-explore-file[data-index="${idx}"]`);
+        if (fileInput?.files?.[0]) {
+          currentHomePage.exploreSection.items[idx].imageUrl = await uploadHomePhoto(fileInput.files[0]);
+        }
+      }
+
+      currentHomePage.shippingSection = collectShippingFromForm();
+      const mapFile = homePageForm.querySelector(".home-ship-map-file");
+      if (mapFile?.files?.[0]) {
+        currentHomePage.shippingSection.mapImageUrl = await uploadHomePhoto(mapFile.files[0]);
+      }
+      for (let idx = 0; idx < 4; idx++) {
+        const fileInput = homePageForm.querySelector(`.home-ship-file[data-index="${idx}"]`);
+        if (fileInput?.files?.[0]) {
+          currentHomePage.shippingSection.cards[idx].imageUrl = await uploadHomePhoto(fileInput.files[0]);
+        }
+      }
+
+      currentHomePage.showcaseSection = collectShowcaseFromForm();
+      for (let idx = 0; idx < 2; idx++) {
+        const fileInput = homePageForm.querySelector(`.home-show-file[data-index="${idx}"]`);
+        if (fileInput?.files?.[0]) {
+          currentHomePage.showcaseSection.tiles[idx].imageUrl = await uploadHomePhoto(fileInput.files[0]);
+        }
+      }
+      const bannerFile = homePageForm.querySelector(".home-banner-file");
+      if (bannerFile?.files?.[0]) {
+        currentHomePage.showcaseSection.banner.imageUrl = await uploadHomePhoto(bannerFile.files[0]);
+      }
+
       currentHomePage.footerSection = collectFooterSectionFromForm();
 
       const payload = {
+        layoutVersion: 2,
         tagline: document.getElementById("homeTagline").value.trim(),
-        sectionTitle: document.getElementById("homeSectionTitle").value.trim(),
+        sectionTitle: currentHomePage.sectionTitle || "",
         slides: currentHomePage.slides,
         features: currentHomePage.features,
+        exploreSection: currentHomePage.exploreSection,
+        shippingSection: currentHomePage.shippingSection,
+        showcaseSection: currentHomePage.showcaseSection,
         aboutSection: currentHomePage.aboutSection,
         footerSection: currentHomePage.footerSection,
       };
@@ -4367,7 +4737,12 @@ async function loadAdminArticles() {
       list.innerHTML = '<p class="empty-state">Belum ada artikel.</p>';
       return;
     }
-    const labels = { berita: "Berita", tips: "Tips" };
+    const labels = {
+      berita: "Berita",
+      tips: "Tips & Panduan",
+      inspirasi: "Inspirasi",
+      tren: "Tren & Desain",
+    };
     list.innerHTML = `<table style="width:100%;border-collapse:collapse;text-align:left;">
       <thead><tr style="border-bottom:1px solid var(--border);">
         <th style="padding:8px;">Judul</th>

@@ -822,7 +822,7 @@
       <section id="articlesTab" class="auth-card admin-panel hidden">
         <h2>Artikel</h2>
         <p class="empty-state" style="margin-bottom: 12px;">
-          Tulis pengumuman (Berita) atau tips pilih papan. Hanya admin yang bisa menerbitkan — tampil di menu <strong>Artikel</strong>.
+          Tulis berita, tips, inspirasi, atau tren desain. Hanya admin yang bisa menerbitkan — tampil di menu <strong>Artikel</strong>.
         </p>
         <form id="articleForm" class="auth-form">
           <label for="articleTitleInput">Judul</label>
@@ -830,8 +830,10 @@
 
           <label for="articleCategoryInput">Kategori</label>
           <select id="articleCategoryInput" required>
+            <option value="tips">Tips &amp; Panduan</option>
             <option value="berita">Berita</option>
-            <option value="tips">Tips</option>
+            <option value="inspirasi">Inspirasi</option>
+            <option value="tren">Tren &amp; Desain</option>
           </select>
 
           <label for="articleDateInput">Tanggal terbit</label>
@@ -1181,37 +1183,40 @@
 
       <section id="bannerTab" class="auth-card admin-panel hidden">
         <h2>Pengaturan Halaman Utama</h2>
-        <p class="empty-state" style="margin-bottom: 12px">Atur slider banner, tagline, dan kartu fitur di halaman depan website.</p>
+        <p class="empty-state" style="margin-bottom: 12px">Ubah foto dan teks setiap bagian beranda. Kosongkan teks jika tidak ingin ditampilkan.</p>
 
         <form id="homePageForm" class="auth-form">
           <div class="info-card" style="margin-bottom: 12px">
             <h3>Informasi Brand</h3>
-            <label style="font-size: 0.9rem; color: #6b7280;">Tagline (di bawah nama perusahaan):</label>
+            <label style="font-size: 0.9rem; color: #6b7280;">Tagline (di bawah nama perusahaan, halaman lain):</label>
             <input type="text" id="homeTagline" placeholder="Your Board Solusions" />
-            <label style="font-size: 0.9rem; color: #6b7280; margin-top: 8px; display: block;">Judul Section Fitur:</label>
-            <input type="text" id="homeSectionTitle" placeholder="Satu tempat yang bikin #SemuaJadiSimple" />
           </div>
 
           <div class="info-card" style="margin-bottom: 16px; border-left: 4px solid #5a3e32;">
-            <h3 style="margin-top:0">Foto Slideshow (Slider Beranda)</h3>
+            <h3 style="margin-top:0">Foto Hero (Slider)</h3>
             <p class="empty-state" style="margin-bottom: 12px">
-              Upload foto atau video untuk slider di halaman utama. Disarankan ukuran <strong>1920 × 600 px</strong> (format JPG, PNG, WEBP, atau MP4).
-              Anda bisa menambah beberapa slide — akan berganti otomatis.
+              Foto besar di atas beranda. Judul boleh beberapa baris (tekan Enter). Disarankan <strong>1920 × 800 px</strong>.
             </p>
             <div id="homeSlidesContainer"></div>
             <button type="button" id="addHomeSlideBtn" class="btn-secondary">+ Tambah Slide Baru</button>
           </div>
 
-          <h3 style="margin-top: 8px;">Kartu Fitur (Foto &amp; Keterangan)</h3>
-          <p class="empty-state" style="margin-bottom: 12px">Upload foto dan isi keterangan untuk setiap kartu di bawah slider.</p>
-          <div id="homeFeaturesContainer"></div>
+          <div class="info-card" style="margin-bottom: 16px; border-left: 4px solid #5a3e32;">
+            <h3 style="margin-top:0">Jelajahi Produk</h3>
+            <p class="empty-state" style="margin-bottom: 12px">Kartu kategori yang bisa digeser. Setiap kartu punya foto, nama, dan tautan.</p>
+            <div id="homeExploreContainer"></div>
+          </div>
 
-          <div class="info-card" style="margin-top: 20px; margin-bottom: 16px; border-left: 4px solid #5a3e32;">
-            <h3 style="margin-top:0">Section Tentang / Pengiriman (Halaman 2)</h3>
-            <p class="empty-state" style="margin-bottom: 12px">
-              Bagian yang muncul saat pengunjung scroll ke bawah — statistik, judul, dan kolase 4 foto.
-            </p>
-            <div id="homeAboutContainer"></div>
+          <div class="info-card" style="margin-bottom: 16px; border-left: 4px solid #5a3e32;">
+            <h3 style="margin-top:0">Pengiriman</h3>
+            <p class="empty-state" style="margin-bottom: 12px">Judul, peta, dan 4 kartu foto di bawahnya.</p>
+            <div id="homeShippingContainer"></div>
+          </div>
+
+          <div class="info-card" style="margin-bottom: 16px; border-left: 4px solid #5a3e32;">
+            <h3 style="margin-top:0">Showcase &amp; Banner Artikel</h3>
+            <p class="empty-state" style="margin-bottom: 12px">Dua foto besar (misalnya Plywood dan HPL) plus satu banner lebar.</p>
+            <div id="homeShowcaseContainer"></div>
           </div>
 
           <div class="info-card" style="margin-top: 20px; margin-bottom: 16px; border-left: 4px solid #5a3e32;">
@@ -1318,7 +1323,7 @@
     </div>
 
     <script src="/common.js?v=25"></script>
-    <script src="/admin.js?v=67"></script>
+    <script src="/admin.js?v=69"></script>
     <script src="/admin-points.js?v=4"></script>
   </body>
 </html>
