@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/logo-sjs.png" type="image/png" />
+    <link rel="apple-touch-icon" href="/logo-sjs.png" />
+    <title>Poin & Hadiah Loyalitas - PT SAHABAT JAYA SUKSES</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body class="loyalty-page">
+    <header class="topbar">
+      <a class="brand" href="/">
+        <img id="brandLogo" class="brand-logo hidden" alt="Logo" />
+        <span class="brand-text">
+          <h1>PT SAHABAT JAYA SUKSES</h1>
+          <p>Poin Loyalitas</p>
+        </span>
+      </a>
+      <div class="top-actions">
+        <img id="topLogo" class="top-logo hidden" alt="Logo" />
+        <div id="userArea"></div>
+        <a href="/" class="btn-secondary">Kembali</a>
+      </div>
+    </header>
+
+    <main class="account-shell">
+      <aside class="account-nav" aria-label="Menu akun">
+        <h2>Pengaturan Profil</h2>
+        <a href="/profile.html">Profil</a>
+        <a href="/addresses.html">Alamat pengiriman</a>
+        <a href="/profile.html#kata-sandi">Ubah kata sandi</a>
+        <h2>Keanggotaan</h2>
+        <a href="/orders.html">Riwayat pembelian</a>
+        <a href="/points.html" class="is-active" aria-current="page">Poin</a>
+      </aside>
+
+      <section>
+        <h1>Poin & hadiah loyalitas</h1>
+        <div class="loyalty-hero">
+          <article class="loyalty-balance">
+            <svg class="loyalty-balance-wave" viewBox="0 0 600 200" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M0 150 C 140 90, 230 190, 360 130 C 470 80, 530 40, 600 100 L 600 200 L 0 200 Z" fill="rgba(255,255,255,0.08)" />
+              <path d="M0 170 C 160 120, 260 200, 400 150 C 490 120, 550 80, 600 120 L 600 200 L 0 200 Z" fill="rgba(92,58,40,0.12)" />
+            </svg>
+            <div class="loyalty-balance-copy">
+              <p>Total poin saat ini</p>
+              <strong id="userTotalPoints">0</strong>
+              <span>Kumpulkan poin dari setiap pembelian</span>
+            </div>
+            <div class="loyalty-balance-art" aria-hidden="true">
+              <svg class="loyalty-coins" viewBox="0 0 250 180">
+                <defs>
+                  <linearGradient id="coinFace" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#fff7e4" />
+                    <stop offset="0.5" stop-color="#f3dcb0" />
+                    <stop offset="1" stop-color="#d7b172" />
+                  </linearGradient>
+                  <linearGradient id="coinEdge" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#f0d7a2" />
+                    <stop offset="1" stop-color="#b8894a" />
+                  </linearGradient>
+                  <filter id="coinShadow" x="-30%" y="-30%" width="160%" height="160%">
+                    <feDropShadow dx="0" dy="5" stdDeviation="3.5" flood-color="#5c3b28" flood-opacity="0.28" />
+                  </filter>
+                </defs>
+                <g fill="#fff" opacity="0.9">
+                  <path d="M58 22 l2.2 6.2 6.2 2.2 -6.2 2.2 -2.2 6.2 -2.2 -6.2 -6.2 -2.2 6.2 -2.2 z" />
+                  <path d="M196 14 l1.5 4.2 4.2 1.5 -4.2 1.5 -1.5 4.2 -1.5 -4.2 -4.2 -1.5 4.2 -1.5 z" />
+                  <path d="M214 86 l1.2 3.4 3.4 1.2 -3.4 1.2 -1.2 3.4 -1.2 -3.4 -3.4 -1.2 3.4 -1.2 z" />
+                </g>
+                <g transform="translate(154 8) rotate(16)" filter="url(#coinShadow)">
+                  <ellipse cx="30" cy="32" rx="27" ry="27" fill="url(#coinEdge)" />
+                  <ellipse cx="30" cy="28" rx="22" ry="22" fill="url(#coinFace)" />
+                  <ellipse cx="30" cy="28" rx="14" ry="14" fill="none" stroke="#edd7a6" stroke-width="2" />
+                </g>
+                <g transform="translate(18 48) rotate(-22)" filter="url(#coinShadow)">
+                  <ellipse cx="38" cy="36" rx="34" ry="34" fill="url(#coinEdge)" />
+                  <ellipse cx="38" cy="32" rx="28" ry="28" fill="url(#coinFace)" />
+                  <path d="M38 18 l3.6 9 9.2 1.2 -7.2 5.8 2.6 9 -8.2 -5.2 -8.2 5.2 2.6 -9 -7.2 -5.8 9.2 -1.2 z" fill="#f6e4bc" />
+                </g>
+                <g transform="translate(108 52)" filter="url(#coinShadow)">
+                  <ellipse cx="52" cy="54" rx="48" ry="48" fill="url(#coinEdge)" />
+                  <ellipse cx="52" cy="49" rx="40" ry="40" fill="url(#coinFace)" />
+                  <ellipse cx="52" cy="49" rx="31" ry="31" fill="none" stroke="#f4e4c0" stroke-width="3" />
+                  <path d="M52 28 l5.4 13 13.6 1.4 -10.6 8.6 3.6 13.2 -12 -7.6 -12 7.6 3.6 -13.2 -10.6 -8.6 13.6 -1.4 z" fill="#f7e7c4" stroke="#d7b56a" stroke-width="1" />
+                </g>
+              </svg>
+            </div>
+          </article>
+
+          <article class="loyalty-claim">
+            <h2>Klaim hadiah</h2>
+            <p>Tukarkan poin anda dengan hadiah menarik di bawah ini</p>
+            <div id="rewardsList" class="loyalty-rewards">
+              <p class="loyalty-muted">Memuat hadiah...</p>
+            </div>
+            <p id="redeemMessage" class="message"></p>
+          </article>
+        </div>
+
+        <h2 class="loyalty-history-title">Riwayat poin</h2>
+        <div class="loyalty-history-wrap">
+          <table class="loyalty-history">
+            <thead>
+              <tr>
+                <th>Riwayat poin</th>
+                <th>Tipe</th>
+                <th>Poin</th>
+                <th>Keterangan</th>
+              </tr>
+            </thead>
+            <tbody id="userPointsHistoryTbody">
+              <tr>
+                <td colspan="4" class="loyalty-history-empty">Memuat riwayat...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="/common.js?v=24"></script>
+    <script src="/points.js?v=1"></script>
+  </body>
+</html>

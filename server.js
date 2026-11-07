@@ -4835,7 +4835,11 @@ app.get("/api/orders/my", authMiddleware, async (req, res) => {
     if (ids.length) {
       const placeholders = ids.map(() => "?").join(",");
       items = await allQuery(
-        `SELECT order_id, product_name, qty, size, subtotal FROM order_items WHERE order_id IN (${placeholders}) ORDER BY id ASC`,
+        `SELECT oi.order_id, oi.product_id, oi.product_name, oi.qty, oi.size, oi.subtotal, p.image, p.images
+         FROM order_items oi
+         LEFT JOIN products p ON p.id = oi.product_id
+         WHERE oi.order_id IN (${placeholders})
+         ORDER BY oi.id ASC`,
         ids
       );
     }
@@ -4843,10 +4847,12 @@ app.get("/api/orders/my", authMiddleware, async (req, res) => {
     for (const item of items) {
       const list = itemsByOrder.get(item.order_id) || [];
       list.push({
+        productId: item.product_id,
         productName: item.product_name,
         qty: item.qty,
         size: item.size || "",
         subtotal: item.subtotal,
+        image: parseProductImagesField(item)[0] || "",
       });
       itemsByOrder.set(item.order_id, list);
     }

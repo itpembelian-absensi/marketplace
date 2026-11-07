@@ -510,6 +510,13 @@ a {
   color: #991b1b;
 }
 
+.brand-clear-media {
+  align-self: flex-start;
+  margin: 0 0 14px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+
 .btn-wa {
   background: #25d366;
   color: #ffffff;
@@ -2814,9 +2821,197 @@ body.lightbox-open {
   color: #4b5563;
 }
 
+.my-orders-page {
+  background: #fff;
+}
+
 .my-orders-page .shop-main {
-  padding-top: 24px;
+  padding-top: 8px;
   padding-bottom: 48px;
+}
+
+.hist-page h1 {
+  margin: 0 0 18px;
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #1a1a1a;
+}
+
+.hist-tabs {
+  display: flex;
+  gap: 22px;
+  overflow-x: auto;
+  border-bottom: 1px solid #ececec;
+  margin-bottom: 16px;
+}
+
+.hist-tabs button {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #6b7280;
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 8px 0 12px;
+  margin-bottom: -1px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.hist-tabs button.active {
+  color: #111827;
+  font-weight: 700;
+  border-bottom-color: #6d5344;
+}
+
+.hist-search {
+  width: 100%;
+  max-width: 360px;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font: inherit;
+}
+
+.hist-card {
+  background: #f5f5f6;
+  border-radius: 16px;
+  padding: 16px 18px 18px;
+  margin-bottom: 14px;
+}
+
+.hist-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 28px;
+}
+
+.hist-head p {
+  margin: 0;
+}
+
+.hist-head span,
+.hist-pay span,
+.hist-pay small {
+  display: block;
+  color: #9ca3af;
+  font-size: 0.8rem;
+}
+
+.hist-head strong,
+.hist-pay strong {
+  display: block;
+  margin-top: 2px;
+  color: #1f2937;
+}
+
+.hist-badge {
+  margin-left: auto;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-style: normal;
+  font-weight: 700;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.hist-badge.is-shipped,
+.hist-badge.is-done {
+  background: #e7f8ee;
+  color: #178a45;
+}
+
+.hist-badge.is-pack {
+  background: #e7f0ff;
+  color: #3b6fd8;
+}
+
+.hist-badge.is-wait {
+  background: #fff4dc;
+  color: #b7791f;
+}
+
+.hist-badge.is-void {
+  background: #ececec;
+  color: #6b7280;
+}
+
+.hist-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 16px;
+  align-items: center;
+  margin-top: 16px;
+}
+
+.hist-thumbs {
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+.hist-thumbs img,
+.hist-thumb,
+.hist-more {
+  width: 74px;
+  height: 74px;
+  border-radius: 10px;
+  background: #e7e5e4;
+  object-fit: cover;
+  flex: 0 0 74px;
+}
+
+.hist-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.75rem;
+  line-height: 1.25;
+  padding: 6px;
+}
+
+.hist-pay {
+  text-align: right;
+}
+
+.hist-pay strong {
+  font-size: 1.15rem;
+}
+
+.hist-detail {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: #6d5344;
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.hist-detail:hover {
+  background: #5b4538;
+}
+
+@media (max-width: 800px) {
+  .hist-body {
+    grid-template-columns: 1fr;
+  }
+
+  .hist-pay {
+    text-align: left;
+  }
+
+  .hist-detail {
+    justify-self: start;
+  }
 }
 
 .my-orders-wrap {
@@ -3010,4 +3205,319 @@ body.lightbox-open {
 
 .track-steps li.current::before {
   background: #c2410c;
+}
+
+.loyalty-page {
+  background: #fff;
+  color: #1f2937;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+.account-shell {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 40px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 34px 28px 80px;
+}
+
+.account-nav h2 {
+  margin: 26px 0 8px;
+  font-size: 1.12rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.account-nav h2:first-child {
+  margin-top: 0;
+}
+
+.account-nav a {
+  display: block;
+  padding: 7px 0;
+  color: #8b919a;
+  font-size: 0.98rem;
+}
+
+.account-nav a:hover {
+  color: #374151;
+}
+
+.account-nav a.is-active {
+  color: #111827;
+  font-weight: 800;
+}
+
+.loyalty-page h1,
+.loyalty-history-title {
+  margin: 0 0 22px;
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #1a1a1a;
+}
+
+.loyalty-history-title {
+  margin: 42px 0 16px;
+}
+
+.loyalty-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.95fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+.loyalty-balance {
+  position: relative;
+  overflow: hidden;
+  min-height: 188px;
+  padding: 28px 18px 28px 32px;
+  border-radius: 18px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 72% 42%, rgba(255, 255, 255, 0.16), transparent 26%),
+    linear-gradient(115deg, #c6a07c 0%, #a67c5d 46%, #8d654c 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.loyalty-balance-wave {
+  position: absolute;
+  inset: auto 0 0 0;
+  width: 100%;
+  height: 70%;
+  pointer-events: none;
+}
+
+.loyalty-balance-copy {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.loyalty-balance-copy p,
+.loyalty-balance-copy span {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.loyalty-balance-copy span {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.loyalty-balance-copy strong {
+  display: block;
+  margin: 4px 0 8px;
+  font-size: 4.1rem;
+  line-height: 0.95;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.loyalty-balance-art {
+  position: relative;
+  z-index: 1;
+  width: min(44%, 230px);
+  flex: 0 0 auto;
+}
+
+.loyalty-coins {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.loyalty-claim {
+  background: #f3f4f6;
+  border-radius: 16px;
+  padding: 22px 22px 14px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.loyalty-claim h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.loyalty-claim > p {
+  margin: 6px 0 8px;
+  color: #6b7280;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.loyalty-rewards {
+  display: flex;
+  flex-direction: column;
+}
+
+.loyalty-reward {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr) auto;
+  gap: 10px 12px;
+  align-items: center;
+  padding: 10px 0;
+}
+
+.loyalty-reward + .loyalty-reward {
+  border-top: 1px solid #e6e7eb;
+}
+
+.loyalty-gift {
+  width: 64px;
+  height: 64px;
+  display: block;
+}
+
+.loyalty-reward-copy strong {
+  display: block;
+  font-size: 0.98rem;
+  color: #1f2937;
+}
+
+.loyalty-reward-copy p {
+  margin: 2px 0 6px;
+  color: #9ca3af;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.loyalty-reward-copy b {
+  display: block;
+  font-size: 1.2rem;
+  color: #111827;
+}
+
+.loyalty-redeem {
+  border: 0;
+  background: #6d5344;
+  color: #fff;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.loyalty-redeem:hover {
+  background: #5b4538;
+}
+
+.loyalty-muted {
+  margin: 12px 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.loyalty-history-wrap {
+  border: 1px solid #e7e7e7;
+  border-radius: 12px;
+  overflow: auto;
+  background: #fff;
+}
+
+.loyalty-history {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.92rem;
+}
+
+.loyalty-history th {
+  background: #ececec;
+  padding: 14px 18px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.loyalty-history td {
+  padding: 14px 18px;
+  color: #374151;
+  vertical-align: middle;
+}
+
+.loyalty-history tbody tr + tr td {
+  border-top: 1px solid #f3f4f6;
+}
+
+.loyalty-history .is-plus {
+  color: #22a34a;
+  font-weight: 700;
+}
+
+.loyalty-history .is-minus {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.loyalty-history-empty {
+  text-align: center;
+  color: #6b7280;
+}
+
+@media (max-width: 900px) {
+  .account-shell {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    padding: 24px 16px 56px;
+  }
+
+  .account-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 18px;
+  }
+
+  .account-nav h2 {
+    width: 100%;
+    margin: 8px 0 0;
+  }
+
+  .loyalty-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .loyalty-balance-copy strong {
+    font-size: 3.2rem;
+  }
+
+  .loyalty-balance-copy span {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 640px) {
+  .loyalty-page h1,
+  .loyalty-history-title {
+    font-size: 1.45rem;
+  }
+
+  .loyalty-balance {
+    padding: 22px 16px;
+  }
+
+  .loyalty-reward {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+
+  .loyalty-redeem {
+    grid-column: 2;
+    justify-self: start;
+  }
 }

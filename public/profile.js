@@ -65,9 +65,6 @@ async function loadProfile() {
     renderAvatar();
 
     loadProfileAddressSummary();
-    loadUserPoints();
-    loadRewards();
-    loadPointsHistory();
   } catch (error) {
     const tokenError = /token tidak valid|token tidak ditemukan|kadaluarsa/i.test(
       error.message || ""
@@ -156,93 +153,3 @@ profileForm.addEventListener("submit", async (e) => {
 });
 
 loadProfile();
-
-// --- Points System ---
-const userTotalPointsEl = document.getElementById("userTotalPoints");
-const rewardsListEl = document.getElementById("rewardsList");
-const userPointsHistoryTbody = document.getElementById("userPointsHistoryTbody");
-const redeemMessage = document.getElementById("redeemMessage");
-
-async function loadUserPoints() {
-  try {
-    const data = await apiFetch("/points/my");
-    userTotalPointsEl.textContent = data.totalPoints || 0;
-  } catch (error) {
-    userTotalPointsEl.textContent = "Error";
-  }
-}
-
-async function loadRewards() {
-  try {
-    const rewards = await apiFetch("/points/rewards");
-    if (!rewards || rewards.length === 0) {
-      rewardsListEl.innerHTML = '<p style="color: #6b7280; font-style: italic;">Belum ada hadiah tersedia.</p>';
-      return;
-    }
-
-    rewardsListEl.innerHTML = rewards.map(r => `
-      <div style="border: 1px solid var(--border); border-radius: 8px; padding: 15px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column;">
-        <h4 style="margin: 0 0 5px;">${r.name}</h4>
-        <p style="font-size: 0.85rem; color: #6b7280; margin: 0 0 10px; flex: 1;">${r.description || 'Hadiah spesial untuk Anda!'}</p>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-          <span style="font-weight: bold; color: var(--primary); font-size: 1.1rem;">${r.points_required} Poin</span>
-        </div>
-        <button class="btn-primary" onclick="redeemReward(${r.id}, '${r.name}', ${r.points_required})" style="width: 100%; padding: 8px; font-size: 0.9rem;">Tukar</button>
-      </div>
-    `).join('');
-  } catch (error) {
-    rewardsListEl.innerHTML = '<p style="color: red;">Gagal memuat hadiah.</p>';
-  }
-}
-
-async function loadPointsHistory() {
-  try {
-    const history = await apiFetch("/points/my/history");
-    if (!history || history.length === 0) {
-      userPointsHistoryTbody.innerHTML = '<tr><td colspan="4" style="padding: 10px; text-align: center;">Belum ada riwayat poin.</td></tr>';
-      return;
-    }
-
-    userPointsHistoryTbody.innerHTML = history.map(h => `
-      <tr style="border-bottom: 1px solid var(--border);">
-        <td style="padding: 10px;">${new Date(h.created_at).toLocaleDateString('id-ID')}</td>
-        <td style="padding: 10px;">${h.type === 'earn' ? '<span style="color:green; font-weight:500;">Dapat Poin</span>' : '<span style="color:red; font-weight:500;">Tukar Hadiah</span>'}</td>
-        <td style="padding: 10px; text-align: right; font-weight: bold; ${h.type === 'earn' ? 'color:green' : 'color:red'}">${h.type === 'earn' ? '+' : '-'}${h.points}</td>
-        <td style="padding: 10px;">${h.description || '-'}</td>
-      </tr>
-    `).join('');
-  } catch (error) {
-    userPointsHistoryTbody.innerHTML = '<tr><td colspan="4" style="padding: 10px; text-align: center; color: red;">Gagal memuat riwayat.</td></tr>';
-  }
-}
-
-window.redeemReward = async function(rewardId, rewardName, pointsRequired) {
-  const currentPoints = parseInt(userTotalPointsEl.textContent) || 0;
-  if (currentPoints < pointsRequired) {
-    redeemMessage.textContent = `Poin Anda tidak mencukupi. Butuh ${pointsRequired} poin.`;
-    redeemMessage.className = "message";
-    return;
-  }
-
-  if (!confirm(`Tukar ${pointsRequired} poin dengan "${rewardName}"?`)) return;
-
-  redeemMessage.textContent = "Memproses...";
-  redeemMessage.className = "message";
-
-  try {
-    const res = await apiFetch("/points/redeem", {
-      method: "POST",
-      body: JSON.stringify({ rewardId })
-    });
-    
-    redeemMessage.textContent = res.message;
-    redeemMessage.className = "message success";
-    
-    // Refresh data
-    loadUserPoints();
-    loadPointsHistory();
-  } catch (error) {
-    redeemMessage.textContent = error.message;
-    redeemMessage.className = "message";
-  }
-};

@@ -433,6 +433,17 @@ async function renderHeroBanners() {
   }
 }
 
+function ensurePointsMenuLink() {
+  const dropdown = document.getElementById("profileDropdown");
+  if (!dropdown || dropdown.querySelector('a[href="/points.html"]')) return;
+  const ordersLink = dropdown.querySelector('a[href="/orders.html"]');
+  const link = document.createElement("a");
+  link.href = "/points.html";
+  link.textContent = "Poin Loyalitas";
+  if (ordersLink) ordersLink.insertAdjacentElement("afterend", link);
+  else dropdown.appendChild(link);
+}
+
 function renderUserArea() {
   const userArea = document.getElementById("userArea");
   const topLoginLink = document.getElementById("topLoginLink");
@@ -445,6 +456,8 @@ function renderUserArea() {
   if (!userArea && !topLoginLink) {
     return;
   }
+
+  ensurePointsMenuLink();
 
   const auth = getAuth();
   if (!auth?.user) {
@@ -510,6 +523,7 @@ function renderUserArea() {
       ${profilePicOld}
       <span>Hi, ${auth.user.name}</span>
     </a>
+    <a href="/points.html" class="btn-secondary" title="Poin loyalitas">Poin</a>
     <a href="/addresses.html" class="btn-secondary" title="Master alamat kirim">Alamat</a>
     <button id="logoutButton" class="btn-danger">Logout</button>
   `;
@@ -1014,6 +1028,15 @@ function getSizeItemStock(sizeItem) {
   const stockSjs = Math.max(0, Number(sizeItem?.stock_sjs) || 0);
   const stockSjl = Math.max(0, Number(sizeItem?.stock_sjl) || 0);
   return stockSjs + stockSjl;
+}
+
+function getProductTotalStock(product) {
+  const sizes = parseSizes(product);
+  if (sizes.length) {
+    return sizes.reduce((sum, item) => sum + getSizeItemStock(item), 0);
+  }
+  const pooled = Math.max(0, Number(product?.stock_sjs) || 0) + Math.max(0, Number(product?.stock_sjl) || 0);
+  return pooled || Math.max(0, Number(product?.stock) || 0);
 }
 
 function findSizeOption(sizes, sizeName) {

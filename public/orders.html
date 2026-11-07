@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="/logo-sjs.png" type="image/png" />
     <link rel="apple-touch-icon" href="/logo-sjs.png" />
-    <title>Pesanan Saya - PT SAHABAT JAYA SUKSES</title>
+    <title>Riwayat Pembelian - PT SAHABAT JAYA SUKSES</title>
     <link rel="stylesheet" href="/style.css?v=25" />
     <link rel="stylesheet" href="/home.css?v=83" />
     <script src="https://accounts.google.com/gsi/client" async></script>
@@ -88,22 +88,32 @@
     </div>
 
     <main class="container shop-main">
-      <div class="my-orders-wrap">
-        <div class="my-orders-head">
-          <h2>Pesanan Saya</h2>
-          <p class="empty-state" style="margin: 0;">Lihat status, buka invoice, unggah bukti bayar, dan cek detail pengiriman.</p>
-        </div>
-        <div class="my-orders-filters" id="ordersFilterBar">
-          <button type="button" class="active" data-filter="all">Semua</button>
-          <button type="button" data-filter="unpaid">Belum dibayar</button>
-          <button type="button" data-filter="paid">Lunas</button>
-          <button type="button" data-filter="void">Dibatalkan</button>
-        </div>
-        <input type="search" id="ordersSearch" class="my-orders-search" placeholder="Cari nomor invoice, produk, atau alamat..." />
-        <p id="ordersMessage" class="message"></p>
-        <div id="ordersList">
-          <p class="empty-state">Memuat pesanan...</p>
-        </div>
+      <div class="account-shell hist-page">
+        <aside class="account-nav" aria-label="Menu akun">
+          <h2>Pengaturan Profil</h2>
+          <a href="/profile.html">Profil</a>
+          <a href="/addresses.html">Alamat pengiriman</a>
+          <a href="/profile.html#kata-sandi">Ubah kata sandi</a>
+          <h2>Keanggotaan</h2>
+          <a href="/orders.html" class="is-active" aria-current="page">Riwayat pembelian</a>
+          <a href="/points.html">Poin</a>
+        </aside>
+        <section>
+          <h1>Riwayat pembelian</h1>
+          <div class="hist-tabs" id="ordersFilterBar">
+            <button type="button" class="active" data-filter="all">Semua Pesanan</button>
+            <button type="button" data-filter="unpaid">Menunggu Pembayaran</button>
+            <button type="button" data-filter="processing">Diproses</button>
+            <button type="button" data-filter="shipped">Dikirim</button>
+            <button type="button" data-filter="done">Selesai</button>
+            <button type="button" data-filter="void">Dibatalkan</button>
+          </div>
+          <input type="search" id="ordersSearch" class="hist-search" placeholder="Cari nomor pesanan atau produk..." />
+          <p id="ordersMessage" class="message"></p>
+          <div id="ordersList">
+            <p class="empty-state">Memuat pesanan...</p>
+          </div>
+        </section>
       </div>
     </main>
 
@@ -133,6 +143,6 @@
     <script src="/common.js?v=24"></script>
     <script src="/main.js?v=15"></script>
     <script src="/cs-chat.js?v=6"></script>
-    <script src="/orders.js?v=3"></script>
+    <script src="/orders.js?v=4"></script>
   </body>
 </html>

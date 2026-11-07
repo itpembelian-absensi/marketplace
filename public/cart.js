@@ -173,6 +173,7 @@ function renderCartTable() {
               <input type="number" class="cart-qty-input" data-line-index="${index}" value="${line.qty || 1}" min="1" max="${Math.max(1, maxStock)}" inputmode="numeric" />
               <button type="button" class="cart-qty-plus" data-line-index="${index}" aria-label="Tambah">+</button>
             </div>
+            <p class="cart-row-stock${maxStock <= 0 ? " is-empty" : ""}">${maxStock <= 0 ? "Stok habis" : `Sisa stok: ${maxStock}`}</p>
           </div>
           <div class="cart-col-total">${formatRupiah(lineTotal)}</div>
         </article>

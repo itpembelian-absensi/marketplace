@@ -211,6 +211,17 @@ function itemSpecLine(item) {
 }
 
 function bindInvoiceExtras() {
+  document.getElementById("orderHelpBtn")?.addEventListener("click", () => {
+    const panel = document.getElementById("csChatPanel");
+    const restore = document.getElementById("csChatRestore");
+    const toggle = document.getElementById("csChatToggle");
+    if (restore && !restore.classList.contains("hidden")) {
+      restore.click();
+      return;
+    }
+    if (panel?.classList.contains("hidden")) toggle?.click();
+  });
+
   document.querySelectorAll("[data-copy-account]").forEach((button) => {
     button.addEventListener("click", async () => {
       const number = button.getAttribute("data-copy-account") || "";
@@ -252,6 +263,28 @@ function bindInvoiceExtras() {
     showFile();
   });
 }
+
+function formatLongDate(value) {
+  const date = new Date(value);
+  if (!value || Number.isNaN(date.getTime())) return "";
+  const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}, ${hours}.${minutes}`;
+}
+
+function orderPublicCode(order) {
+  const date = new Date(order.created_at);
+  const seq = String(order.id).padStart(4, "0");
+  if (Number.isNaN(date.getTime())) return `SJS-${seq}`;
+  const yy = String(date.getFullYear()).slice(-2);
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `SJS${yy}${mm}${dd}-${seq}`;
+}
+
+const orderCheckIcon = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M5 12.5 9.2 17 19 7"/></svg>`;
+const orderTruckIcon = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 7h11v8H3zM14 10h4l3 3v2h-7"/><circle cx="7" cy="17.5" r="1.4" fill="currentColor" stroke="none"/><circle cx="17" cy="17.5" r="1.4" fill="currentColor" stroke="none"/></svg>`;
 
 function setInvoiceActionsEnabled(enabled) {
   if (invoicePrintBtn) invoicePrintBtn.disabled = !enabled;
@@ -448,91 +481,170 @@ async function loadInvoice() {
                   order.paymentTimeoutLabel ? ` (durasi ${escapeHtml(order.paymentTimeoutLabel)})` : ""
                 }.`
               : "Invoice ini belum lunas. Silakan selesaikan pembayaran.";
-    const payStateLabel = isVoid ? "Dibatalkan" : isPaid ? "Sudah diterima" : "Menunggu pembayaran";
+    const payStateLabel = isVoid ? "Dibatalkan" : isPaid ? "Berhasil" : "Menunggu";
+    const payStateClass = isVoid ? "is-void" : isPaid ? "is-ok" : "is-wait";
+    const shipKey = String(order.shipmentStatus || "pending");
+    const isPickup = order.shipping_method === "pickup";
+    const isShipped = shipKey === "shipped" || shipKey === "delivered" || (isPickup && shipKey === "ready_pickup");
+    const isDelivered = shipKey === "delivered";
+    const createdWhen = formatLongDate(order.created_at);
+    const paidWhen = isPaid ? formatLongDate(order.paymentProofAt) || "Sudah dikonfirmasi" : "Menunggu pembayaran";
+    const shippedWhen = isShipped ? formatLongDate(order.shipmentUpdatedAt) || "Sedang dikirim" : "Menunggu pengiriman";
+    const finishedWhen = isDelivered ? formatLongDate(order.shipmentUpdatedAt) || "Pesanan diterima" : "Menunggu pesanan diterima";
+    const publicCode = orderPublicCode(order);
+    const itemCount = order.items.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+    const discountAmount = order.items.reduce((sum, item) => {
+      const qty = Math.max(0, Number(item.qty) || 0);
+      const gross = (Number(item.price) || 0) * qty;
+      const paid = Number(item.subtotal) || 0;
+      return sum + (gross > paid ? gross - paid : 0);
+    }, 0);
+    const badge = isVoid
+      ? { label: "Dibatalkan", className: "is-void" }
+      : !isPaid
+        ? { label: "Menunggu Bayar", className: "is-wait" }
+        : isDelivered
+          ? { label: "Selesai", className: "is-done" }
+          : isShipped
+            ? { label: isPickup ? "Siap Diambil" : "Dikirim", className: "is-shipped" }
+            : shipKey === "packed"
+              ? { label: "Dikemas", className: "is-pack" }
+              : { label: "Diproses", className: "is-pack" };
+    const steps = [
+      { title: "Pesanan Dibuat", note: createdWhen || "-", state: "done", icon: "check" },
+      {
+        title: "Pembayaran Dikonfirmasi",
+        note: paidWhen,
+        state: isVoid ? "wait" : isPaid ? "done" : "current",
+        icon: isPaid && !isVoid ? "check" : "",
+      },
+      {
+        title: isPickup ? "Siap Diambil" : "Pesanan Dikirim",
+        note: isVoid ? "Dibatalkan" : shippedWhen,
+        state: isVoid ? "wait" : isDelivered ? "done" : isShipped || isPaid ? "current" : "wait",
+        icon: isDelivered ? "check" : isShipped ? "truck" : "",
+      },
+      {
+        title: "Pesanan Selesai",
+        note: isVoid ? "-" : finishedWhen,
+        state: isDelivered ? "done" : "wait",
+        icon: isDelivered ? "check" : "",
+      },
+    ];
+    const stepsHtml = steps
+      .map((step) => {
+        const icon = step.icon === "check" ? orderCheckIcon : step.icon === "truck" ? orderTruckIcon : "";
+        return `<li class="od-step is-${step.state}">
+          <span class="od-node">${icon}</span>
+          <strong>${step.title}</strong>
+          <small>${escapeHtml(step.note)}</small>
+        </li>`;
+      })
+      .join("");
+    const productRows = order.items
+      .map((item) => {
+        const qty = Math.max(1, Number(item.qty) || 1);
+        const unitPrice = Number(item.final_price ?? item.price) || 0;
+        const image = imageById[item.product_id] || "";
+        const spec = item.size || itemSpecLine(item);
+        return `<article class="od-item">
+          ${image ? `<img src="${escapeHtml(image)}" alt="" />` : `<span class="od-thumb"></span>`}
+          <div>
+            <strong>${escapeHtml(item.product_name)}</strong>
+            ${spec ? `<small>${escapeHtml(spec)}</small>` : ""}
+          </div>
+          <span class="od-qty">x${qty} lembar</span>
+          <div class="od-item-price">
+            <strong>${formatRupiah(item.subtotal)}</strong>
+            <small>${formatRupiah(unitPrice)} /lembar</small>
+          </div>
+        </article>`;
+      })
+      .join("");
 
     invoiceContainer.innerHTML = `
-      <header class="inv-head">
-        <h1>Invoice</h1>
-        <div class="inv-head-meta">
-          <p>Order ID: ${order.id}</p>
-          <p>Tanggal: ${dateStr}</p>
-        </div>
-        <span class="inv-badge ${statusClass}">${statusLabel}</span>
-      </header>
-
-      <section class="inv-grid">
-        <article class="inv-card inv-bill">
-          <h2>Info Penagihan dan Pengiriman</h2>
-          <div class="inv-field"><span>Nama</span><span>:</span><span>${escapeHtml(order.customer_name)}</span></div>
-          <div class="inv-field"><span>Email</span><span>:</span><span>${escapeHtml(order.customer_email || "-")}</span></div>
-          <div class="inv-field"><span>Telepon</span><span>:</span><span>${escapeHtml(order.customer_phone)}</span></div>
-          <div class="inv-field"><span>Alamat</span><span>:</span><span>${escapeHtml(order.customer_address || "-").replace(/\n/g, "<br>")}</span></div>
-          <div class="inv-field"><span>Jasa kirim</span><span>:</span><span>${escapeHtml(shippingMethodLabel)}${shippingMeta.estimated ? " (estimasi)" : ""}</span></div>
-          <div class="inv-field"><span>Status kirim</span><span>:</span><span><em class="inv-pill">${escapeHtml(order.shipmentStatusLabel || "Menunggu proses")}</em></span></div>
-          ${
-            order.trackingNumber
-              ? `<div class="inv-field"><span>No. resi</span><span>:</span><span>${escapeHtml(order.trackingNumber)}${
-                  order.trackingUrl
-                    ? ` · <a href="${escapeHtml(order.trackingUrl)}" target="_blank" rel="noopener">Cek resi</a>`
-                    : ""
-                }</span></div>`
-              : ""
-          }
-          ${order.shipmentNote ? `<div class="inv-field"><span>Catatan kirim</span><span>:</span><span>${escapeHtml(order.shipmentNote)}</span></div>` : ""}
-          <a class="inv-track no-print" href="/lacak.html?id=${order.id}">Lacak pengiriman</a>
-        </article>
-
-        <article class="inv-card inv-pay">
-          ${showTimer ? `<span class="inv-timer">Sisa waktu bayar <strong id="invoicePayCountdown">--:--:--</strong></span>` : ""}
-          <h2>Pembayaran</h2>
-          <div class="inv-field"><span>Metode pembayaran</span><span>:</span><span>${escapeHtml(paymentMethodLabel)}</span></div>
-          <div class="inv-field"><span>Status pembayaran</span><span>:</span><span class="${isPaid ? "is-paid" : isVoid ? "" : "is-wait"}">${payStateLabel}</span></div>
-          ${paymentTimeoutHtml}
-          ${bankAccountsHtml}
-          ${
-            !isPaid && !isVoid && paymentMethodRaw === "qris" && settings?.qrisImageUrl
-              ? `<div class="inv-qris">
-                  <p>Scan barcode QRIS di bawah ini:</p>
-                  <img src="${escapeHtml(settings.qrisImageUrl)}" alt="QRIS" />
-                </div>`
-              : ""
-          }
-          ${paymentProofSectionHtml(order, isPaid, isVoid, paymentMethodRaw)}
-        </article>
-      </section>
-
-      <table class="inv-items">
-        <thead>
-          <tr>
-            <th>Produk</th>
-            <th>Quantity</th>
-            <th>Harga satuan</th>
-            <th>Diskon</th>
-            <th>Subtotal</th>
-          </tr>
-        </thead>
-        <tbody>${itemsHtml}</tbody>
-      </table>
-
-      <section class="inv-bottom">
-        <div class="inv-notice">
-          <span aria-hidden="true">!</span>
+      <article class="od">
+        <header class="od-top">
           <div>
-            <p>${noticeText}</p>
-            <p>Barang yang sudah dibeli tidak dapat ditukar atau dikembalikan</p>
+            <h1>Detail Pesanan</h1>
+            <p class="od-code">#${escapeHtml(publicCode)}</p>
+            <p class="od-when">Tanggal Pembelian: ${escapeHtml(createdWhen || dateStr)}</p>
+          </div>
+          <span class="od-status ${badge.className}">${badge.label}</span>
+        </header>
+
+        ${!isPaid || isVoid ? `<p class="od-alert">${noticeText}</p>` : ""}
+        ${showTimer ? `<p class="od-timer">Sisa waktu bayar <strong id="invoicePayCountdown">--:--:--</strong></p>` : ""}
+
+        <ol class="od-steps">${stepsHtml}</ol>
+
+        <div class="od-columns">
+          <div class="od-col">
+            <section class="od-card od-ship">
+              <div class="od-ship-copy">
+                <h2>Informasi Pengiriman</h2>
+                <div class="od-field"><span>Nama penerima</span><span>:</span><span>${escapeHtml(order.customer_name)}</span></div>
+                <div class="od-field"><span>Alamat</span><span>:</span><span>${escapeHtml(order.customer_address || "-").replace(/\n/g, "<br>")}</span></div>
+                <div class="od-field"><span>Jasa Kirim</span><span>:</span><span>${escapeHtml(shippingMethodLabel)}${shippingMeta.estimated ? " (estimasi)" : ""}</span></div>
+                <div class="od-field"><span>No. resi/tracking</span><span>:</span><span>${
+                  order.trackingNumber
+                    ? `${escapeHtml(order.trackingNumber)}${
+                        order.trackingUrl
+                          ? ` · <a href="${escapeHtml(order.trackingUrl)}" target="_blank" rel="noopener">Cek resi</a>`
+                          : ""
+                      }`
+                    : "-"
+                }</span></div>
+                ${order.shipmentNote ? `<div class="od-field"><span>Catatan</span><span>:</span><span>${escapeHtml(order.shipmentNote)}</span></div>` : ""}
+              </div>
+              <a class="od-track no-print" href="/lacak.html?id=${order.id}">
+                ${orderTruckIcon}
+                Lacak Pengiriman
+              </a>
+            </section>
+
+            <section class="od-card">
+              <h2>Produk yang dibeli</h2>
+              <div class="od-items">${productRows || `<p class="od-empty">Tidak ada produk.</p>`}</div>
+            </section>
+          </div>
+
+          <div class="od-col">
+            <section class="od-card od-pay">
+              <h2>Ringkasan Pembayaran</h2>
+              <div class="od-line"><span>Subtotal produk (${itemCount} item)</span><span>${formatRupiah(productsSubtotal)}</span></div>
+              <div class="od-line"><span>Ongkir</span><span>${formatRupiah(shippingFee)}</span></div>
+              <div class="od-line"><span>Diskon</span><span>${formatRupiah(discountAmount)}</span></div>
+              ${taxLine ? `<div class="od-line"><span>${taxMode === "include" ? `PPN ${taxPercent}% (include)` : `PPN ${taxPercent}%`}</span><span>${formatRupiah(taxAmount)}</span></div>` : ""}
+              <div class="od-grand"><span>Total pembayaran</span><strong>${formatRupiah(order.total)}</strong></div>
+              <div class="od-meta">
+                <div class="od-field"><span>Metode pembayaran</span><span>:</span><span>${escapeHtml(paymentMethodLabel)}</span></div>
+                <div class="od-field"><span>Status pembayaran</span><span>:</span><span class="od-paystate ${payStateClass}"><i></i>${payStateLabel}</span></div>
+                <div class="od-field"><span>Tanggal pembayaran</span><span>:</span><span>${escapeHtml(isPaid ? formatLongDate(order.paymentProofAt) || "Sudah dikonfirmasi" : "-")}</span></div>
+                ${paymentTimeoutHtml}
+              </div>
+              ${bankAccountsHtml}
+              ${
+                !isPaid && !isVoid && paymentMethodRaw === "qris" && settings?.qrisImageUrl
+                  ? `<div class="inv-qris"><p>Scan barcode QRIS di bawah ini:</p><img src="${escapeHtml(settings.qrisImageUrl)}" alt="QRIS" /></div>`
+                  : ""
+              }
+              ${paymentProofSectionHtml(order, isPaid, isVoid, paymentMethodRaw)}
+            </section>
+
+            <section class="od-card od-help no-print">
+              <h2>Bantuan Pesanan</h2>
+              <p>Ada kendala dengan pesanan ini?</p>
+              <small>Tim kami siap membantu Anda.</small>
+              <button type="button" id="orderHelpBtn">Hubungin Bantuan</button>
+            </section>
           </div>
         </div>
-        <div class="inv-sum">
-          <div class="inv-sum-row"><span>Subtotal produk</span><span>${formatRupiah(productsSubtotal)}</span></div>
-          ${taxLine}
-          <div class="inv-sum-row"><span>Ongkir</span><span>${formatRupiah(shippingFee)}</span></div>
-          <div class="inv-sum-row inv-sum-total"><span>TOTAL KESELURUHAN</span><span>${formatRupiah(order.total)}</span></div>
-        </div>
-      </section>
+      </article>
     `;
 
     currentOrderId = order.id;
-    document.title = `Invoice_Order_${order.id}`;
+    document.title = `Detail Pesanan #${publicCode}`;
     setInvoiceActionsEnabled(true);
     bindPaymentProofForm(order);
     bindInvoiceExtras();

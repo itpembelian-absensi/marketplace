@@ -206,7 +206,8 @@ function renderCatalogCard(product) {
   const finalPrice = getFinalPrice(product);
   const rating = Number(product.rating);
   const ratingLabel = Number.isFinite(rating) && rating > 0 ? rating.toFixed(1) : "";
-  const outOfStock = (product.stock || 0) <= 0;
+  const stockLeft = getProductTotalStock(product);
+  const outOfStock = stockLeft <= 0;
   const spec = productSpecLine(product);
   const wasPrice =
     discount > 0
@@ -223,6 +224,7 @@ function renderCatalogCard(product) {
         ${spec ? `<span class="catalog-spec">${escapeHtml(spec)}</span>` : ""}
         <span class="catalog-name">${escapeHtml(product.name)}</span>
         <span class="catalog-price">${formatRupiah(finalPrice)}</span>
+        <span class="catalog-left${outOfStock ? " is-empty" : ""}">${outOfStock ? "Stok habis" : `Sisa stok: ${stockLeft}`}</span>
         ${wasPrice}
         ${
           ratingLabel

@@ -11,11 +11,44 @@ function paymentMethodLabel(method) {
   return map[String(method || "").toLowerCase()] || method || "-";
 }
 
-function orderStatusInfo(status) {
-  const st = String(status || "").toLowerCase();
-  if (st === "paid") return { key: "paid", label: "Lunas" };
-  if (st === "void") return { key: "void", label: "Dibatalkan" };
-  return { key: "unpaid", label: "Belum dibayar" };
+function formatPurchaseDate(value) {
+  const date = new Date(value);
+  if (!value || Number.isNaN(date.getTime())) return "-";
+  const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+function orderPublicCode(order) {
+  const date = new Date(order.created_at);
+  const seq = String(order.id).padStart(4, "0");
+  if (Number.isNaN(date.getTime())) return `SJS-${seq}`;
+  const yy = String(date.getFullYear()).slice(-2);
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `SJS${yy}${mm}${dd}-${seq}`;
+}
+
+function orderStage(order) {
+  const status = String(order.status || "").toLowerCase();
+  const ship = String(order.shipmentStatus || "pending");
+  if (status === "void" || ship === "cancelled") return "void";
+  if (status !== "paid") return "unpaid";
+  if (ship === "delivered") return "done";
+  if (ship === "shipped" || ship === "ready_pickup") return "shipped";
+  return "processing";
+}
+
+function stageBadge(stage, order) {
+  if (stage === "void") return { label: "Dibatalkan", className: "is-void" };
+  if (stage === "unpaid") return { label: "Menunggu Bayar", className: "is-wait" };
+  if (stage === "done") return { label: "Selesai", className: "is-done" };
+  if (stage === "shipped") {
+    return {
+      label: order.shipping_method === "pickup" ? "Siap Diambil" : "Dikirim",
+      className: "is-shipped",
+    };
+  }
+  return { label: "Diproses", className: "is-pack" };
 }
 
 function shippingLabel(order) {
@@ -56,11 +89,11 @@ async function openPaymentProof(orderId) {
 function filteredOrders() {
   const q = String(ordersSearch?.value || "").trim().toLowerCase();
   return myOrdersCache.filter((order) => {
-    const st = String(order.status || "unpaid").toLowerCase();
-    if (myOrdersFilter !== "all" && st !== myOrdersFilter) return false;
+    if (myOrdersFilter !== "all" && orderStage(order) !== myOrdersFilter) return false;
     if (!q) return true;
     const hay = [
       `#${order.id}`,
+      orderPublicCode(order),
       order.customer_name,
       order.customer_address,
       order.payment_method,
@@ -87,67 +120,34 @@ function renderOrders() {
 
   ordersList.innerHTML = rows
     .map((order) => {
-      const status = orderStatusInfo(order.status);
+      const stage = orderStage(order);
+      const badge = stageBadge(stage, order);
       const items = Array.isArray(order.items) ? order.items : [];
-      const itemsHtml = items
-        .map((item) => {
-          const name = escapeHtml(item.productName || "Produk");
-          const size = item.size ? ` (${escapeHtml(item.size)})` : "";
-          return `<li><span>${name}${size} × ${Number(item.qty) || 1}</span><span>${formatRupiah(item.subtotal)}</span></li>`;
-        })
+      const shown = items.slice(0, 3);
+      const extra = items.length - shown.length;
+      const thumbs = shown
+        .map((item) =>
+          item.image
+            ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.productName || "Produk")}" />`
+            : `<span class="hist-thumb"></span>`
+        )
         .join("");
-      const proofNote = order.hasPaymentProof
-        ? `<span style="color:#047857;">Bukti bayar sudah diunggah${
-            order.paymentProofAt ? ` · ${new Date(order.paymentProofAt).toLocaleString("id-ID")}` : ""
-          }</span>`
-        : canUploadProof(order)
-          ? `<span style="color:#c2410c;">Belum ada bukti bayar</span>`
-          : "";
-      const uploadHtml = canUploadProof(order)
-        ? `<div class="my-order-upload">
-            <label for="proofFile-${order.id}" style="font-size:0.88rem;font-weight:600;">Unggah bukti bayar (JPG/PNG/PDF)</label>
-            <input type="file" id="proofFile-${order.id}" accept="image/png,image/jpeg,image/webp,application/pdf" />
-            <button type="button" class="btn-primary" data-action="upload-proof" data-order-id="${order.id}">Kirim bukti</button>
-            <span class="empty-state" data-upload-msg="${order.id}"></span>
-          </div>`
-        : "";
-
-      return `<article class="my-order-card" id="order-${order.id}">
-        <div class="my-order-top">
-          <div>
-            <strong>Invoice #${order.id}</strong>
-            <p class="my-order-meta">${new Date(order.created_at).toLocaleString("id-ID")}</p>
-            <p class="my-order-meta">Pembayaran: ${escapeHtml(paymentMethodLabel(order.payment_method))} · Pengiriman: ${escapeHtml(shippingLabel(order))} · ${escapeHtml(order.shipmentStatusLabel || "Menunggu proses")}</p>
-            <p class="my-order-meta">${escapeHtml(order.customer_address || "")}</p>
-            <p class="my-order-meta">${proofNote}</p>
-            ${
-              String(order.status || "").toLowerCase() === "unpaid" &&
-              order.paymentTimeoutEnabled &&
-              order.paymentDueAt
-                ? `<p class="my-order-meta" style="color:#c2410c;">Bayar sebelum ${new Date(
-                    order.paymentDueAt
-                  ).toLocaleString("id-ID")} atau pesanan dibatalkan otomatis${
-                    order.paymentTimeoutLabel ? ` (${escapeHtml(order.paymentTimeoutLabel)})` : ""
-                  }.</p>`
-                : String(order.voidReason || "") === "timeout"
-                  ? `<p class="my-order-meta">Dibatalkan otomatis karena melewati batas waktu bayar.</p>`
-                  : ""
-            }
+      const more = extra > 0 ? `<span class="hist-more">+${extra} produk lainnya</span>` : "";
+      return `<article class="hist-card" id="order-${order.id}">
+        <header class="hist-head">
+          <p><span>No. Pesanan</span><strong>#${escapeHtml(orderPublicCode(order))}</strong></p>
+          <p><span>Tanggal Pembelian</span><strong>${escapeHtml(formatPurchaseDate(order.created_at))}</strong></p>
+          <em class="hist-badge ${badge.className}">${badge.label}</em>
+        </header>
+        <div class="hist-body">
+          <div class="hist-thumbs">${thumbs}${more}</div>
+          <div class="hist-pay">
+            <span>Total pembayaran</span>
+            <strong>${formatRupiah(order.total)}</strong>
+            <small>Via ${escapeHtml(paymentMethodLabel(order.payment_method))}</small>
           </div>
-          <span class="my-order-badge ${status.key}">${status.label}</span>
+          <a class="hist-detail" href="/invoice.html?id=${order.id}">Lihat Detail</a>
         </div>
-        <ul class="my-order-items">${itemsHtml}</ul>
-        <p class="my-order-total">Total ${formatRupiah(order.total)}${order.shipping_fee ? ` · ongkir ${formatRupiah(order.shipping_fee)}` : ""}</p>
-        <div class="my-order-actions">
-          <a href="/invoice.html?id=${order.id}" class="btn-primary" target="_blank" rel="noopener">Buka Invoice</a>
-          <a href="/lacak.html?id=${order.id}" class="btn-secondary">Lacak pengiriman</a>
-          ${
-            order.hasPaymentProof
-              ? `<button type="button" class="btn-secondary" data-action="view-proof" data-order-id="${order.id}">Lihat bukti bayar</button>`
-              : ""
-          }
-        </div>
-        ${uploadHtml}
       </article>`;
     })
     .join("");

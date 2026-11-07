@@ -151,6 +151,7 @@ function similarCard(product) {
   const image = getProductImages(product)[0] || product.image || "";
   const thick = parseThickness(product.name);
   const spec = [thick ? `Tebal ${thick} mm` : "", displayBrand(product).split(" ")[0]].filter(Boolean).join(" · ");
+  const stockLeft = getProductTotalStock(product);
   return `
     <a class="catalog-card pdp-similar-card" href="/product.html?id=${product.id}">
       <span class="catalog-card-media">${image ? `<img src="${escapeHtml(image)}" alt="" />` : ""}</span>
@@ -158,6 +159,7 @@ function similarCard(product) {
         <span class="catalog-spec">${escapeHtml(spec)}</span>
         <span class="catalog-name">${escapeHtml(displayTitle(product))}</span>
         <span class="catalog-price">${formatPreviewPrice(getProductFinalPrice(product))}</span>
+        <span class="catalog-left${stockLeft <= 0 ? " is-empty" : ""}">${stockLeft <= 0 ? "Stok habis" : `Sisa stok: ${stockLeft}`}</span>
         <span class="catalog-rating">${starMarkup(product.rating)} ${Number(product.rating || 0).toFixed(1)}</span>
       </span>
     </a>
@@ -385,6 +387,7 @@ async function loadProductDetail() {
                 </div>`
               : ""
           }
+          <p class="pdp-stock" id="pdpStock"></p>
           <div class="pdp-cart-row">
             <div class="pdp-qty">
               <button type="button" id="qtyMinus" aria-label="Kurangi">−</button>
@@ -517,6 +520,7 @@ async function loadProductDetail() {
         item.classList.toggle("is-selected", item === chip);
       });
       refreshPrice();
+      refreshStockUi();
     });
 
     function setQty(next) {
@@ -529,11 +533,22 @@ async function loadProductDetail() {
     qtyInput?.addEventListener("change", () => setQty(Number(qtyInput.value) || 1));
 
     const addButton = document.getElementById("addDetailToCart");
-    const stockNow = getProductAvailableStock(product, selectedSize());
-    if (addButton && stockNow <= 0) {
-      addButton.disabled = true;
-      addButton.textContent = "Stok habis";
+    function refreshStockUi() {
+      const stock = getProductAvailableStock(product, selectedSize());
+      const stockEl = document.getElementById("pdpStock");
+      const gradeName = String(selectedSize()?.size || "").trim();
+      if (stockEl) {
+        stockEl.textContent = stock > 0 ? `Sisa stok${gradeName ? ` ${gradeName}` : ""}: ${stock}` : "Stok habis";
+        stockEl.classList.toggle("is-empty", stock <= 0);
+      }
+      if (qtyInput) qtyInput.max = String(Math.max(1, stock));
+      if (stock > 0 && qty > stock) setQty(stock);
+      if (addButton) {
+        addButton.disabled = stock <= 0;
+        addButton.textContent = stock <= 0 ? "Stok habis" : "Tambahkan ke Keranjang";
+      }
     }
+    refreshStockUi();
     addButton?.addEventListener("click", () => {
       const chosen = selectedSize();
       const available = getProductAvailableStock(product, chosen);

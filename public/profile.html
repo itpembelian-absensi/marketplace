@@ -54,7 +54,7 @@
             <input type="text" id="profileName" required autocomplete="name" />
           </div>
 
-          <div class="input-group">
+          <div class="input-group" id="kata-sandi">
             <label for="profilePassword">Password Baru (Opsional)</label>
             <input type="password" id="profilePassword" placeholder="Kosongkan jika tidak ingin mengubah" autocomplete="new-password" />
           </div>
@@ -84,47 +84,15 @@
       </div>
 
       <div class="detail-card" style="margin-top: 20px;">
-        <h2 class="section-title" style="margin-top:0;">Poin & Hadiah Loyalitas</h2>
-        
-        <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
-          <div style="flex: 1; min-width: 250px; background: linear-gradient(135deg, var(--primary) 0%, #3b82f6 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
-            <p style="margin: 0; font-size: 1.1rem; opacity: 0.9;">Total Poin Saat Ini</p>
-            <h1 id="userTotalPoints" style="margin: 10px 0 0; font-size: 3rem; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">0</h1>
-            <p style="margin: 5px 0 0; font-size: 0.9rem; opacity: 0.8;">Kumpulkan poin dari setiap pembelian!</p>
-          </div>
-          
-          <div style="flex: 2; min-width: 300px;">
-            <h3 style="margin-top: 0;">Klaim Hadiah</h3>
-            <p style="font-size: 0.9rem; color: #6b7280; margin-bottom: 12px;">Tukarkan poin Anda dengan hadiah menarik di bawah ini.</p>
-            <div id="rewardsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;">
-              <p style="color: #6b7280; font-style: italic;">Memuat hadiah...</p>
-            </div>
-            <p id="redeemMessage" class="message" style="margin-top: 10px;"></p>
-          </div>
-        </div>
-
-        <hr style="border:0; border-top: 1px solid var(--border); margin: 20px 0;" />
-
-        <h3>Riwayat Poin</h3>
-        <div style="overflow-x: auto;">
-          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
-            <thead>
-              <tr style="border-bottom: 1px solid var(--border); background: #f9fafb;">
-                <th style="padding: 10px;">Tanggal</th>
-                <th style="padding: 10px;">Tipe</th>
-                <th style="padding: 10px; text-align: right;">Poin</th>
-                <th style="padding: 10px;">Keterangan</th>
-              </tr>
-            </thead>
-            <tbody id="userPointsHistoryTbody">
-              <tr><td colspan="4" style="padding: 10px; text-align: center;">Memuat riwayat...</td></tr>
-            </tbody>
-          </table>
-        </div>
+        <h2 class="section-title" style="margin-top:0;">Poin & hadiah loyalitas</h2>
+        <p class="empty-state" style="margin-bottom: 14px;">
+          Lihat saldo poin, tukarkan hadiah, dan riwayat poin Anda.
+        </p>
+        <a href="/points.html" class="btn-primary">Buka Poin Loyalitas</a>
       </div>
     </main>
 
     <script src="/common.js?v=24"></script>
-    <script src="/profile.js?v=3"></script>
+    <script src="/profile.js?v=4"></script>
   </body>
 </html>

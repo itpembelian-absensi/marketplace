@@ -917,6 +917,18 @@ function updateProductSubcategoryOptions(categoryName, selectedSubcategory = "")
   }
 }
 
+function renderAdminStockCell(product) {
+  const sizes = parseSizes(product);
+  const total = getProductTotalStock(product);
+  const color = total > 0 ? "#059669" : "#dc2626";
+  const breakdown = sizes.length
+    ? `<div style="font-size:0.75rem; color:#6b7280; margin-top:2px; white-space:normal;">${sizes
+        .map((size) => `${escapeHtml(size.size)}: ${getSizeItemStock(size)}`)
+        .join(" · ")}</div>`
+    : "";
+  return `<strong style="color:${color}">${total}</strong>${breakdown}`;
+}
+
 function renderAdminProducts(products) {
   if (!productsList) return;
   if (!products.length) {
@@ -931,6 +943,7 @@ function renderAdminProducts(products) {
             <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb">Nama</th>
             <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb">Kategori</th>
             <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb">Harga</th>
+            <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb">Sisa Stok</th>
             <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb">Diskon</th>
             <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb">WA</th>
             <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb">Aksi</th>
@@ -944,6 +957,7 @@ function renderAdminProducts(products) {
               <td style="padding:8px; border-bottom:1px solid #f3f4f6">${product.name}</td>
               <td style="padding:8px; border-bottom:1px solid #f3f4f6">${product.category} / ${product.subcategory || "Umum"}</td>
               <td style="padding:8px; border-bottom:1px solid #f3f4f6">${formatRupiah(product.price)}</td>
+              <td style="padding:8px; border-bottom:1px solid #f3f4f6">${renderAdminStockCell(product)}</td>
               <td style="padding:8px; border-bottom:1px solid #f3f4f6">${Number(product.discount || 0)}%</td>
               <td style="padding:8px; border-bottom:1px solid #f3f4f6">${product.wa_phone || "-"}</td>
               <td style="padding:8px; border-bottom:1px solid #f3f4f6">
@@ -4459,10 +4473,12 @@ function renderBrandImagePreview(containerId, url) {
   if (!url) {
     el.innerHTML = "";
     renderBrandLayoutPreview();
+    syncBrandClearButtons();
     return;
   }
   el.innerHTML = `<img src="${escapeHtml(url)}" alt="" style="max-height:120px; max-width:220px; object-fit:contain; border:1px solid #e5e7eb; border-radius:8px; background:#fff; padding:6px;">`;
   renderBrandLayoutPreview();
+  syncBrandClearButtons();
 }
 
 function resetBrandForm() {
@@ -4601,6 +4617,74 @@ document.getElementById("brandLogoFile")?.addEventListener("change", async (even
   }
 });
 
+function syncBrandClearButtons() {
+  const hasLogo = Boolean(document.getElementById("brandLogoUrl")?.value.trim());
+  const hasCover = Boolean(document.getElementById("brandCoverUrl")?.value.trim());
+  document.getElementById("brandClearLogo")?.classList.toggle("hidden", !hasLogo);
+  document.getElementById("brandClearCover")?.classList.toggle("hidden", !hasCover);
+}
+
+function currentBrandPayload() {
+  const { x: logoX, y: logoY } = getBrandLogoXY();
+  return {
+    name: document.getElementById("brandNameInput")?.value.trim() || "",
+    coverUrl: document.getElementById("brandCoverUrl")?.value.trim() || "",
+    logoUrl: document.getElementById("brandLogoUrl")?.value.trim() || "",
+    logoPosition: getBrandLogoPosition(),
+    logoX,
+    logoY,
+    logoScale: getBrandLogoScale(),
+    sortOrder: Number(document.getElementById("brandSortInput")?.value || 0),
+    category: document.getElementById("brandCategoryInput")?.value.trim() || "",
+  };
+}
+
+async function clearBrandMedia(kind) {
+  const isLogo = kind === "logo";
+  const urlInput = document.getElementById(isLogo ? "brandLogoUrl" : "brandCoverUrl");
+  const fileInput = document.getElementById(isLogo ? "brandLogoFile" : "brandCoverFile");
+  const previewId = isLogo ? "brandLogoPreview" : "brandCoverPreview";
+  const currentUrl = urlInput?.value.trim() || "";
+  if (!currentUrl) return;
+  const label = isLogo ? "logo" : "foto latar";
+  const kept = isLogo ? "Foto latar" : "Logo";
+  if (!confirm(`Hapus ${label} saja? ${kept} tetap ada.`)) return;
+
+  urlInput.value = "";
+  if (fileInput) fileInput.value = "";
+  renderBrandImagePreview(previewId, "");
+
+  if (!editingBrandId) {
+    setBrandsMessage(isLogo ? "Logo dihapus. Foto latar tetap ada." : "Foto latar dihapus. Logo tetap ada.", true);
+    return;
+  }
+
+  const payload = currentBrandPayload();
+  if (!payload.name) {
+    urlInput.value = currentUrl;
+    renderBrandImagePreview(previewId, currentUrl);
+    setBrandsMessage("Nama merek wajib diisi.");
+    return;
+  }
+
+  try {
+    setBrandsMessage(isLogo ? "Menghapus logo..." : "Menghapus foto latar...");
+    await apiFetch(`/admin/brands/${editingBrandId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+    setBrandsMessage(isLogo ? "Logo dihapus. Foto latar tetap ada." : "Foto latar dihapus. Logo tetap ada.", true);
+    loadAdminBrands();
+  } catch (error) {
+    urlInput.value = currentUrl;
+    renderBrandImagePreview(previewId, currentUrl);
+    setBrandsMessage(error.message);
+  }
+}
+
+document.getElementById("brandClearLogo")?.addEventListener("click", () => clearBrandMedia("logo"));
+document.getElementById("brandClearCover")?.addEventListener("click", () => clearBrandMedia("cover"));
+
 document.getElementById("brandNameInput")?.addEventListener("input", renderBrandLayoutPreview);
 document.getElementById("brandLogoScale")?.addEventListener("input", () => {
   writeBrandLogoScale(document.getElementById("brandLogoScale").value);
@@ -4616,20 +4700,12 @@ document.querySelectorAll('input[name="brandLogoPosition"]').forEach((input) => 
 
 document.getElementById("brandForm")?.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const name = document.getElementById("brandNameInput")?.value.trim();
-  const coverUrl = document.getElementById("brandCoverUrl")?.value.trim() || "";
-  const logoUrl = document.getElementById("brandLogoUrl")?.value.trim() || "";
-  const logoPosition = getBrandLogoPosition();
-  const { x: logoX, y: logoY } = getBrandLogoXY();
-  const logoScale = getBrandLogoScale();
-  const sortOrder = Number(document.getElementById("brandSortInput")?.value || 0);
-  const category = document.getElementById("brandCategoryInput")?.value.trim() || "";
-  if (!name) {
+  const payload = currentBrandPayload();
+  if (!payload.name) {
     setBrandsMessage("Nama merek wajib diisi.");
     return;
   }
   try {
-    const payload = { name, coverUrl, logoUrl, logoPosition, logoX, logoY, logoScale, sortOrder, category };
     if (editingBrandId) {
       await apiFetch(`/admin/brands/${editingBrandId}`, {
         method: "PUT",
