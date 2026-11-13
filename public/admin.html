@@ -6,7 +6,7 @@
     <link rel="icon" href="/logo-sjs.png" type="image/png" />
     <link rel="apple-touch-icon" href="/logo-sjs.png" />
     <title>Manajemen User - PT SAHABAT JAYA SUKSES</title>
-    <link rel="stylesheet" href="/style.css?v=41" />
+    <link rel="stylesheet" href="/style.css?v=42" />
   </head>
   <body class="admin-page">
     <header class="topbar">
@@ -174,7 +174,17 @@
       </section>
 
       <section id="layananTab" class="auth-card admin-panel hidden">
-        <h2>Permintaan Layanan</h2>
+        <h2>Layanan</h2>
+        <form id="layananPageForm" class="auth-form" style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
+          <h3 style="margin: 0 0 6px;">Teks Halaman Layanan</h3>
+          <p class="empty-state" style="margin-bottom: 12px;">
+            Semua teks di halaman Layanan, menu Layanan, dan formulir pengajuan. Kosongkan catatan formulir jika tidak ingin ditampilkan.
+          </p>
+          <div id="layananPageEditor"><p class="empty-state">Memuat teks...</p></div>
+          <button type="submit" class="btn-primary" style="margin-top: 12px;">Simpan Teks Layanan</button>
+          <p id="layananPageMessage" class="message"></p>
+        </form>
+        <h3>Permintaan Layanan</h3>
         <p class="empty-state" style="margin-bottom: 8px">Pengajuan kerja sama, custom order, komplain, dan konsultasi dari menu Layanan.</p>
         <p id="layananAdminMessage" class="message"></p>
         <div style="margin-top: 12px; overflow-x: auto;">
@@ -708,7 +718,8 @@
         <h3 class="section-heading">Daftar Menu</h3>
         <div id="menuList"></div>
         <p class="empty-state" style="margin-top: 10px">
-          Catatan: Jika kategori/sub-kategori dihapus, produk terkait akan otomatis dipindah ke
+          Catatan: Gambar kartu kategori di halaman toko punya dua pilihan, otomatis dari foto produk
+          atau upload manual. Jika kategori/sub-kategori dihapus, produk terkait akan otomatis dipindah ke
           <strong>Lainnya → Umum</strong>.
         </p>
       </section>
@@ -1324,8 +1335,8 @@
       </main>
     </div>
 
-    <script src="/common.js?v=26"></script>
-    <script src="/admin.js?v=71"></script>
+    <script src="/common.js?v=28"></script>
+    <script src="/admin.js?v=74"></script>
     <script src="/admin-points.js?v=4"></script>
   </body>
 </html>

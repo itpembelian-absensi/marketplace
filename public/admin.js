@@ -613,7 +613,10 @@ function initTabs() {
 
       // Load data on tab activation
       if (tabId === "ordersTab") loadOrders();
-      if (tabId === "layananTab") loadLayananRequests();
+      if (tabId === "layananTab") {
+        loadLayananPageEditor();
+        loadLayananRequests();
+      }
       if (tabId === "salesTab") loadSalesReport();
       if (tabId === "insightsTab") loadInsights();
       if (tabId === "inventoryTab") loadInventoryReport();
@@ -1008,6 +1011,51 @@ async function loadCompanyProfileSettings() {
   }
 }
 
+let catalogThumbs = { all: { mode: "auto", imageUrl: "" }, categories: {} };
+
+function normalizeAdminCatalogThumbs(raw) {
+  const source = raw && typeof raw === "object" ? raw : {};
+  const one = (item) => ({
+    mode: item?.mode === "manual" ? "manual" : "auto",
+    imageUrl: String(item?.imageUrl || "").trim(),
+  });
+  const categories = {};
+  Object.entries(source.categories || {}).forEach(([id, item]) => {
+    categories[String(id)] = one(item);
+  });
+  return { all: one(source.all), categories };
+}
+
+function catalogThumbOf(id) {
+  if (String(id) === "all") return catalogThumbs.all || { mode: "auto", imageUrl: "" };
+  return catalogThumbs.categories[String(id)] || { mode: "auto", imageUrl: "" };
+}
+
+function catalogThumbEditor(id, title) {
+  const thumb = catalogThumbOf(id);
+  const manual = thumb.mode === "manual";
+  const preview = thumb.imageUrl
+    ? `<img src="${escapeHtml(thumb.imageUrl)}" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:10px;display:block;margin:8px 0;" />`
+    : "";
+  return `
+    <div class="cat-thumb" data-thumb-id="${escapeHtml(String(id))}" style="margin-top:12px;padding-top:12px;border-top:1px solid #f3f4f6;">
+      <p style="margin:0 0 8px;font-size:0.88rem;color:#6b7280;">Gambar kartu “${escapeHtml(title)}” di halaman toko</p>
+      <label style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+        <input type="radio" name="thumb-${escapeHtml(String(id))}" value="auto" ${manual ? "" : "checked"} />
+        Otomatis dari produk
+      </label>
+      <label style="display:flex;gap:8px;align-items:center;">
+        <input type="radio" name="thumb-${escapeHtml(String(id))}" value="manual" ${manual ? "checked" : ""} />
+        Upload manual
+      </label>
+      <div class="cat-thumb-manual" ${manual ? "" : "hidden"}>
+        ${preview}
+        <input type="file" data-thumb-file="${escapeHtml(String(id))}" accept="image/png,image/jpeg,image/webp" style="margin-top:8px;" />
+      </div>
+      <button type="button" class="btn-secondary" data-action="save-thumb" data-id="${escapeHtml(String(id))}" style="margin-top:8px;">Simpan gambar</button>
+    </div>`;
+}
+
 function renderMenu(menu) {
   if (!menuList) return;
   if (!menu.length) {
@@ -1015,7 +1063,7 @@ function renderMenu(menu) {
     return;
   }
 
-  menuList.innerHTML = menu
+  menuList.innerHTML = catalogThumbEditor("all", "Semua Produk") + menu
     .map((cat) => {
       const subs = (cat.subcategories || []).map((s) => {
         return `
@@ -1047,6 +1095,7 @@ function renderMenu(menu) {
           <div style="margin-top:10px">
             ${subs.length ? subs.join("") : '<p class="empty-state">Belum ada sub-kategori.</p>'}
           </div>
+          ${catalogThumbEditor(cat.id, cat.name)}
         </div>
       `;
     })
@@ -1057,7 +1106,8 @@ async function loadMenu() {
   if (!menuList) return;
   setMenuMessage("");
   try {
-    const menu = await apiFetch("/categories");
+    const [menu, settings] = await Promise.all([apiFetch("/categories"), apiFetch("/settings")]);
+    catalogThumbs = normalizeAdminCatalogThumbs(settings?.catalogThumbs);
     cachedMenuCategories = Array.isArray(menu) ? menu : [];
     if (!Array.isArray(menu)) {
       setMenuMessage(
@@ -1169,9 +1219,42 @@ if (menuList) {
         setMenuMessage("Sub-kategori berhasil dihapus.", true);
         loadMenu();
       }
+
+      if (action === "save-thumb") {
+        const id = String(btn.dataset.id || "");
+        const box = btn.closest(".cat-thumb");
+        const mode = box?.querySelector("input[type=radio]:checked")?.value === "manual" ? "manual" : "auto";
+        const file = box?.querySelector("input[type=file]")?.files?.[0];
+        const current = catalogThumbOf(id);
+        let imageUrl = current.imageUrl;
+        if (mode === "manual") {
+          if (file) imageUrl = await uploadPictureImage(file, "home");
+          if (!imageUrl) throw new Error("Pilih gambar untuk upload manual.");
+        } else {
+          imageUrl = "";
+        }
+        const next = { mode, imageUrl };
+        if (id === "all") catalogThumbs.all = next;
+        else catalogThumbs.categories[id] = next;
+        const saved = await apiFetch("/admin/settings/catalog_thumbs", {
+          method: "PUT",
+          body: JSON.stringify(catalogThumbs),
+        });
+        catalogThumbs = normalizeAdminCatalogThumbs(saved?.catalogThumbs || catalogThumbs);
+        localStorage.removeItem("marketplace_settings_cache");
+        setMenuMessage("Gambar kategori berhasil disimpan.", true);
+        loadMenu();
+      }
     } catch (error) {
       setMenuMessage(error.message);
     }
+  });
+
+  menuList.addEventListener("change", (event) => {
+    const radio = event.target.closest("input[type=radio]");
+    if (!radio || !radio.name.startsWith("thumb-")) return;
+    const manualBox = radio.closest(".cat-thumb")?.querySelector(".cat-thumb-manual");
+    if (manualBox) manualBox.hidden = radio.value !== "manual";
   });
 }
 
@@ -3286,6 +3369,209 @@ const LAYANAN_STATUS_LABELS = {
   done: "Selesai",
 };
 
+const LAYANAN_FORM_LABELS = {
+  kerjasama: "Kerja Sama Bisnis",
+  custom: "Pesanan Proyek & Custom",
+  komplain: "Pengembalian & Komplain",
+  konsultasi: "Konsultasi Produk",
+};
+
+function layananFieldEditor(formId, field) {
+  const bits = [
+    `<label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Label</label>
+     <input type="text" data-form="${formId}" data-fname="${field.name}" data-part="label" value="${quoteAttr(field.label)}" style="width:100%;box-sizing:border-box;" />`,
+  ];
+  if ("placeholder" in field) {
+    bits.push(
+      `<label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Placeholder</label>
+       <input type="text" data-form="${formId}" data-fname="${field.name}" data-part="placeholder" value="${quoteAttr(field.placeholder)}" style="width:100%;box-sizing:border-box;" />`
+    );
+  }
+  if ("hint" in field) {
+    bits.push(
+      `<label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Petunjuk lampiran</label>
+       <input type="text" data-form="${formId}" data-fname="${field.name}" data-part="hint" value="${quoteAttr(field.hint)}" style="width:100%;box-sizing:border-box;" />`
+    );
+  }
+  if (Array.isArray(field.options)) {
+    bits.push(
+      field.options
+        .map(
+          (option) => `
+        <label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Pilihan: ${escapeHtml(option.label)}</label>
+        <input type="text" data-form="${formId}" data-fname="${field.name}" data-opt="${quoteAttr(option.value)}" data-part="option" value="${quoteAttr(option.label)}" style="width:100%;box-sizing:border-box;" />`
+        )
+        .join("")
+    );
+  }
+  return `
+    <div class="info-card" style="margin-top:8px;background:#fff;">
+      <strong style="font-size:0.9rem;">${escapeHtml(field.label)}</strong>
+      ${bits.join("")}
+    </div>`;
+}
+
+function renderLayananPageEditor(page) {
+  const editor = document.getElementById("layananPageEditor");
+  if (!editor || !page) return;
+  const cards = (page.cards || [])
+    .map(
+      (card) => `
+      <div class="info-card" style="margin-bottom:10px;background:#fafafa;">
+        <h4 style="margin:0 0 8px;color:#5a3e32;">${escapeHtml(card.title)}</h4>
+        <label style="font-size:0.85rem;color:#6b7280;">Judul kartu</label>
+        <input type="text" data-card="${card.id}" data-part="title" value="${quoteAttr(card.title)}" style="width:100%;box-sizing:border-box;" />
+        <label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Deskripsi kartu</label>
+        <textarea data-card="${card.id}" data-part="text" rows="3" style="width:100%;box-sizing:border-box;">${escapeHtml(card.text)}</textarea>
+        <label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Teks singkat di menu Layanan</label>
+        <input type="text" data-card="${card.id}" data-part="menuText" value="${quoteAttr(card.menuText)}" style="width:100%;box-sizing:border-box;" />
+      </div>`
+    )
+    .join("");
+
+  const forms = Object.entries(page.forms || {})
+    .map(([id, form]) => {
+      const fields = (form.fields || []).map((field) => layananFieldEditor(id, field)).join("");
+      return `
+        <details style="margin-top:10px;">
+          <summary style="cursor:pointer;font-weight:700;color:#5a3e32;">Formulir ${escapeHtml(LAYANAN_FORM_LABELS[id] || form.title)}</summary>
+          <div style="margin-top:10px;">
+            <label style="font-size:0.85rem;color:#6b7280;">Judul formulir</label>
+            <input type="text" data-form="${id}" data-part="title" value="${quoteAttr(form.title)}" style="width:100%;box-sizing:border-box;" />
+            <label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Pengantar</label>
+            <textarea data-form="${id}" data-part="intro" rows="3" style="width:100%;box-sizing:border-box;">${escapeHtml(form.intro)}</textarea>
+            <label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Catatan (opsional)</label>
+            <textarea data-form="${id}" data-part="note" rows="2" style="width:100%;box-sizing:border-box;">${escapeHtml(form.note)}</textarea>
+            <label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Teks tombol kirim</label>
+            <input type="text" data-form="${id}" data-part="submit" value="${quoteAttr(form.submit)}" style="width:100%;box-sizing:border-box;" />
+            ${fields}
+          </div>
+        </details>`;
+    })
+    .join("");
+
+  editor.innerHTML = `
+    <label style="font-size:0.9rem;color:#6b7280;">Judul halaman</label>
+    <input type="text" id="layananPageTitle" value="${quoteAttr(page.title)}" style="width:100%;box-sizing:border-box;" />
+    ${cards}
+    <div class="info-card" style="margin:12px 0;background:#fafafa;">
+      <h4 style="margin:0 0 8px;color:#5a3e32;">Banner bawah</h4>
+      <label style="font-size:0.85rem;color:#6b7280;">Judul</label>
+      <input type="text" id="layananCtaTitle" value="${quoteAttr(page.ctaTitle)}" style="width:100%;box-sizing:border-box;" />
+      <label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Keterangan</label>
+      <textarea id="layananCtaText" rows="3" style="width:100%;box-sizing:border-box;">${escapeHtml(page.ctaText)}</textarea>
+      <label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Teks tombol</label>
+      <input type="text" id="layananCtaButton" value="${quoteAttr(page.ctaButton)}" style="width:100%;box-sizing:border-box;" />
+    </div>
+    <div class="info-card" style="margin-bottom:12px;background:#fafafa;">
+      <h4 style="margin:0 0 8px;color:#5a3e32;">Teks pendukung</h4>
+      <label style="font-size:0.85rem;color:#6b7280;">Tautan “lihat semua” di menu</label>
+      <input type="text" id="layananMenuAllLabel" value="${quoteAttr(page.menuAllLabel)}" style="width:100%;box-sizing:border-box;" />
+      <label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Teks kembali di formulir</label>
+      <input type="text" id="layananBackLabel" value="${quoteAttr(page.backLabel)}" style="width:100%;box-sizing:border-box;" />
+      <label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Teks area unggah berkas</label>
+      <input type="text" id="layananDropTitle" value="${quoteAttr(page.dropTitle)}" style="width:100%;box-sizing:border-box;" />
+      <label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Tombol chat Sasa</label>
+      <input type="text" id="layananSasaButton" value="${quoteAttr(page.sasaButton)}" style="width:100%;box-sizing:border-box;" />
+      <label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Judul setelah terkirim</label>
+      <input type="text" id="layananSuccessTitle" value="${quoteAttr(page.successTitle)}" style="width:100%;box-sizing:border-box;" />
+      <label style="font-size:0.85rem;color:#6b7280;display:block;margin-top:8px;">Pesan setelah terkirim</label>
+      <textarea id="layananSuccessText" rows="2" style="width:100%;box-sizing:border-box;">${escapeHtml(page.successText)}</textarea>
+    </div>
+    ${forms}`;
+}
+
+function collectLayananPageForm() {
+  const editor = document.getElementById("layananPageEditor");
+  const read = (selector) => editor?.querySelector(selector)?.value ?? "";
+  const cards = [];
+  editor?.querySelectorAll("[data-card][data-part='title']").forEach((input) => {
+    const id = input.dataset.card;
+    cards.push({
+      id,
+      title: input.value,
+      text: read(`[data-card="${id}"][data-part="text"]`),
+      menuText: read(`[data-card="${id}"][data-part="menuText"]`),
+    });
+  });
+  const forms = {};
+  editor?.querySelectorAll("[data-form][data-part='title']:not([data-fname])").forEach((input) => {
+    const id = input.dataset.form;
+    const fields = [];
+    const names = new Set();
+    editor.querySelectorAll(`[data-form="${id}"][data-fname]`).forEach((el) => names.add(el.dataset.fname));
+    names.forEach((name) => {
+      const field = { name, label: read(`[data-form="${id}"][data-fname="${name}"][data-part="label"]`) };
+      const placeholder = editor.querySelector(`[data-form="${id}"][data-fname="${name}"][data-part="placeholder"]`);
+      const hint = editor.querySelector(`[data-form="${id}"][data-fname="${name}"][data-part="hint"]`);
+      if (placeholder) field.placeholder = placeholder.value;
+      if (hint) field.hint = hint.value;
+      const options = Array.from(
+        editor.querySelectorAll(`[data-form="${id}"][data-fname="${name}"][data-part="option"]`)
+      ).map((el) => ({ value: el.dataset.opt, label: el.value }));
+      if (options.length) field.options = options;
+      fields.push(field);
+    });
+    forms[id] = {
+      title: input.value,
+      intro: read(`[data-form="${id}"][data-part="intro"]`),
+      note: read(`[data-form="${id}"][data-part="note"]`),
+      submit: read(`[data-form="${id}"][data-part="submit"]`),
+      fields,
+    };
+  });
+  return {
+    title: document.getElementById("layananPageTitle")?.value || "",
+    ctaTitle: document.getElementById("layananCtaTitle")?.value || "",
+    ctaText: document.getElementById("layananCtaText")?.value || "",
+    ctaButton: document.getElementById("layananCtaButton")?.value || "",
+    menuAllLabel: document.getElementById("layananMenuAllLabel")?.value || "",
+    backLabel: document.getElementById("layananBackLabel")?.value || "",
+    dropTitle: document.getElementById("layananDropTitle")?.value || "",
+    sasaButton: document.getElementById("layananSasaButton")?.value || "",
+    successTitle: document.getElementById("layananSuccessTitle")?.value || "",
+    successText: document.getElementById("layananSuccessText")?.value || "",
+    cards,
+    forms,
+  };
+}
+
+async function loadLayananPageEditor() {
+  const editor = document.getElementById("layananPageEditor");
+  const message = document.getElementById("layananPageMessage");
+  if (!editor) return;
+  if (message) message.textContent = "";
+  try {
+    const settings = await apiFetch("/settings");
+    renderLayananPageEditor(settings?.layananPage);
+  } catch (error) {
+    editor.innerHTML = `<p class="empty-state">${escapeHtml(error.message)}</p>`;
+  }
+}
+
+document.getElementById("layananPageForm")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const message = document.getElementById("layananPageMessage");
+  if (message) {
+    message.textContent = "Menyimpan...";
+    message.classList.remove("success");
+  }
+  try {
+    const result = await apiFetch("/admin/settings/layanan_page", {
+      method: "PUT",
+      body: JSON.stringify(collectLayananPageForm()),
+    });
+    localStorage.removeItem("marketplace_settings_cache");
+    renderLayananPageEditor(result?.layananPage);
+    if (message) {
+      message.textContent = result?.message || "Teks halaman Layanan berhasil disimpan.";
+      message.classList.add("success");
+    }
+  } catch (error) {
+    if (message) message.textContent = error.message;
+  }
+});
+
 async function loadLayananRequests() {
   const tbody = document.getElementById("layananAdminTbody");
   const msg = document.getElementById("layananAdminMessage");
@@ -3440,7 +3726,7 @@ function renderSalesSummary(summary, period) {
     </div>
     <div class="info-card" style="margin: 0; padding: 14px;">
       <p style="margin: 0 0 4px; font-size: 0.85rem; color: #6b7280;">Total Omzet</p>
-      <p style="margin: 0; font-weight: 700; color: #2563eb;">${formatRupiah(summary.total_revenue)}</p>
+      <p style="margin: 0; font-weight: 700; color: #643f2d;">${formatRupiah(summary.total_revenue)}</p>
     </div>
     <div class="info-card" style="margin: 0; padding: 14px;">
       <p style="margin: 0 0 4px; font-size: 0.85rem; color: #6b7280;">Jumlah Order</p>

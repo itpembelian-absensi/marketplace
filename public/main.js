@@ -17,6 +17,20 @@ const selected = {
 };
 
 let promoOnly = false;
+let savedOnly = false;
+
+function readSavedIds() {
+  try {
+    const raw = JSON.parse(localStorage.getItem("sjs_saved_products") || "[]");
+    return new Set((Array.isArray(raw) ? raw : []).map((id) => Number(id)));
+  } catch (error) {
+    return new Set();
+  }
+}
+
+function syncSavedFromUrl() {
+  savedOnly = new URLSearchParams(window.location.search).get("saved") === "1";
+}
 
 function isPromoProduct(product) {
   return normalizeDiscount(product.discount) > 0;
@@ -53,7 +67,7 @@ function updateShopNavState() {
 function updateShopSectionTitle() {
   const title = document.getElementById("catalogTitle");
   if (!title) return;
-  title.textContent = promoOnly ? "Promo Spesial" : "Temukan Material yang Tepat";
+  title.textContent = savedOnly ? "Produk Tersimpan" : promoOnly ? "Promo Spesial" : "Temukan Material yang Tepat";
 }
 
 function normalizeDiscount(discount) {
@@ -77,6 +91,28 @@ function getWhatsAppUrl(phone, productName) {
   return `https://wa.me/${cleaned}?text=${message}`;
 }
 
+let catalogThumbs = { all: { mode: "auto", imageUrl: "" }, categories: {} };
+
+function normalizeCatalogThumbs(raw) {
+  const source = raw && typeof raw === "object" ? raw : {};
+  const one = (item) => ({
+    mode: item?.mode === "manual" ? "manual" : "auto",
+    imageUrl: String(item?.imageUrl || "").trim(),
+  });
+  const categories = {};
+  Object.entries(source.categories || {}).forEach(([id, item]) => {
+    if (!id) return;
+    categories[String(id)] = one(item);
+  });
+  return { all: one(source.all), categories };
+}
+
+function manualCatalogThumb(id) {
+  const item = String(id) === "all" ? catalogThumbs.all : catalogThumbs.categories[String(id)];
+  if (item?.mode === "manual" && item.imageUrl) return item.imageUrl;
+  return "";
+}
+
 const CATEGORY_THUMBS = [
   [/plywood/i, "/home/cat-plywood.jpg"],
   [/particle/i, "/home/cat-particle.jpg"],
@@ -87,10 +123,15 @@ const CATEGORY_THUMBS = [
 ];
 
 function categoryThumb(name) {
-  const known = CATEGORY_THUMBS.find(([pattern]) => pattern.test(name));
-  if (known) return known[1];
+  const cat = (Array.isArray(window.__menuCategories) ? window.__menuCategories : []).find(
+    (item) => item.name === name
+  );
+  const manual = cat ? manualCatalogThumb(cat.id) : "";
+  if (manual) return manual;
   const sample = products.find((item) => item.category === name && item.image);
-  return sample?.image || "";
+  if (sample?.image) return sample.image;
+  const known = CATEGORY_THUMBS.find(([pattern]) => pattern.test(name));
+  return known ? known[1] : "";
 }
 
 function renderCategoryRail() {
@@ -109,7 +150,7 @@ function renderCategoryRail() {
     ? fromMenu
     : Array.from(new Set(products.map((item) => item.category || "Lainnya")))
   ).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b, "id"));
-  const allThumb = products.find((item) => item.image)?.image || "/home/cat-plywood.jpg";
+  const allThumb = manualCatalogThumb("all") || products.find((item) => item.image)?.image || "/home/cat-plywood.jpg";
   const chips = [{ name: "Semua Produk", cat: "all", image: allThumb }].concat(
     names.map((name) => ({ name, cat: name, image: categoryThumb(name) }))
   );
@@ -161,7 +202,8 @@ function getFilteredProducts() {
     const matchesSub =
       selected.subcategory === "all" || (product.subcategory || "Umum") === selected.subcategory;
     const matchesPromo = !promoOnly || isPromoProduct(product);
-    return matchesSearch && matchesCategory && matchesSub && matchesPromo;
+    const matchesSaved = !savedOnly || readSavedIds().has(Number(product.id));
+    return matchesSearch && matchesCategory && matchesSub && matchesPromo && matchesSaved;
   });
 
   if (selectedSort === "priceAsc") {
@@ -277,7 +319,9 @@ function renderProducts() {
   if (catalogPage > pageCount) catalogPage = pageCount;
 
   if (!filtered.length) {
-    productGrid.innerHTML = `<p class="catalog-empty">${promoOnly ? "Tidak ada produk promo saat ini." : "Produk tidak ditemukan."}</p>`;
+    productGrid.innerHTML = `<p class="catalog-empty">${
+      savedOnly ? "Belum ada produk tersimpan." : promoOnly ? "Tidak ada produk promo saat ini." : "Produk tidak ditemukan."
+    }</p>`;
     renderPager(0);
     return;
   }
@@ -345,7 +389,12 @@ async function loadProducts() {
   productGrid.innerHTML = '<p class="empty-state">Memuat produk...</p>';
   try {
     try {
-      window.__menuCategories = await apiFetch("/categories");
+      const [menu, settings] = await Promise.all([
+        apiFetch("/categories").catch(() => null),
+        loadSettings({ fresh: true }).catch(() => null),
+      ]);
+      window.__menuCategories = menu;
+      catalogThumbs = normalizeCatalogThumbs(settings?.catalogThumbs);
     } catch (error) {
       window.__menuCategories = null;
     }
@@ -372,6 +421,7 @@ async function loadProducts() {
 if (isShopPage) {
   window.addEventListener("pageshow", () => {
     syncPromoFromUrl();
+    syncSavedFromUrl();
     loadProducts();
   });
 
@@ -431,6 +481,7 @@ if (isShopPage) {
   }
 
   syncPromoFromUrl();
+  syncSavedFromUrl();
 
   renderUserArea();
   refreshHeaderCartBadge();

@@ -1,6 +1,14 @@
-(function initLayananForm() {
+(async function initLayananForm() {
   const formEl = document.getElementById("layananForm");
   if (!formEl) return;
+
+  let pageCopy = null;
+  try {
+    const settings = await loadSettings({ fresh: true });
+    pageCopy = settings?.layananPage || null;
+  } catch (error) {
+    pageCopy = null;
+  }
 
   const FORMS = {
     kerjasama: {
@@ -217,8 +225,41 @@
     },
   };
 
+  function applyLayananFormCopy(config, page, jenis) {
+    if (!config || !page) return;
+    const saved = page.forms?.[jenis];
+    if (saved) {
+      if (saved.title) config.title = saved.title;
+      if (saved.intro) config.intro = saved.intro;
+      config.note = saved.note || "";
+      if (saved.submit) config.submit = saved.submit;
+      config.fields.forEach((field) => {
+        const over = (saved.fields || []).find((item) => item.name === field.name);
+        if (!over) return;
+        if (over.label) field.label = over.label;
+        if ("placeholder" in field && over.placeholder != null) field.placeholder = over.placeholder;
+        if ("hint" in field && over.hint != null) field.hint = over.hint;
+        if (field.options && Array.isArray(over.options)) {
+          field.options.forEach((opt) => {
+            const match = over.options.find((item) => item.value === opt.value);
+            if (match?.label) opt.label = match.label;
+          });
+        }
+      });
+    }
+    config.dropTitle = page.dropTitle || "";
+    config.sasaButton = page.sasaButton || "";
+    config.successTitle = page.successTitle || "";
+    config.successText = page.successText || "";
+    config.backLabel = page.backLabel || "";
+    document.querySelectorAll(".layanan-back").forEach((link) => {
+      if (config.backLabel) link.textContent = `← ${config.backLabel}`;
+    });
+  }
+
   const jenis = new URLSearchParams(location.search).get("jenis") || "";
-  const config = FORMS[jenis];
+  const config = FORMS[jenis] ? { ...FORMS[jenis], fields: FORMS[jenis].fields.map((field) => ({ ...field, options: field.options?.map((opt) => ({ ...opt })) })) } : null;
+  applyLayananFormCopy(config, pageCopy, jenis);
   const titleEl = document.getElementById("layananFormTitle");
   const introEl = document.getElementById("layananFormIntro");
   const noteEl = document.getElementById("layananNote");
@@ -258,7 +299,7 @@
       return `<div class="layanan-field${full}"><label for="${field.name}">${escapeHtml(field.label)}${reqMark}</label><textarea id="${field.name}" name="${field.name}" ${req} placeholder="${escapeHtml(field.placeholder || "")}"></textarea></div>`;
     }
     if (field.type === "file") {
-      return `<div class="layanan-field${full}"><label>${escapeHtml(field.label)}${reqMark}</label><div class="layanan-dropzone" id="layananDropzone"><strong>Tarik berkas ke sini atau klik untuk memilih</strong><small>${escapeHtml(field.hint || "")}</small><div class="layanan-file-name hidden" id="layananFileName"></div></div><input type="file" id="layananFile" name="file" class="hidden" ${field.required ? "required" : ""} ${field.accept ? `accept="${field.accept}"` : 'accept=".pdf,.png,.jpg,.jpeg,.webp,.xls,.xlsx,.doc,.docx,application/pdf,image/*'} /></div>`;
+      return `<div class="layanan-field${full}"><label>${escapeHtml(field.label)}${reqMark}</label><div class="layanan-dropzone" id="layananDropzone"><strong>${escapeHtml(config.dropTitle || "Tarik berkas ke sini atau klik untuk memilih")}</strong><small>${escapeHtml(field.hint || "")}</small><div class="layanan-file-name hidden" id="layananFileName"></div></div><input type="file" id="layananFile" name="file" class="hidden" ${field.required ? "required" : ""} ${field.accept ? `accept="${field.accept}"` : 'accept=".pdf,.png,.jpg,.jpeg,.webp,.xls,.xlsx,.doc,.docx,application/pdf,image/*'} /></div>`;
     }
     return `<div class="layanan-field${full}"><label for="${field.name}">${escapeHtml(field.label)}${reqMark}</label><input type="${field.type}" id="${field.name}" name="${field.name}" ${req} placeholder="${escapeHtml(field.placeholder || "")}" /></div>`;
   }
@@ -267,7 +308,7 @@
     <p class="layanan-message hidden" id="layananMessage"></p>
     <div class="layanan-actions">
       <button type="submit" class="layanan-submit" id="layananSubmit">${escapeHtml(config.submit)}</button>
-      ${config.sasa ? '<button type="button" class="layanan-secondary" id="layananOpenSasa">Chat Sasa sekarang</button>' : ""}
+      ${config.sasa ? `<button type="button" class="layanan-secondary" id="layananOpenSasa">${escapeHtml(config.sasaButton || "Chat Sasa sekarang")}</button>` : ""}
     </div>`;
 
   const fileInput = document.getElementById("layananFile");
@@ -393,10 +434,10 @@
       if (noteEl) noteEl.classList.add("hidden");
       if (introEl) introEl.classList.add("hidden");
       successEl.classList.remove("hidden");
-      successEl.innerHTML = `<h2>Permintaan terkirim</h2>
-        <p>Simpan nomor tiket ini. Tim SJS akan menghubungi via WhatsApp dalam 1 hari kerja.</p>
+      successEl.innerHTML = `<h2>${escapeHtml(config.successTitle || "Permintaan terkirim")}</h2>
+        <p>${escapeHtml(config.successText || "Simpan nomor tiket ini. Tim SJS akan menghubungi via WhatsApp dalam 1 hari kerja.")}</p>
         <div class="layanan-ticket">${escapeHtml(data.ticketCode || "")}</div>
-        <p><a class="layanan-back" href="/layanan.html">Kembali ke semua layanan</a></p>`;
+        <p><a class="layanan-back" href="/layanan.html">← ${escapeHtml(config.backLabel || "Semua layanan")}</a></p>`;
     } catch (error) {
       if (messageEl) {
         messageEl.classList.remove("hidden");

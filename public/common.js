@@ -1409,6 +1409,29 @@ function initLayananNav() {
   });
 }
 
+async function applyLayananNavCopy() {
+  const items = document.querySelectorAll(".sjs-layanan-item");
+  if (!items.length) return;
+  try {
+    const settings = await loadSettings({ fresh: /\/layanan/.test(location.pathname) });
+    const page = settings?.layananPage;
+    if (!page) return;
+    items.forEach((link) => {
+      const id = new URL(link.getAttribute("href"), location.origin).searchParams.get("jenis");
+      const card = (page.cards || []).find((item) => item.id === id);
+      if (!card) return;
+      const title = link.querySelector("strong");
+      const desc = link.querySelector("span > span");
+      if (title && card.title) title.textContent = card.title;
+      if (desc && card.menuText) desc.textContent = card.menuText;
+    });
+    const all = document.querySelector(".sjs-layanan-all");
+    if (all && page.menuAllLabel) all.textContent = `${page.menuAllLabel} →`;
+  } catch (error) {
+    // keep the default menu text
+  }
+}
+
 const VISITOR_ID_KEY = "sjs_visitor_id";
 
 function getOrCreateVisitorId() {
@@ -1452,13 +1475,28 @@ function trackSiteVisit() {
   }).catch(() => {});
 }
 
+function ensureHeaderWishButton() {
+  if (document.querySelector(".sjs-wish-btn, #headerSaveButton")) return;
+  const cart = document.getElementById("cartButton");
+  if (!cart) return;
+  const link = document.createElement("a");
+  link.href = "/shop.html?saved=1";
+  link.className = "sjs-cart-btn sjs-wish-btn";
+  link.setAttribute("aria-label", "Produk tersimpan");
+  link.innerHTML =
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 20s-7-4.4-7-9a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 4.6-7 9-7 9z"/></svg>';
+  cart.insertAdjacentElement("afterend", link);
+}
+
 trackSiteVisit();
 renderBrandLogo();
+ensureHeaderWishButton();
 renderLandingHeader();
 renderUserArea();
 initLandingAuth();
 initHeaderAdminNotifications();
 initLayananNav();
+applyLayananNavCopy();
 renderHomeWatermark();
 renderHomeCompanyProfile();
 renderHeaderCartButton();

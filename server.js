@@ -32,6 +32,26 @@ const { handleWebhook, sendFonnteMessage } = require("./lib/whatsapp-bot");
 const { answerCustomerQuestion } = require("./lib/cs-ai");
 const { applyIncomingDatabase, streamBackup, restoreFromZip } = require("./lib/backup");
 const { normalizeTaxSettings, computeTax } = require("./lib/tax");
+const { normalizeLayananPage } = require("./lib/layanan-page");
+
+function normalizeCatalogThumbItem(raw) {
+  const source = raw && typeof raw === "object" ? raw : {};
+  const mode = source.mode === "manual" ? "manual" : "auto";
+  return {
+    mode,
+    imageUrl: mode === "manual" ? String(source.imageUrl || "").trim().slice(0, 300) : "",
+  };
+}
+
+function normalizeCatalogThumbs(raw) {
+  const source = raw && typeof raw === "object" ? raw : {};
+  const categories = {};
+  Object.entries(source.categories || {}).forEach(([id, item]) => {
+    if (!/^\d+$/.test(String(id))) return;
+    categories[String(id)] = normalizeCatalogThumbItem(item);
+  });
+  return { all: normalizeCatalogThumbItem(source.all), categories };
+}
 const {
   normalizePaymentTimeout,
   formatDurationId,
@@ -2387,6 +2407,8 @@ app.get("/api/settings", async (req, res) => {
     const bannersRow = await getQuery("SELECT value FROM app_settings WHERE key = ?", ["hero_banners"]);
     const homePageRow = await getQuery("SELECT value FROM app_settings WHERE key = ?", ["home_page"]);
     const brandsPageRow = await getQuery("SELECT value FROM app_settings WHERE key = ?", ["brands_page"]);
+    const layananPageRow = await getQuery("SELECT value FROM app_settings WHERE key = ?", ["layanan_page"]);
+    const catalogThumbsRow = await getQuery("SELECT value FROM app_settings WHERE key = ?", ["catalog_thumbs"]);
     const qrisRow = await getQuery("SELECT value FROM app_settings WHERE key = ?", ["qris_image_url"]);
 
     let companyProfile = { ...DEFAULT_COMPANY_PROFILE };
@@ -2421,6 +2443,21 @@ app.get("/api/settings", async (req, res) => {
     }
     const brandsPage = normalizeBrandsPage(brandsPageRaw);
 
+    let layananPageRaw = null;
+    if (layananPageRow?.value) {
+      try {
+        layananPageRaw = JSON.parse(layananPageRow.value);
+      } catch (error) {}
+    }
+    const layananPage = normalizeLayananPage(layananPageRaw);
+    let catalogThumbsRaw = null;
+    if (catalogThumbsRow?.value) {
+      try {
+        catalogThumbsRaw = JSON.parse(catalogThumbsRow.value);
+      } catch (error) {}
+    }
+    const catalogThumbs = normalizeCatalogThumbs(catalogThumbsRaw);
+
     let whatsappBotNumber = process.env.WHATSAPP_BOT_NUMBER || "";
     let sasaChatEnabled = true;
     let sasaChatIdleMinutes = 5;
@@ -2450,6 +2487,8 @@ app.get("/api/settings", async (req, res) => {
       heroBanners,
       homePage,
       brandsPage,
+      layananPage,
+      catalogThumbs,
       qrisImageUrl: qrisRow?.value || "",
       whatsappBotNumber,
       sasaChatEnabled,
@@ -2603,6 +2642,42 @@ app.put(
       res.json({ message: "Teks pengantar Daftar Merek berhasil disimpan.", brandsPage });
     } catch (error) {
       res.status(500).json({ message: "Gagal menyimpan teks pengantar Daftar Merek." });
+    }
+  }
+);
+
+app.put(
+  "/api/admin/settings/layanan_page",
+  authMiddleware,
+  requireRole(["admin", "manager"]),
+  async (req, res) => {
+    const layananPage = normalizeLayananPage(req.body || {});
+    try {
+      await runQuery(
+        "INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        ["layanan_page", JSON.stringify(layananPage)]
+      );
+      res.json({ message: "Teks halaman Layanan berhasil disimpan.", layananPage });
+    } catch (error) {
+      res.status(500).json({ message: "Gagal menyimpan teks halaman Layanan." });
+    }
+  }
+);
+
+app.put(
+  "/api/admin/settings/catalog_thumbs",
+  authMiddleware,
+  requireRole(["admin"]),
+  async (req, res) => {
+    const catalogThumbs = normalizeCatalogThumbs(req.body || {});
+    try {
+      await runQuery(
+        "INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        ["catalog_thumbs", JSON.stringify(catalogThumbs)]
+      );
+      res.json({ message: "Gambar kategori berhasil disimpan.", catalogThumbs });
+    } catch (error) {
+      res.status(500).json({ message: "Gagal menyimpan gambar kategori." });
     }
   }
 );

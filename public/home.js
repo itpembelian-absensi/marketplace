@@ -413,6 +413,26 @@ function renderFooterSection(footer) {
   }
 }
 
+function applyLayananLanding(page) {
+  if (!page || !document.getElementById("layananTitle")) return;
+  const title = document.getElementById("layananTitle");
+  title.textContent = page.title || title.textContent;
+  document.querySelectorAll("[data-layanan-card]").forEach((card) => {
+    const data = (page.cards || []).find((item) => item.id === card.dataset.layananCard);
+    if (!data) return;
+    const heading = card.querySelector("h2");
+    const copy = card.querySelector("p");
+    if (heading) heading.textContent = data.title || heading.textContent;
+    if (copy) copy.textContent = data.text || copy.textContent;
+  });
+  const ctaTitle = document.getElementById("layananCtaTitle");
+  const ctaText = document.getElementById("layananCtaText");
+  const ctaButton = document.getElementById("layananCtaButton");
+  if (ctaTitle) ctaTitle.textContent = page.ctaTitle || ctaTitle.textContent;
+  if (ctaText) ctaText.textContent = page.ctaText || ctaText.textContent;
+  if (ctaButton) ctaButton.textContent = page.ctaButton || ctaButton.textContent;
+}
+
 function bindNewsletterForm() {
   if (!footerNewsletterForm) return;
   footerNewsletterForm.addEventListener("submit", async (e) => {
@@ -523,6 +543,7 @@ async function loadHomePage() {
     renderShowcase(home.showcaseSection);
     renderFooterSection(home.footerSection);
     applyHeaderContact(settings);
+    applyLayananLanding(settings?.layananPage);
 
     const waWidget = document.getElementById("whatsappChatWidget");
     if (waWidget) waWidget.style.display = "none";

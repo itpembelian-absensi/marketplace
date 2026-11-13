@@ -6,12 +6,15 @@
     <link rel="icon" href="/logo-sjs.png" type="image/png" />
     <link rel="apple-touch-icon" href="/logo-sjs.png" />
     <title>Layanan - PT Sahabat Jaya Sukses</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/style.css?v=21" />
-    <link rel="stylesheet" href="/home.css?v=86" />
-    <link rel="stylesheet" href="/layanan.css?v=1" />
+    <link rel="stylesheet" href="/home.css?v=106" />
+    <link rel="stylesheet" href="/layanan.css?v=3" />
     <script src="https://accounts.google.com/gsi/client" async></script>
   </head>
-  <body class="landing-page layanan-page">
+  <body class="layanan-page">
     <div class="sjs-header-sticky">
     <header class="sjs-header">
       <div class="sjs-header-inner">
@@ -26,10 +29,10 @@
         <div class="sjs-header-spacer" aria-hidden="true"></div>
         <div class="sjs-header-right">
         <form class="sjs-search" id="headerSearchForm" action="/shop.html" method="get">
-          <input type="search" name="q" id="headerSearchInput" placeholder="Cari apa?" autocomplete="off" />
           <button type="submit" aria-label="Cari">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3-3"/></svg>
           </button>
+          <input type="search" name="q" id="headerSearchInput" placeholder="Cari material yang kamu butuhkan" autocomplete="off" />
         </form>
         <div class="sjs-header-actions">
           <button type="button" id="cartButton" class="sjs-cart-btn" aria-label="Keranjang">
@@ -59,106 +62,133 @@
     <nav class="sjs-navbar">
       <div class="sjs-navbar-inner">
         <div class="sjs-nav-links">
-          <a href="/" class="sjs-nav-item sjs-nav-home" aria-label="Beranda">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-5v-6H11v6H6v-9H3z"/></svg>
-          </a>
-          <a href="/shop.html?promo=1" class="sjs-nav-item sjs-nav-promo">Promo Spesial %</a>
-          <a href="/shop.html" class="sjs-nav-item sjs-nav-all">Semua Kategori</a>
+          <a href="/" class="sjs-nav-item">Beranda</a>
+          <a href="/shop.html" class="sjs-nav-item">Produk</a>
+          <a href="/shop.html?promo=1" class="sjs-nav-item">Promo Spesial</a>
           <a href="/layanan.html" class="sjs-nav-item sjs-nav-active">Layanan</a>
-          <a href="/brands.html" class="sjs-nav-item">Daftar Merek</a>
+          <a href="/brands.html" class="sjs-nav-item">Merek</a>
           <a href="/artikel.html" class="sjs-nav-item">Artikel</a>
         </div>
         <div class="sjs-navbar-end">
-          <nav id="headerSocial" class="sjs-header-social" aria-label="Media sosial SJS"></nav>
-          <a href="/lacak.html" class="sjs-nav-track">
-          <svg class="sjs-nav-track-icon" viewBox="0 0 48 32" aria-hidden="true">
-            <g fill="currentColor">
-              <rect x="0" y="5" width="11" height="3" rx="1.5"/>
-              <rect x="0" y="11" width="8" height="3" rx="1.5"/>
-              <rect x="0" y="17" width="5" height="3" rx="1.5"/>
-              <path d="M12 7h21v13H12V7zm20 4h6l4 4v5H32V11z"/>
-              <circle cx="17" cy="23" r="3.2"/>
-              <circle cx="37" cy="23" r="3.2"/>
-            </g>
-          </svg>
-          Lacak pengirimanmu
-        </a>
+          <div class="sjs-shipto" id="shipToWrap">
+            <button type="button" class="sjs-shipto-btn" id="shipToButton">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>
+              <span>kirim ke</span>
+              <strong id="shipToLabel">Pancoran, Jakarta Selatan</strong>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="sjs-shipto-menu hidden" id="shipToMenu">
+              <p>Pilih kota tujuan</p>
+              <div id="shipToList" class="sjs-shipto-list"></div>
+              <label for="shipToInput">Atau tulis kota lain</label>
+              <input type="text" id="shipToInput" placeholder="Nama kota" />
+              <button type="button" id="shipToSave">Simpan</button>
+            </div>
+          </div>
         </div>
       </div>
     </nav>
     </div>
 
     <main class="layanan-main">
-      <header class="layanan-hero">
-        <h1>Layanan SJS</h1>
-        <p>Dari kemitraan grosir sampai klaim after-sales — pilih kebutuhan Anda. Tim SJS merespons via WhatsApp dalam 1 hari kerja.</p>
-        <div class="layanan-trust">
-          <span>Balas 1 hari kerja</span>
-          <span>WhatsApp CS</span>
-          <span>Bukan checkout keranjang</span>
-        </div>
-      </header>
-
+      <h1 class="layanan-title" id="layananTitle">Layanan Kami</h1>
       <div class="layanan-grid">
-        <a class="layanan-card" href="/layanan-form.html?jenis=kerjasama">
+        <a class="layanan-card" href="/layanan-form.html?jenis=kerjasama" data-layanan-card="kerjasama">
           <span class="layanan-card-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 12h8M8 12l-2 6h12l-2-6M9 12V8a3 3 0 016 0v4"/><circle cx="8" cy="8" r="2"/><circle cx="16" cy="8" r="2"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m11 17 2 2a1 1 0 1 0 3-3"/>
+              <path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/>
+              <path d="m21 3 1 11h-2"/>
+              <path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/>
+              <path d="M3 4h8"/>
+            </svg>
           </span>
           <h2>Kerja Sama Bisnis</h2>
-          <p>Untuk distributor, kontraktor, furniture, dan reseller yang butuh pasokan rutin dan skema harga kemitraan.</p>
-          <span class="layanan-card-cta">Ajukan kemitraan →</span>
+          <p>Bangun kerja sama bersama SJS untuk kebutuhan pasokan material rutin, harga khusus mitra, dan dukungan bisnis jangka panjang.</p>
         </a>
-        <a class="layanan-card" href="/layanan-form.html?jenis=custom">
+        <a class="layanan-card" href="/layanan-form.html?jenis=custom" data-layanan-card="custom">
           <span class="layanan-card-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1.4"/>
+              <rect x="14" y="3" width="7" height="7" rx="1.4"/>
+              <rect x="3" y="14" width="7" height="7" rx="1.4"/>
+              <rect x="14" y="14" width="7" height="7" rx="1.4"/>
+            </svg>
           </span>
           <h2>Pesanan Proyek &amp; Custom</h2>
-          <p>Butuh ukuran potong, volume proyek, atau spek di luar katalog? Kirim kebutuhan — ini permintaan penawaran.</p>
-          <span class="layanan-card-cta">Minta penawaran →</span>
+          <p>Punya kebutuhan ukuran khusus, volume besar, atau spesifikasi di luar katalog? Sampaikan detail proyekmu untuk mendapatkan penawaran yang sesuai.</p>
         </a>
-        <a class="layanan-card" href="/layanan-form.html?jenis=komplain">
+        <a class="layanan-card" href="/layanan-form.html?jenis=komplain" data-layanan-card="komplain">
           <span class="layanan-card-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h12l4 5-4 5H4V7z"/><path d="M9 12h.01M13 12h.01"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16.2 4.6A8 8 0 0 1 20.2 12"/>
+              <path d="M15.4 2.8v3.4h3.3"/>
+              <path d="M7.8 19.4A8 8 0 0 1 3.8 12"/>
+              <path d="M8.6 21.2v-3.4H5.3"/>
+              <rect x="9" y="9.3" width="6" height="5.2" rx="0.8"/>
+              <path d="M9 11.2h6"/>
+            </svg>
           </span>
           <h2>Pengembalian &amp; Komplain</h2>
-          <p>Siapkan nomor pesanan dan foto barang. Klaim diproses sesuai kebijakan pengembalian SJS.</p>
-          <span class="layanan-card-cta">Ajukan klaim →</span>
+          <p>Ada kendala dengan pesananmu? Siapkan nomor pesanan dan foto produk agar tim kami dapat membantu meninjau pengajuanmu sesuai kebijakan yang berlaku.</p>
         </a>
-        <a class="layanan-card" href="/layanan-form.html?jenis=konsultasi">
+        <a class="layanan-card" href="/layanan-form.html?jenis=konsultasi" data-layanan-card="konsultasi">
           <span class="layanan-card-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 015 1c0 1.5-2.5 2-2.5 4"/><circle cx="12" cy="17" r="0.8" fill="currentColor"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+              <path d="M12 17h.01"/>
+            </svg>
           </span>
           <h2>Konsultasi Produk</h2>
-          <p>Belum yakin papan mana untuk furniture, interior, atau konstruksi? Tulis kebutuhan, atau tanya Sasa untuk jawaban cepat.</p>
-          <span class="layanan-card-cta">Minta konsultasi →</span>
+          <p>Masih bingung memilih material yang tepat? Ceritakan kebutuhan furniture, interior, atau konstruksi kamu. Tim kami siap membantu menemukan pilihan yang sesuai.</p>
         </a>
       </div>
+
+      <section class="layanan-cta">
+        <h2 id="layananCtaTitle">Ada pertanyaan seputar material?</h2>
+        <p id="layananCtaText">Butuh informasi produk, saran pemilihan material, atau bantuan terkait pesanan? Tim SJS siap membantu.</p>
+        <a class="layanan-cta-btn" href="/layanan-form.html?jenis=konsultasi">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h3l1.5 4-2 1.2a12 12 0 0 0 6.3 6.3L17 12.5 21 14v3a2 2 0 0 1-2.2 2A16 16 0 0 1 5 7.2 2 2 0 0 1 7 3z"/></svg>
+          <span id="layananCtaButton">Hubungi Kami</span>
+        </a>
+      </section>
     </main>
 
     <footer class="home-footer" id="homeFooter">
-      <section class="home-footer-newsletter">
-        <div class="home-footer-newsletter-inner">
-          <div class="home-news-copy">
-            <h2 class="home-footer-newsletter-title" id="footerNewsletterTitle">Ada yang Baru dari SJS</h2>
-            <p id="footerNewsletterText">Dapatkan inspirasi material, informasi produk, dan penawaran terbaru langsung ke emailmu.</p>
-          </div>
-          <form class="home-footer-newsletter-form" id="footerNewsletterForm" novalidate>
-            <label id="footerNewsletterLabel" for="footerNewsletterEmail">Alamat email</label>
-            <div class="home-footer-newsletter-row">
-              <input type="email" id="footerNewsletterEmail" placeholder="Masukan email Anda" autocomplete="email" required />
-              <button type="submit" id="footerNewsletterBtn">Berlangganan</button>
-            </div>
-            <p class="home-footer-msg hidden" id="footerNewsletterMessage"></p>
-          </form>
-        </div>
-        <div class="home-footer-social-bar">
-          <div class="home-footer-social" id="footerSocial" aria-label="Media sosial"></div>
-        </div>
-      </section>
       <section class="home-footer-main">
         <div class="home-footer-main-inner">
-          <div class="home-footer-address" id="footerAddress"></div>
-          <div class="home-footer-columns" id="footerColumns"></div>
+          <div class="home-footer-address" id="footerAddress">
+            <h3>Alamat</h3>
+            <p>Komplek Blok M2 No. 24 RT.13/RW.15<br />Pejagalan Penjaringan, Jakarta Utara 14450</p>
+          </div>
+          <div class="home-footer-columns" id="footerColumns">
+            <div class="home-footer-col">
+              <h3>Bantuan</h3>
+              <ul>
+                <li><a href="#">Cara Berbelanja</a></li>
+                <li><a href="#">Pertanyaan Umum</a></li>
+                <li><a href="/layanan-form.html?jenis=konsultasi">Hubungi Kami</a></li>
+              </ul>
+            </div>
+            <div class="home-footer-col">
+              <h3>Kemitraan</h3>
+              <ul>
+                <li><a href="/layanan-form.html?jenis=custom">Pembelian Retail</a></li>
+                <li><a href="/layanan-form.html?jenis=kerjasama">Kerja Sama Bisnis</a></li>
+                <li><a href="/layanan-form.html?jenis=kerjasama">Menjadi Mitra</a></li>
+              </ul>
+            </div>
+            <div class="home-footer-col">
+              <h3>Informasi</h3>
+              <ul>
+                <li><a href="#">Syarat &amp; Ketentuan</a></li>
+                <li><a href="#">Kebijakan Privasi</a></li>
+                <li><a href="/layanan-form.html?jenis=komplain">Pengembalian Produk</a></li>
+                <li><a href="/layanan.html">Pengiriman</a></li>
+              </ul>
+            </div>
+          </div>
         </div>
       </section>
       <section class="home-footer-copy">
@@ -191,8 +221,8 @@
       </div>
     </div>
 
-    <script src="/common.js?v=24"></script>
-    <script src="/home.js?v=12"></script>
+    <script src="/common.js?v=28"></script>
+    <script src="/home.js?v=13"></script>
     <script src="/cs-chat.js?v=6"></script>
   </body>
 </html>
